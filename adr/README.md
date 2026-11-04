@@ -14,6 +14,7 @@ ADRs are **grouped**: a baseline ADR, then one ADR per batch of answered open qu
 | [0004](0004-validator-and-inputs.md) | Validator protocol and input scope (open-question batch 4) | accepted | Q9, Q-in1, Q-in3, Q-in4, Q-in5 |
 | [0005](0005-containers-become-locks.md) | Containers, `become` and locks (open-question batch 5) | accepted | Q16, Q17, Q-j |
 | [0006](0006-shims-and-license.md) | `.cmd` shims and the spec license (open-question batch 6) | accepted | Q-l, Q-q (license, testkit) |
+| [0007](0007-syntax-details.md) | Syntax details (draft round 1) | accepted | — (raised in T-0015) |
 
 ## Format
 

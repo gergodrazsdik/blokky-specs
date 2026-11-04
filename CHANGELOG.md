@@ -10,3 +10,4 @@ and the specification adheres to [Semantic Versioning](https://semver.org/spec/v
 ### Added
 
 - Draft glossary (`spec/glossary.md`).
+- Draft syntax (`spec/syntax.md`): plan text, YAML subset, root document, inputs, scalar grammars, references and interpolation, the per-field table, pitfalls and targeted errors.
