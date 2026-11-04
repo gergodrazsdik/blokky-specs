@@ -29,8 +29,8 @@ The draft spec describes **every** planned feature, tagged `v0.1` or `later`. Va
 - **`for` sources:** `items` (JSON array from a captured variable), `lines`, `matrix`; `collect` for results.
 - **`lock`:** named advisory locks.
 - **`services`:** background processes with `ready:` conditions (`port`, `output` subjects).
-- **`container`:** ephemeral and existing containers.
-- **`become`** and `defaults.become`.
+- **`container`:** ephemeral containers started per node ([ADR 0005](adr/0005-containers-become-locks.md)).
+- **`become`** and `defaults.become` (with `sudo` or `doas`; Unix only until out-of-band consent exists).
 - **`consent`:** out-of-band OS consent (reserved keyword).
 - **Shells:** `zsh` and `fish`.
 - **Candidates, revisited after v0.1 usage** (no keyword reserved; [ADR 0004](adr/0004-validator-and-inputs.md)): `--input-file` (Q-in3), env-sourced secret inputs (Q-in4), references in literal fields such as `timeout: { var: T }` (Q-in5).

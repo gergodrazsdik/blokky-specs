@@ -12,6 +12,7 @@ ADRs are **grouped**: a baseline ADR, then one ADR per batch of answered open qu
 | [0002](0002-language-core.md) | Language core (open-question batch 1) | accepted | Q1, Q2, Q3, Q12, Q13, Q-m, Q-n, Q-s |
 | [0003](0003-execution-defaults.md) | Execution and defaults (open-question batch 2) | accepted | Q4, Q5, Q7, Q8, Q-k, Q-r |
 | [0004](0004-validator-and-inputs.md) | Validator protocol and input scope (open-question batch 4) | accepted | Q9, Q-in1, Q-in3, Q-in4, Q-in5 |
+| [0005](0005-containers-become-locks.md) | Containers, `become` and locks (open-question batch 5) | accepted | Q16, Q17, Q-j |
 
 ## Format
 
