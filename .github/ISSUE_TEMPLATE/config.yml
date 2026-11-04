@@ -1,0 +1,9 @@
+---
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/gergodrazsdik/blokky-specs/security/advisories/new
+    about: Please report vulnerabilities privately (see SECURITY.md), not as public issues.
+  - name: CLI, install and tooling issues
+    url: https://github.com/gergodrazsdik/blokky-cli/issues/new/choose
+    about: Problems with the implementation or its docs belong in blokky-cli.

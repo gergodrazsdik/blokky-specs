@@ -1,0 +1,25 @@
+---
+name: Spec question
+description: Something in the specification is unclear, ambiguous or contradictory.
+labels: ["question", "spec"]
+body:
+  - type: input
+    id: where
+    attributes:
+      label: Where?
+      description: Document and section (e.g. spec/conditions.md, "Operators").
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What is unclear? If two parts disagree, quote both.
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Example plan
+      description: A minimal plan that shows the question, if any.
+      render: yaml
