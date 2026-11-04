@@ -8,7 +8,7 @@ ADRs are **grouped**: a baseline ADR, then one ADR per batch of answered open qu
 
 | ADR | Title | Status | Questions |
 |---|---|---|---|
-| — | *(none yet)* | | |
+| [0001](0001-language-baseline.md) | Language baseline | accepted | Q14, Q-p |
 
 ## Format
 
