@@ -219,6 +219,8 @@ Exactly `true` or `false`. Unary condition operators (`empty: true`, `exists: tr
 
 `^(0|[1-9][0-9]*)$`: decimal, no sign, no leading zeros, at most 2 147 483 647. Each field states its allowed range in [reference.md](reference.md) (for example `max` ≥ 1, `concurrency` ≥ 1).
 
+**Decimals** (`backoff.factor`, `jitter`): `^(0|[1-9][0-9]*)(\.[0-9]+)?$`, no sign, no exponent, invariant culture. Each field states its range.
+
 ### 6.5 Durations
 
 ([ADR 0007](../adr/0007-syntax-details.md))
@@ -336,13 +338,16 @@ Legend: **L** = literal only; **`${}`** = display string with interpolation; **R
 | `env.<NAME>` | v0.1 | string, `{ var }`, `{ from_env }` | R |
 | `export` | v0.1 | list of variable names | L |
 | `finally` | v0.1 | list of nodes | N |
+| `finally_timeout` | v0.1 | duration | L |
 | `ignore_errors` | v0.1 | boolean | L |
 | `retry` | v0.1 | `true` or condition | L / C |
 | `while`, `until` | v0.1 | condition | C |
 | `max` | v0.1 | integer | L |
 | `every` | v0.1 | duration (`0s` allowed) | L |
 | `on_body_failure` | v0.1 | `stop`, `continue` | L |
-| `backoff`, `jitter` | v0.1 | as defined in [reference.md](reference.md) | L |
+| `backoff.factor` | v0.1 | decimal, 1–10 | L |
+| `backoff.max` | v0.1 | duration | L |
+| `jitter` | v0.1 | decimal, 0 < j ≤ 1 | L |
 | `lock` | later | lock name, or `{ name, wait }` | L |
 | `lock.wait` | later | duration | L |
 | `container.image` | later | image reference | L |
