@@ -33,4 +33,6 @@ The draft spec describes **every** planned feature, tagged `v0.1` or `later`. Va
 - **`become`** and `defaults.become`.
 - **`consent`:** out-of-band OS consent (reserved keyword).
 - **Shells:** `zsh` and `fish`.
-- **Under consideration** (open questions): native nested plans (Q-in1), `--input-file` (Q-in3), env-sourced secret inputs (Q-in4), references in literal fields (Q-in5).
+- **Candidates, revisited after v0.1 usage** (no keyword reserved; [ADR 0004](adr/0004-validator-and-inputs.md)): `--input-file` (Q-in3), env-sourced secret inputs (Q-in4), references in literal fields such as `timeout: { var: T }` (Q-in5).
+
+Not planned: a native nested-plan node (Q-in1); nested runs stay an `exec` of `blokky run`.
