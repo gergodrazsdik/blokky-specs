@@ -9,6 +9,7 @@ ADRs are **grouped**: a baseline ADR, then one ADR per batch of answered open qu
 | ADR | Title | Status | Questions |
 |---|---|---|---|
 | [0001](0001-language-baseline.md) | Language baseline | accepted | Q14, Q-p |
+| [0002](0002-language-core.md) | Language core (open-question batch 1) | accepted | Q1, Q2, Q3, Q12, Q13, Q-m, Q-n, Q-s |
 
 ## Format
 
