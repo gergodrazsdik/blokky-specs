@@ -52,4 +52,4 @@ A change that touches both repos gets two linked pull requests; the spec PR merg
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE). Contributions are accepted under the [Developer Certificate of Origin](https://developercertificate.org/) (no CLA). Whether the spec text moves to a documentation license (e.g. CC BY 4.0) is open question Q-q.
+Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE). Contributions are accepted under the [Developer Certificate of Origin](https://developercertificate.org/) (no CLA). The spec text, schemas, examples and conformance cases are all under Apache-2.0 ([ADR 0006](adr/0006-shims-and-license.md)).
