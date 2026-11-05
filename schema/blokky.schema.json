@@ -1,5 +1,510 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:blokky:schema:0.1:plan",
   "title": "Blokky plan",
-  "description": "Blokky plan documents; normative for structure. Status: not started."
+  "description": "Blokky plan documents (spec 0.1, draft). Normative for structure; spec/reference.md is normative for semantics and lists the rules this schema can't express. Every plan scalar is a string to Blokky; so that YAML editors (which type unquoted scalars) validate too, scalar fields also accept JSON booleans and numbers of the right form.",
+  "$ref": "#/$defs/root",
+  "$defs": {
+    "scalar": {
+      "description": "Any scalar; Blokky reads it as a string.",
+      "type": ["string", "number", "boolean"]
+    },
+    "nonEmptyScalar": {
+      "anyOf": [
+        { "type": "string", "minLength": 1 },
+        { "type": ["number", "boolean"] }
+      ]
+    },
+    "bool": {
+      "anyOf": [
+        { "type": "boolean" },
+        { "type": "string", "enum": ["true", "false"] }
+      ]
+    },
+    "trueOnly": {
+      "anyOf": [
+        { "const": true },
+        { "const": "true" }
+      ]
+    },
+    "int": {
+      "anyOf": [
+        { "type": "integer", "minimum": 0, "maximum": 2147483647 },
+        { "type": "string", "pattern": "^(0|[1-9][0-9]{0,9})$" }
+      ]
+    },
+    "posInt": {
+      "anyOf": [
+        { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+        { "type": "string", "pattern": "^[1-9][0-9]{0,9}$" }
+      ]
+    },
+    "exitCodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/int" }
+    },
+    "decimal": {
+      "anyOf": [
+        { "type": "number", "minimum": 0 },
+        { "type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$" }
+      ]
+    },
+    "duration": {
+      "description": "<integer><unit> parts with units h, m, s, ms in descending order (500ms, 10s, 1h30m). No bare numbers.",
+      "type": "string",
+      "pattern": "^(?=[0-9])((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m(?!s))?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$"
+    },
+    "size": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(B|KiB|MiB|GiB)$"
+    },
+    "specVersion": {
+      "anyOf": [
+        { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
+        { "type": "number" }
+      ]
+    },
+    "varName": {
+      "type": "string",
+      "pattern": "^(?!BLOKKY_)[A-Z][A-Z0-9_]*$"
+    },
+    "envName": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+    },
+    "userCode": {
+      "type": "string",
+      "pattern": "^(?!BK_)[A-Z][A-Z0-9_]*$"
+    },
+    "jsonPath": {
+      "type": "string",
+      "pattern": "^\\."
+    },
+    "shell": {
+      "enum": ["bash", "sh", "pwsh", "powershell", "zsh", "fish"]
+    },
+    "user": {
+      "description": "A user name, uid or uid:gid; for become also the special value invoker.",
+      "anyOf": [
+        { "type": "string", "minLength": 1 },
+        { "type": "integer" }
+      ]
+    },
+    "varRef": {
+      "type": "object",
+      "properties": {
+        "var": { "$ref": "#/$defs/varName" },
+        "secret": { "$ref": "#/$defs/bool" }
+      },
+      "required": ["var"],
+      "additionalProperties": false
+    },
+    "fromEnvRef": {
+      "type": "object",
+      "properties": {
+        "from_env": { "$ref": "#/$defs/envName" },
+        "secret": { "$ref": "#/$defs/bool" }
+      },
+      "required": ["from_env"],
+      "additionalProperties": false
+    },
+    "pathValue": {
+      "anyOf": [
+        { "$ref": "#/$defs/nonEmptyScalar" },
+        { "$ref": "#/$defs/varRef" }
+      ]
+    },
+    "envMap": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/envName" },
+      "additionalProperties": {
+        "anyOf": [
+          { "$ref": "#/$defs/scalar" },
+          { "$ref": "#/$defs/varRef" },
+          { "$ref": "#/$defs/fromEnvRef" }
+        ]
+      }
+    },
+    "nameList": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/varName" }
+    },
+    "exec": {
+      "anyOf": [
+        { "type": "string", "minLength": 1 },
+        {
+          "type": "array",
+          "minItems": 1,
+          "prefixItems": [ { "$ref": "#/$defs/nonEmptyScalar" } ],
+          "items": {
+            "anyOf": [
+              { "$ref": "#/$defs/scalar" },
+              { "$ref": "#/$defs/varRef" }
+            ]
+          }
+        }
+      ]
+    },
+    "stdin": {
+      "anyOf": [
+        { "$ref": "#/$defs/scalar" },
+        { "$ref": "#/$defs/varRef" },
+        {
+          "type": "object",
+          "properties": { "file": { "$ref": "#/$defs/pathValue" } },
+          "required": ["file"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "nodeList": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "probe": {
+      "type": "object",
+      "properties": {
+        "exec": { "$ref": "#/$defs/exec" },
+        "script": { "type": "string", "minLength": 1 },
+        "shell": { "$ref": "#/$defs/shell" },
+        "env": { "$ref": "#/$defs/envMap" },
+        "export": { "$ref": "#/$defs/nameList" },
+        "timeout": { "$ref": "#/$defs/duration" },
+        "true_exit": { "$ref": "#/$defs/exitCodes" },
+        "false_exit": { "$ref": "#/$defs/exitCodes" },
+        "timeout_result": { "$ref": "#/$defs/bool" }
+      },
+      "oneOf": [
+        { "required": ["exec"] },
+        { "required": ["script"] }
+      ],
+      "additionalProperties": false
+    },
+    "stringList": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/scalar" }
+    },
+    "condition": {
+      "description": "One subject plus one operator (with optional json and ignore_case), a bare probe, or a composite. The one-subject/one-operator rule is enforced by implementations (spec/conditions.md).",
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "var": { "$ref": "#/$defs/varName" },
+        "env": { "$ref": "#/$defs/envName" },
+        "path": { "$ref": "#/$defs/pathValue" },
+        "host": { "enum": ["os", "arch"] },
+        "result": { "enum": ["stdout", "stderr", "exit", "error"] },
+        "probe": { "$ref": "#/$defs/probe" },
+        "port": { "$ref": "#/$defs/posInt" },
+        "output": { "enum": ["stdout", "stderr"] },
+        "equals": { "$ref": "#/$defs/scalar" },
+        "not_equals": { "$ref": "#/$defs/scalar" },
+        "in": { "$ref": "#/$defs/stringList" },
+        "not_in": { "$ref": "#/$defs/stringList" },
+        "contains": { "$ref": "#/$defs/scalar" },
+        "not_contains": { "$ref": "#/$defs/scalar" },
+        "matches": { "type": "string" },
+        "not_matches": { "type": "string" },
+        "empty": { "$ref": "#/$defs/trueOnly" },
+        "not_empty": { "$ref": "#/$defs/trueOnly" },
+        "defined": { "$ref": "#/$defs/trueOnly" },
+        "not_defined": { "$ref": "#/$defs/trueOnly" },
+        "exists": { "$ref": "#/$defs/trueOnly" },
+        "not_exists": { "$ref": "#/$defs/trueOnly" },
+        "is_file": { "$ref": "#/$defs/trueOnly" },
+        "is_dir": { "$ref": "#/$defs/trueOnly" },
+        "open": { "$ref": "#/$defs/trueOnly" },
+        "gt": { "$ref": "#/$defs/scalar" },
+        "ge": { "$ref": "#/$defs/scalar" },
+        "lt": { "$ref": "#/$defs/scalar" },
+        "le": { "$ref": "#/$defs/scalar" },
+        "json": { "$ref": "#/$defs/jsonPath" },
+        "ignore_case": { "$ref": "#/$defs/bool" },
+        "all": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/condition" } },
+        "any": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/condition" } },
+        "not": { "$ref": "#/$defs/condition" }
+      },
+      "additionalProperties": false
+    },
+    "forSpec": {
+      "type": "object",
+      "properties": {
+        "each": { "$ref": "#/$defs/stringList" },
+        "count": { "$ref": "#/$defs/int" },
+        "glob": { "type": "string", "minLength": 1 },
+        "items": {
+          "type": "object",
+          "properties": {
+            "var": { "$ref": "#/$defs/varName" },
+            "json": { "$ref": "#/$defs/jsonPath" }
+          },
+          "required": ["var"],
+          "additionalProperties": false
+        },
+        "lines": {
+          "type": "object",
+          "properties": { "var": { "$ref": "#/$defs/varName" } },
+          "required": ["var"],
+          "additionalProperties": false
+        },
+        "matrix": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/varName" },
+          "additionalProperties": { "$ref": "#/$defs/stringList" }
+        },
+        "as": { "$ref": "#/$defs/varName" },
+        "concurrency": { "$ref": "#/$defs/posInt" },
+        "fail_fast": { "$ref": "#/$defs/bool" },
+        "allow_empty": { "$ref": "#/$defs/bool" },
+        "max_items": { "$ref": "#/$defs/posInt" }
+      },
+      "oneOf": [
+        { "required": ["each"] },
+        { "required": ["count"] },
+        { "required": ["glob"] },
+        { "required": ["items"] },
+        { "required": ["lines"] },
+        { "required": ["matrix"] }
+      ],
+      "additionalProperties": false
+    },
+    "mount": {
+      "type": "object",
+      "properties": {
+        "host": { "$ref": "#/$defs/pathValue" },
+        "path": { "type": "string", "minLength": 1 },
+        "read_only": { "$ref": "#/$defs/bool" }
+      },
+      "required": ["host", "path"],
+      "additionalProperties": false
+    },
+    "container": {
+      "type": "object",
+      "properties": {
+        "image": { "type": "string", "minLength": 1 },
+        "mounts": { "type": "array", "items": { "$ref": "#/$defs/mount" } },
+        "user": { "$ref": "#/$defs/user" },
+        "env_pass": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/envName" } }
+      },
+      "required": ["image"],
+      "additionalProperties": false
+    },
+    "become": {
+      "anyOf": [
+        { "$ref": "#/$defs/user" },
+        {
+          "type": "object",
+          "properties": { "user": { "$ref": "#/$defs/user" } },
+          "required": ["user"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "service": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "exec": { "$ref": "#/$defs/exec" },
+        "script": { "type": "string", "minLength": 1 },
+        "shell": { "$ref": "#/$defs/shell" },
+        "env": { "$ref": "#/$defs/envMap" },
+        "export": { "$ref": "#/$defs/nameList" },
+        "cwd": { "$ref": "#/$defs/pathValue" },
+        "ready": { "$ref": "#/$defs/condition" },
+        "ready_timeout": { "$ref": "#/$defs/duration" }
+      },
+      "oneOf": [
+        { "required": ["exec"] },
+        { "required": ["script"] }
+      ],
+      "additionalProperties": false
+    },
+    "nodeProps": {
+      "description": "Every key a node may carry. The kind x modifier validity matrix is in spec/reference.md section 7.",
+      "properties": {
+        "exec": { "$ref": "#/$defs/exec" },
+        "script": { "type": "string", "minLength": 1 },
+        "do": { "$ref": "#/$defs/nodeList" },
+        "all": { "$ref": "#/$defs/nodeList" },
+        "any": { "$ref": "#/$defs/nodeList" },
+        "race": { "$ref": "#/$defs/nodeList" },
+        "if": { "$ref": "#/$defs/condition" },
+        "sleep": { "$ref": "#/$defs/duration" },
+        "log": { "$ref": "#/$defs/scalar" },
+        "fail": { "$ref": "#/$defs/scalar" },
+        "assert": { "$ref": "#/$defs/condition" },
+
+        "shell": { "$ref": "#/$defs/shell" },
+        "then": { "$ref": "#/$defs/nodeList" },
+        "else": { "$ref": "#/$defs/nodeList" },
+        "level": { "enum": ["debug", "info", "warn"] },
+        "message": { "$ref": "#/$defs/scalar" },
+        "code": { "$ref": "#/$defs/userCode" },
+        "concurrency": { "$ref": "#/$defs/posInt" },
+        "fail_fast": { "$ref": "#/$defs/bool" },
+
+        "stdin": { "$ref": "#/$defs/stdin" },
+        "ok_exit": { "$ref": "#/$defs/exitCodes" },
+        "stderr": { "const": "merge" },
+        "encoding": { "enum": ["utf-8", "utf-16le", "utf-16be", "latin1"] },
+        "max_log_bytes": { "$ref": "#/$defs/size" },
+        "keep_descendants": { "$ref": "#/$defs/bool" },
+        "capture": {
+          "anyOf": [
+            { "$ref": "#/$defs/varName" },
+            {
+              "type": "object",
+              "minProperties": 1,
+              "propertyNames": { "$ref": "#/$defs/varName" },
+              "additionalProperties": { "$ref": "#/$defs/jsonPath" }
+            }
+          ]
+        },
+        "capture_file": { "$ref": "#/$defs/varName" },
+        "secret": { "$ref": "#/$defs/bool" },
+
+        "name": { "$ref": "#/$defs/scalar" },
+        "when": { "$ref": "#/$defs/condition" },
+        "timeout": { "$ref": "#/$defs/duration" },
+        "lock": {
+          "anyOf": [
+            { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+            {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+                "wait": { "$ref": "#/$defs/duration" }
+              },
+              "required": ["name"],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "tempdir": {
+          "anyOf": [
+            { "$ref": "#/$defs/trueOnly" },
+            {
+              "type": "object",
+              "minProperties": 1,
+              "properties": {
+                "as": { "$ref": "#/$defs/varName" },
+                "prefix": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,32}$" }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "cwd": { "$ref": "#/$defs/pathValue" },
+        "env": { "$ref": "#/$defs/envMap" },
+        "export": { "$ref": "#/$defs/nameList" },
+        "container": { "$ref": "#/$defs/container" },
+        "become": { "$ref": "#/$defs/become" },
+        "services": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/service" } },
+        "finally": { "$ref": "#/$defs/nodeList" },
+        "finally_timeout": { "$ref": "#/$defs/duration" },
+        "ignore_errors": { "$ref": "#/$defs/bool" },
+
+        "retry": {
+          "anyOf": [
+            { "$ref": "#/$defs/trueOnly" },
+            { "$ref": "#/$defs/condition" }
+          ]
+        },
+        "while": { "$ref": "#/$defs/condition" },
+        "until": { "$ref": "#/$defs/condition" },
+        "for": { "$ref": "#/$defs/forSpec" },
+        "attempt_timeout": { "$ref": "#/$defs/duration" },
+        "max": { "$ref": "#/$defs/posInt" },
+        "every": { "$ref": "#/$defs/duration" },
+        "backoff": {
+          "type": "object",
+          "properties": {
+            "factor": { "$ref": "#/$defs/decimal" },
+            "max": { "$ref": "#/$defs/duration" }
+          },
+          "required": ["factor"],
+          "additionalProperties": false
+        },
+        "jitter": { "$ref": "#/$defs/decimal" },
+        "on_body_failure": { "enum": ["stop", "continue"] },
+        "collect": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/varName" },
+          "additionalProperties": { "$ref": "#/$defs/varName" }
+        }
+      }
+    },
+    "kindChoice": {
+      "description": "Exactly one kind per node.",
+      "oneOf": [
+        { "required": ["exec"] },
+        { "required": ["script"] },
+        { "required": ["do"] },
+        { "required": ["all"] },
+        { "required": ["any"] },
+        { "required": ["race"] },
+        { "required": ["if"] },
+        { "required": ["sleep"] },
+        { "required": ["log"] },
+        { "required": ["fail"] },
+        { "required": ["assert"] }
+      ]
+    },
+    "node": {
+      "type": "object",
+      "allOf": [
+        { "$ref": "#/$defs/nodeProps" },
+        { "$ref": "#/$defs/kindChoice" }
+      ],
+      "unevaluatedProperties": false
+    },
+    "input": {
+      "type": "object",
+      "properties": {
+        "default": { "$ref": "#/$defs/scalar" },
+        "description": { "type": "string" },
+        "in": { "$ref": "#/$defs/stringList" },
+        "matches": { "type": "string" }
+      },
+      "not": { "required": ["in", "matches"] },
+      "minProperties": 1,
+      "additionalProperties": false
+    },
+    "root": {
+      "type": "object",
+      "allOf": [
+        { "$ref": "#/$defs/nodeProps" },
+        { "$ref": "#/$defs/kindChoice" }
+      ],
+      "properties": {
+        "blokky": { "$ref": "#/$defs/specVersion" },
+        "inputs": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/varName" },
+          "additionalProperties": { "$ref": "#/$defs/input" }
+        },
+        "outputs": { "$ref": "#/$defs/nameList" },
+        "defaults": {
+          "type": "object",
+          "minProperties": 1,
+          "properties": {
+            "shell": { "$ref": "#/$defs/shell" },
+            "leaf_timeout": { "$ref": "#/$defs/duration" },
+            "become": { "$ref": "#/$defs/user" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": ["blokky"],
+      "unevaluatedProperties": false
+    }
+  }
 }

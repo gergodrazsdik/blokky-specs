@@ -20,3 +20,4 @@ and the specification adheres to [Semantic Versioning](https://semver.org/spec/v
 - Draft error catalogue (`spec/errors.md`): code rules and stability, phases and exit codes, and every built-in `BK_` code with its `detail` fields and retry behaviour.
 - Draft output contract (`spec/output-contract.md`): stdout and stderr rules, run dir files, the run report, the pre-run envelope, the error object, the event log, leaf output, report truncation and contract versioning.
 - Draft leaves and validation (`spec/leaves-and-validation.md`): the `leaves` document, units and their fields, the rendered form and markers, effects, flags, nested plans, and the validator protocol.
+- Draft JSON Schemas (`schema/`): plan, report and pre-run envelope, events, `leaves`, validator request and response.
