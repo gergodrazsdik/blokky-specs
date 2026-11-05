@@ -149,7 +149,7 @@ When a run fails before it starts (EM-1), stdout carries:
 }
 ```
 
-- **OC-11.** `status` is always `invalid`. `phase` is the phase of the first error by exit-code order: `usage`, `plan`, `config`, `approval` ([errors.md §2](errors.md#2-phases)).
+- **OC-11.** `status` is always `invalid`. `phase` names the first failing step in the order Blokky checks an invocation (arguments, `--expect-sha256`, config, plan, input values, approval; blokky-cli `cli.md`): `usage`, `approval` (for a sha mismatch), `config`, `plan`, `usage` (for input values) or `approval`. The exit code is that step's ([errors.md §2](errors.md#2-phases)).
 - **OC-12.** `errors` lists every error found, each an error object (§5); plan errors carry `pos` and, where the error has one, `fix` (the corrected YAML snippet).
 - **OC-13.** There is no `run_id`, no run dir and nothing to clean.
 

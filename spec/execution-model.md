@@ -125,7 +125,7 @@ Rules:
 
 ### 7.3 Shutdown mode
 
-- **EM-39.** SIGINT, SIGTERM and SIGHUP (Unix) and console control events (Windows) put Blokky into **shutdown mode**: cancel all nodes, run `finally`, write a partial report, exit with 128 + the signal number (130 for SIGINT and for Ctrl-C/Ctrl-Break on Windows). Leaves killed this way carry `killed_by: shutdown`.
+- **EM-39.** SIGINT, SIGTERM and SIGHUP (Unix) and console control events (Windows) put Blokky into **shutdown mode**: cancel all nodes, run `finally`, write a partial report, exit with 128 + the signal number (130 for SIGINT and for Ctrl-C/Ctrl-Break on Windows; 129 for the Windows console close, logoff and shutdown events). Leaves killed this way carry `killed_by: shutdown`.
 - **EM-40.** A **second** interrupt skips the remaining `finally` work and force-kills everything; the report is still written.
 - **EM-41.** Leaves run in their own sessions, so a Ctrl-C in Blokky's terminal reaches only Blokky; Blokky then stops the leaves itself.
 - **EM-42.** If stdout is closed (`blokky run … | head`), the report is written to the run dir only and the exit code is unchanged.
