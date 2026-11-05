@@ -7,6 +7,10 @@ and the specification adheres to [Semantic Versioning](https://semver.org/spec/v
 
 ## [Unreleased]
 
+### Changed
+
+- The repository covers only the language; runtime contracts move to blokky-cli, and the spec is versioned as `1.0.0-draft.N` without milestone tags ([ADR 0013](adr/0013-scope-and-versioning.md)). The move itself follows in later changes.
+
 ### Added
 
 - Draft glossary (`spec/glossary.md`).
