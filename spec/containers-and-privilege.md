@@ -9,7 +9,7 @@ Decisions: [ADR 0005](../adr/0005-containers-become-locks.md), [ADR 0012](../adr
 ## 1. Path model (v0.1)
 
 - **CP-1.** `path:` subjects, `for: { glob }`, `tempdir`, `cwd`, `capture_file`, `stdin: { file }` and `mounts[].host` are **host** paths, evaluated by Blokky on the host, in every milestone.
-- **CP-2.** Under `container`, only processes run inside the container: leaves, probes and services. A `path:` condition on a container node still checks the host; the `path-on-container` lint rule warns.
+- **CP-2.** Under `container`, only processes run inside the container: leaves, probes and services. A `path:` condition on a container node still checks the host; implementations SHOULD warn about it.
 
 ## 2. `container`
 
@@ -40,8 +40,8 @@ Decisions: [ADR 0005](../adr/0005-containers-become-locks.md), [ADR 0012](../adr
 ### 2.2 Lifecycle
 
 - **CP-4.** The container starts when the node is entered (after `lock`, `tempdir`, `cwd` and `env`; [execution-model.md](execution-model.md)), within the node's `timeout`, and runs an idle process. Each leaf, probe and service under the node runs in it through `<engine> exec`.
-- **CP-5.** At node end (after `finally`), the container is **stopped, not removed**, so it can be inspected. It is labelled with the run id and registered as an artefact; `blokky clean` and `gc` remove it.
-- **CP-6.** The report records the engine, the image digest and the container id. `leaves` lists the engine commands Blokky will issue as `derived` units, rendered by the single invocation builder.
+- **CP-5.** At node end (after `finally`), the container is **stopped, not removed**, so it can be inspected. Removing it later is the implementation's business (for blokky-cli: `blokky clean`).
+- **CP-6.** The run result records the engine, the image digest and the container id. The engine commands the implementation issues are part of what the plan executes, and are visible before the run like any other process ([reference.md §9](reference.md#9-security-considerations)).
 - **CP-7.** The engine CLI is started with Blokky's own environment, not the node's `env`, so a node can't redirect it (for example with `DOCKER_HOST`). Which engines are supported and how one is chosen is a later question (Q16b).
 - **CP-8.** Terminating a leaf inside a container uses an in-container process group with a recorded PID: TERM, grace period, KILL through `<engine> exec … kill`, and stopping the container as the fallback. *Provisional — verify in spike*, including images without a shell or `kill`.
 
@@ -49,7 +49,7 @@ Decisions: [ADR 0005](../adr/0005-containers-become-locks.md), [ADR 0012](../adr
 
 - **CP-9.** **Default mount.** When `mounts` is not given, the node's effective **cwd is mounted read-write at the same path**, wherever it is; Blokky doesn't assume a git repository.
 - **CP-10.** **Path mapping.** "The same path" means the host path on Linux and macOS. On a Windows host with a Linux container, a host path `C:\src\app` maps to `/c/src/app` (lowercase drive letter, forward slashes); with a Windows container it stays as it is. The same mapping applies to the container-side defaults of `{ var }` host paths.
-- **CP-11.** **Runtime mounts** are always added: the run's scripts dir, read-only, at a fixed container path; and the node's own `tempdir`, read-write, when the node has one (it is the cwd, so it is the cwd mount). How the trampoline binary becomes available in the container is *provisional — verify in spike*.
+- **CP-11.** **Runtime mounts** are always added: the run's scripts dir, read-only, at a fixed container path; and the node's own `tempdir`, read-write, when the node has one (it is the cwd, so it is the cwd mount).
 - **CP-12.** **Explicit mounts.** A `mounts` list replaces the default cwd mount; it doesn't add to it. `mounts: []` mounts only the runtime dirs.
 - **CP-13.** Each entry is `{ host, path, read_only }`: `host` is a host path (literal or `{ var: X }`), relative paths resolve against the **invocation** cwd; `path` is an absolute container path (literal); `read_only` defaults to `false`.
 - **CP-14.** **The container cwd** is the container path the node's effective cwd maps to through the mounts. A cwd that maps through no mount is an error ("add a mount for … or set `cwd` to a container path"). An absolute `cwd` that isn't a host path under a mount is taken as a container path.
@@ -57,8 +57,8 @@ Decisions: [ADR 0005](../adr/0005-containers-become-locks.md), [ADR 0012](../adr
 ### 2.4 Inside the container
 
 - **CP-15.** `exec` argv[0] resolves **inside** the container (the engine's lookup), not on the host. `script` leaves need their shell in the image; the script file is read from the read-only scripts mount.
-- **CP-16.** A container process's environment is the image's environment, plus the scoped `env` and `export` mappings of the node and its ancestors, plus the `env_pass` names (taken from Blokky's environment), plus `BLOKKY_RUN_ID` and `BLOKKY_MAX_DURATION`. The host environment is not passed otherwise.
-- **CP-17.** **User.** Without `user`, processes run as the image's default user, as with `docker run`. On a rootful engine, running as root with a read-write mount creates root-owned files on the host; the `container-root-write` lint rule warns.
+- **CP-16.** A container process's environment is the image's environment, plus the scoped `env` and `export` mappings of the node and its ancestors, plus the `env_pass` names (taken from the environment the run started with), plus the `BLOKKY_*` variables. The host environment is not passed otherwise.
+- **CP-17.** **User.** Without `user`, processes run as the image's default user, as with `docker run`. On a rootful engine, running as root with a read-write mount creates root-owned files on the host; implementations SHOULD warn about it.
 - **CP-18.** Probes on a container node run inside the container (they are processes). `when` is evaluated in the parent's scope, outside the container.
 
 ### 2.5 Nesting
@@ -68,7 +68,7 @@ Decisions: [ADR 0005](../adr/0005-containers-become-locks.md), [ADR 0012](../adr
 
 ### 2.6 Security
 
-Containers are not a sandbox by default. Mounting the engine socket, adding capabilities or running privileged is equivalent to host root; the `container-privileged` lint rule flags engine-socket mounts. The default read-write cwd mount gives the container the same access to the workspace as a host leaf. Blokky never uses a container to decide what is allowed.
+Containers are not a sandbox by default. Mounting the engine socket, adding capabilities or running privileged is equivalent to host root; implementations SHOULD flag engine-socket mounts. The default read-write cwd mount gives the container the same access to the workspace as a host leaf. Blokky never uses a container to decide what is allowed.
 
 ## 3. `become`
 
@@ -86,7 +86,7 @@ do:
 ```
 
 - **CP-21.** `become: USER`, `become: invoker` or `become: { user: USER }` (literal). `defaults.become` takes the same values and applies to every leaf and probe without its own `become`.
-- **CP-22.** `become` is enabled only by a **user-only** config switch; without it, a plan using `become` fails before it runs, with a message naming the switch. It is an accident-prevention and reviewability opt-in: `sudo -n` in a leaf is equally available.
+- **CP-22.** Implementations MAY require an explicit opt-in by the user before `become` is used; without it, a plan using `become` fails before it runs (`BK_BECOME_DISABLED`). Such an opt-in is accident prevention, not a control: `sudo -n` in a leaf is equally available.
 
 ### 3.2 Users
 
@@ -96,32 +96,20 @@ do:
 
 ### 3.3 Mechanism
 
-- **CP-26.** When Blokky runs as root, it **drops privileges** itself for leaves with another `become` user; no elevation tool is used.
-- **CP-27.** Otherwise it runs the leaf through `sudo -n -u USER` or `doas -n -u USER` (passwordless only; Blokky never prompts or forwards passwords). A user-only config key chooses the tool; when unset, Blokky uses `sudo` if it resolves on `PATH`, else `doas`. A tool that needs a password fails the leaf.
-- **CP-28.** **Transport.** The leaf is started as `<tool> -n -u USER <absolute blokky> __exec`; the trampoline reads argv, the environment and the script text from an inherited pipe. Nothing sensitive appears on a command line, and the sudoers or doas.conf environment policy doesn't matter. *Provisional — verify in spike*, including tools that close extra file descriptors.
-- **CP-29.** **Files.** A `become` node's own `tempdir` is created by the target user (mode 0700). Captured output flows back through the Blokky parent, which stays the owner of capture files. The run dir and ancestor tempdirs stay unreadable to the target user: using one as the cwd of a `become` node is a plan error where it can be detected statically, and a run-time error otherwise. File modes are never relaxed; later versions may extend access (ACLs, ownership) but never loosen modes.
-- **CP-30.** Killing a leaf across a privilege boundary (a non-root Blokky stopping a root leaf) is not guaranteed. *Provisional — verify in spike*, for both `sudo` and `doas`.
+- **CP-26.** When the run has root privileges, leaves with another `become` user run with privileges **dropped** to that user; no elevation tool is used.
+- **CP-27.** Otherwise the leaf runs through a passwordless elevation tool, `sudo -n -u USER` or `doas -n -u USER`; Blokky never prompts for or forwards passwords. Which tool is used is the implementation's choice (for blokky-cli: configurable, `sudo` first). A tool that needs a password fails the leaf.
+- **CP-28.** **Transport.** A `become` leaf gets exactly the argv, environment and script text it would get without `become`, whatever environment policy sudoers or doas.conf set, and none of it appears on a command line visible to other users. How this is done is the implementation's business (for blokky-cli: a `blokky __exec` trampoline, *provisional — verify in spike*).
+- **CP-29.** **Files.** A `become` node's own `tempdir` is created by the target user (mode 0700). Capture files stay owned by the run's user. Files the run owns and ancestor tempdirs stay unreadable to the target user: using one as the cwd of a `become` node is a plan error where it can be detected statically, and a run-time error otherwise. File modes are never relaxed; later versions may extend access (ACLs, ownership) but never loosen modes.
+- **CP-30.** Stopping a leaf across a privilege boundary (a non-root run stopping a root leaf) is best effort; timeouts and cancellation may not reach it. *Provisional — verify in spike.*
 
 ### 3.4 Running as root
 
-- **CP-31.** When Blokky runs with euid 0, the user-level config is root's own: Blokky uses root's passwd home and ignores `XDG_CONFIG_HOME`/`HOME`. The file MUST be root-owned and not group- or world-writable, else it is a config error. The invoking user's config is not read; repo configs still apply.
-- **CP-32.** When Blokky runs as root and the plan has no `defaults.become`, the `root-run` lint rule warns at run start (raised to `error` by `strict`).
-- **CP-33.** Strict mode flags raw `sudo`, `doas`, `su`, `pkexec` and `runas` in leaves (`raw-privilege-escalation`).
+- **CP-32.** When the run has root privileges and the plan has no `defaults.become`, implementations SHOULD warn at run start.
 
 ### 3.5 Visibility
 
-- **CP-34.** `leaves`, `blokky plan` and the report show, per leaf and probe, the effective user, whether elevation is used and with which tool.
+- **CP-34.** The effective user of every leaf and probe, whether elevation is used and with which tool, is determined statically, so implementations can show it before a run, and it is part of the run result.
 
 ### 3.6 Windows
 
 - **CP-35.** `become` is Unix-only until out-of-band consent (*later*, Q18) exists; on Windows a reached `become` that would change the user fails the node.
-
-## 4. Agent handoff pattern (works in v0.1)
-
-Without `become`, an agent can still prepare work that needs root, and the user runs it:
-
-1. The agent writes the plan to a `*.blokky.yaml` file.
-2. The user reviews it (`blokky plan`, `blokky leaves`) and notes the printed SHA-256.
-3. The user runs it: `sudo blokky run --expect-sha256 <hash> [--input NAME=VALUE …] file.blokky.yaml`. The hash covers the plan; the reviewed input values are visible in `blokky plan --input …` and recorded in the report.
-
-Any password prompt happens in the user's terminal, before Blokky starts.

@@ -23,7 +23,7 @@ This document is normative for how leaves become processes: splitting `exec` str
   - unquoted `|`, `&`, `;`, `<`, `>`, `(`, `)`, `*`, `?`, `[`, `]`, `{`, `}`, and `~` or `#` at the start of a word;
   - `$` or a backtick outside single quotes;
   - an unterminated quote, or a string with no words.
-- **SH-8.** `blokky plan` and `leaves` show the resulting argv.
+- **SH-8.** The resulting argv is determined statically, so implementations can show it before a run.
 
 ### 1.3 Windows command lines
 
@@ -34,7 +34,7 @@ This document is normative for how leaves become processes: splitting `exec` str
 
 ### 2.1 Script file
 
-- **SH-11.** The script text is written to a file in the run dir, `scripts/<node-file-name>.<ext>`, with mode 0600, before the leaf starts. `<node-file-name>` is derived from the node's path id; it is never derived from `name`. The extension is `.sh` for `bash` and `sh` and `.ps1` for `pwsh` and `powershell`.
+- **SH-11.** The script text is written to a file owned by the run (readable only by the run's user) before the leaf starts. Its name is derived from the node's path id, never from `name`. The extension is `.sh` for `bash` and `sh` and `.ps1` for `pwsh` and `powershell`.
 - **SH-12.** The file holds the text as written (YAML block scalars give LF line endings), encoded as UTF-8 without a BOM, except for `powershell` (Windows PowerShell 5.1), which gets a UTF-8 BOM so it reads non-ASCII text correctly.
 - **SH-13.** The file is passed to the shell **as a file**, never with `-c`: there are no command-line length limits, no quoting layer, and the exact script stays inspectable until `clean`. Consequences: `$0` (POSIX) and `$PSCommandPath` (PowerShell) are the script file's path, and shell error messages name that file.
 - **SH-14.** The text never interpolates `${…}`. Plan variables reach it only through `env:` and `export:` as environment variables.
@@ -58,26 +58,26 @@ This document is normative for how leaves become processes: splitting `exec` str
 - **SH-16.** In bash, `pipefail` is set with the `-o pipefail` option, so the script text is unchanged and line numbers match the plan. A failing command in the middle of a bash or sh script doesn't stop it; the script's exit status is the leaf's.
 - **SH-17.** **PowerShell prologue.** Blokky inserts `$ErrorActionPreference = 'Stop';` (followed by a space) at the start of the first line of the script that isn't blank, a comment, or a `using` statement. The prologue shares that line, so line numbers in error messages stay exact ([ADR 0011](../adr/0011-pwsh-prologue.md)). A `param(` block at that position is a plan error (plan scripts receive no arguments). With the prologue, a cmdlet error ends the script with exit code 1 instead of being written to stderr while the script exits 0.
 - **SH-18.** `$PSNativeCommandUseErrorActionPreference` is not set: a failing native program doesn't stop a PowerShell script, matching "no `-e`" in bash.
-- **SH-19.** The exact invocation, including the prologue, is shown in `leaves` and `blokky plan`.
+- **SH-19.** The exact invocation, including the prologue, is determined statically, so implementations can show it before a run.
 - **SH-20.** The exit code of `pwsh -File` and `powershell -File` for a script that ends without `exit` after a failing native command is *provisional — verify in spike*; the spec will state it.
 
 ### 2.3 Choosing the shell
 
-- **SH-21.** A `script` leaf's (or script probe's) shell is, in order: its own `shell:`, `defaults.shell`, the config key `shell`, then detection.
-- **SH-22.** **Detection** is fixed and deterministic: on Unix, `bash` if it resolves on `PATH`, else `sh` (`$SHELL` is never consulted); on Windows, `pwsh`, else `powershell`. `blokky plan` shows the result.
+- **SH-21.** A `script` leaf's (or script probe's) shell is, in order: its own `shell:`, `defaults.shell`, the implementation's configuration (if it has one), then detection.
+- **SH-22.** **Detection** is fixed and deterministic: on Unix, `bash` if it resolves on `PATH`, else `sh` (`$SHELL` is never consulted); on Windows, `pwsh`, else `powershell`.
 - **SH-23.** A reached `script` whose shell isn't supported on the current OS (§5), or can't be resolved, fails the node. Statically false `host:` branches are pruned before this check, so portable plans work.
 
 ## 3. A leaf's environment
 
-- **SH-24.** A leaf's environment is built as in [variables.md §7](variables.md#7-environment): Blokky's environment, the scoped `env`/`export` mappings, `BLOKKY_RUN_ID` and `BLOKKY_MAX_DURATION`; then `BASH_ENV` and `ENV` are removed, so no shell reads a startup file through them.
+- **SH-24.** A leaf's environment is built as in [variables.md §7](variables.md#7-environment): the environment the run started with, the scoped `env`/`export` mappings and the `BLOKKY_*` variables; then `BASH_ENV` and `ENV` are removed, so no shell reads a startup file through them.
 
 ## 4. Executable resolution
 
 - **SH-25.** Resolution uses **Blokky's own** `PATH`, never a node's `env`, and never the current directory or Blokky's own directory.
 - **SH-26.** An argv[0] that contains a path separator (`./tools/gen`, `C:\tools\gen.exe`) is a path, resolved against the node's cwd if relative; it is not looked up on `PATH`.
 - **SH-27.** On Windows, a name without an extension is tried with `.com` and `.exe` only, in that order; the `PATHEXT` variable is ignored. `.bat` and `.cmd` are never run directly (SH-10).
-- **SH-28.** Shell binaries resolve the same way, unless the user-only config key `shells.<name>.path` gives an absolute path. On Windows, `bash` and `sh` resolve **only** through that key (Git Bash or MSYS), never through `PATH`, which could find `C:\Windows\System32\bash.exe`, the WSL launcher ([ADR 0003](../adr/0003-execution-defaults.md)).
-- **SH-29.** The launcher receives the resolved absolute path, so platform search orders don't apply (*provisional — verify in spike*). The resolved path appears in `leaves`, `blokky plan` and the report.
+- **SH-28.** Shell binaries resolve the same way, unless the implementation is configured with an absolute path for that shell (for blokky-cli: the user-only key `shells.<name>.path`). On Windows, `bash` and `sh` resolve **only** through such configuration (Git Bash or MSYS), never through `PATH`, which could find `C:\Windows\System32\bash.exe`, the WSL launcher ([ADR 0003](../adr/0003-execution-defaults.md)).
+- **SH-29.** The launcher receives the resolved absolute path, so platform search orders don't apply (*provisional — verify in spike*). The resolved path is part of the run result.
 
 ## 5. Shell × OS matrix
 
@@ -95,21 +95,16 @@ This document is normative for how leaves become processes: splitting `exec` str
 
 ## 6. Injection properties
 
-These describe how values that reach a shell through the environment can still change what runs. They are documented hygiene; lint rules flag the common mistakes. None of them is a control ([reference.md §9](reference.md#9-security-considerations)).
+These describe how values that reach a shell through the environment can still change what runs. They are documented hygiene; implementations may flag the common mistakes. None of them is a control ([reference.md §9](reference.md#9-security-considerations)).
 
-- **POSIX shells.** An unquoted `$X` is split into words and globbed, so a value can inject extra arguments or file names. Write `"$X"`. The `posix-unquoted-var` lint rule flags unquoted expansions of exported names.
-- **PowerShell variables.** An exported plan variable is an environment variable: write `$env:X`, not `$X` or `${X}` (which refer to PowerShell variables and are empty). The `pwsh-env-var-syntax` lint rule flags it.
+- **POSIX shells.** An unquoted `$X` is split into words and globbed, so a value can inject extra arguments or file names. Write `"$X"`.
+- **PowerShell variables.** An exported plan variable is an environment variable: write `$env:X`, not `$X` or `${X}` (which refer to PowerShell variables and are empty).
 - **PowerShell argument passing.** PowerShell 7.3 and later pass arguments to native programs as given (`$PSNativeCommandArgumentPassing`); Windows PowerShell 5.1 re-quotes them and mishandles empty strings and embedded double quotes. Prefer `exec` for native programs with variable arguments.
-- **`.cmd` shims from PowerShell.** `npm`, `npx`, `pnpm`, `yarn` and other `.cmd`/`.bat` files re-parse their arguments in cmd.exe, so a variable argument is exposed to `%X%` expansion and cmd metacharacters. The `pwsh-cmd-shim-args` lint rule flags it; the safe alternative is an `exec` leaf that runs the package's JavaScript entry point with `node` ([ADR 0006](../adr/0006-shims-and-license.md)).
-- **Argument injection.** A value starting with `-` is read as an option by most programs. Put `--` before item values, captures and inputs passed as arguments, where the program supports it (the `argument-injection-dashdash` lint hint).
-- **Dynamic code.** Running a variable as code (`eval`, `source`, `.`, `sh -c "$X"`, `iex`, `Invoke-Expression`, a variable in command position) is flagged `dynamic_exec` in `leaves` (§7).
+- **`.cmd` shims from PowerShell.** `npm`, `npx`, `pnpm`, `yarn` and other `.cmd`/`.bat` files re-parse their arguments in cmd.exe, so a variable argument is exposed to `%X%` expansion and cmd metacharacters. The safe alternative is an `exec` leaf that runs the package's JavaScript entry point with `node` ([ADR 0006](../adr/0006-shims-and-license.md)).
+- **Argument injection.** A value starting with `-` is read as an option by most programs. Put `--` before item values, captures and inputs passed as arguments, where the program supports it.
+- **Dynamic code.** Running a variable as code (`eval`, `source`, `.`, `sh -c "$X"`, `iex`, `Invoke-Expression`, a variable in command position) is dynamic code; implementations may flag it for review (§7).
 
 ## 7. Script analysis
 
-- **SH-30.** In v0.1, Blokky analyses `script` text with **token-level heuristics** for POSIX shells and PowerShell. They drive the script-hygiene lint rules and set the `dynamic_exec` flag on a unit when the text contains:
-  - a variable expansion in command position;
-  - `eval`, `source`, `.` (as a command), or `sh`/`bash -c` with an expansion;
-  - `iex` or `Invoke-Expression`;
-  - an expansion piped into a known interpreter (`sh`, `bash`, `python`, `node`, `pwsh`, …).
-- **SH-31.** The heuristics may miss constructs; a missed case is a lint false negative, not a security failure, because `script` units are never auto-allowed by rules mode and validators see the full text. A hand-written POSIX lexer is planned after v0.1.
-- **SH-32.** Execution never switches between `exec` and `script` automatically. *Later*, a lint hint may suggest `exec` for scripts that use no shell features.
+- **SH-30.** The language doesn't require analysing `script` text. Implementations that flag dynamic code or common mistakes for review MAY analyse it heuristically; what they detect is implementation-defined (for blokky-cli: [`leaves`](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/contracts/leaves-and-validation.md) and its lint rules). A missed case is a review aid failing, not a security failure: `script` text is always shown in full.
+- **SH-32.** Execution never switches between `exec` and `script` automatically.

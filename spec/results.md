@@ -1,0 +1,79 @@
+# Run results
+
+Status: **draft** (spec 0.1, not yet finalized)
+
+This document defines the **run result**: the abstract outcome of a run that every implementation must be able to produce, and that conformance cases assert on. It fixes what is recorded, not how it is serialized; for blokky-cli the run result is serialized as the JSON run report ([output-contract.md](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/contracts/output-contract.md)). Normative keywords are used as defined in [syntax.md §1](syntax.md#1-conventions). Rules carry IDs (`RS-n`).
+
+## 1. Principles
+
+- **RS-1.** Every run that reaches execution ends with a run result (EM-3). A run that fails validation ends with its plan and input errors instead (EM-1, EM-2).
+- **RS-2.** The run result contains no secret value: secrets are masked as described in [variables.md §9](variables.md#9-secrets), and secret outputs are marked without a value.
+- **RS-3.** Nodes appear in plan order, as a tree mirroring the plan. Only the fields listed as non-deterministic (§6) may differ between two runs of the same plan with the same inputs and the same process behaviour.
+- **RS-4.** Implementations MAY record more than this document lists; conformance cases assert only on what is listed here.
+
+## 2. The run
+
+| Field | Meaning |
+|---|---|
+| plan | The plan's SHA-256 and the spec version from `blokky:`. |
+| inputs | Each input's value and its source (supplied, or `default`), in declaration order. |
+| status | `succeeded`, `failed` or `stopped` (EM-50). |
+| stop cause | For `stopped`: why the run was stopped from outside (implementation-defined values, for example `budget`, `interrupt`). |
+| error | The run's primary error (§5): the root node's error, or the external stop. None on success. |
+| outputs | Each `outputs` name with its final value, no value (`null`) if unbound, or marked secret ([variables.md §8](variables.md#8-outputs)). |
+| warnings | Warnings the implementation raised at validation or run time (for example a short secret that couldn't be masked). |
+| nodes | The root node's result (§3). |
+
+## 3. Nodes
+
+| Field | Applies to | Meaning |
+|---|---|---|
+| id | all | The node's path id. |
+| kind | all | The node's kind. |
+| name | if set | The raw `name` template. |
+| status | all | `succeeded`, `failed`, `skipped`, `timed_out` or `cancelled` ([execution-model.md §8](execution-model.md#8-status)). |
+| ignored | failed nodes | Whether `ignore_errors` hid the failure from the parent. |
+| skip reason | skipped nodes | `condition` or `not_reached`. |
+| error | failed, timed out, cancelled | The node's error (§5). |
+| repetition | `retry`, `while`, `until`, `for` | The number of attempts or iterations; what ended them (`condition`, `max`, `timeout`, `failure`, `success`); the last condition result (`true`, `false`, `error`); and for each attempt or iteration its index, rendered name, item, status and error. |
+| children | groups, `if` | The children's results, in plan order. |
+| finally | nodes with `finally` | The `finally` list's results and its status. |
+| messages | `log`, `fail`, `assert` | The rendered message and, for `log`, its level. |
+| probes | nodes whose conditions ran probes | For each executed probe: the command, exit code and result (`true`, `false`, `error`). |
+| captures | `exec`, `script` | The names of the variables the node bound (never their values). |
+
+### 3.1 Leaves
+
+| Field | Meaning |
+|---|---|
+| program | The resolved absolute path of argv[0] or of the shell. |
+| invocation | The argv as run (masked), including the shell invocation for `script`. |
+| exit code | The exit code (an unsigned 32-bit value on Windows), if the process exited. |
+| signal | The terminating signal (Unix), if any. |
+| killed by | If the run stopped the leaf: `timeout`, `attempt_timeout`, `cancel`, or the external stop's cause. |
+| descendants held output | Whether a descendant kept the output open after the leaf completed (EM-20). |
+| survivors | Processes still alive after a join's reap timeout (EM-32). |
+| user | *(later)* The effective user, and the elevation tool if any (CP-34). |
+| container | *(later)* The engine, image digest and container id (CP-6). |
+
+How much of a leaf's output the run result keeps (if any) is implementation-defined; conformance cases assert on output only through captures, `result:` conditions and outputs.
+
+## 4. Statuses and outcomes
+
+- **RS-5.** Node statuses and their propagation are defined in [execution-model.md §8](execution-model.md#8-status); the run status in EM-50.
+- **RS-6.** A node that never started has status `skipped` with its skip reason and no other result fields.
+
+## 5. Errors
+
+| Field | Meaning |
+|---|---|
+| code | A built-in `BK_` code ([errors.md](errors.md)) or a user code. |
+| message | Human-readable, masked. Not asserted on by conformance cases. |
+| node | The id of the node the error belongs to. |
+| detail | The code's machine-readable fields ([errors.md](errors.md)). |
+| causes | Nested errors, in order: the last attempt's error, aggregated child errors in plan order, an attached `finally` error. |
+| context | Extra context, for example an assertion's message and code on a condition error. |
+
+## 6. Non-deterministic fields
+
+Timestamps and durations; completion order; the winners of `any` and `race`; survivors; process ids; anything an implementation records beyond §2–§5. Conformance cases MUST NOT assert on them exactly; timing rules are checked with tolerances or a virtual clock ([conformance/README.md](../conformance/README.md)).

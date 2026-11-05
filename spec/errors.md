@@ -111,5 +111,5 @@ User codes from `fail` and `assert` (`code:`) are node errors too; `retry: true`
 | `BK_CWD_UNMAPPED` | The node's cwd maps through no container mount. |
 | `BK_SERVICE_NOT_READY` | A service's `ready:` condition didn't hold within `ready_timeout`. |
 | `BK_SERVICE_EXITED` | A service exited before it was ready. |
-| `BK_BECOME_DISABLED` | The plan uses `become`, but the user-only switch that enables it is off. |
+| `BK_BECOME_DISABLED` | The plan uses `become`, but the implementation requires an opt-in that the user hasn't given (CP-22). |
 | `BK_BECOME_FAILED` | The user switch failed: the elevation tool needed a password, the user doesn't exist, or the platform doesn't support it. |

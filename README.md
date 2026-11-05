@@ -26,6 +26,7 @@ A change that touches both repos gets two linked pull requests; the spec PR merg
 | [spec/shells.md](spec/shells.md) | `exec` splitting, per-shell invocation, OS matrix |
 | [spec/containers-and-privilege.md](spec/containers-and-privilege.md) | `container` and `become` (later milestone) |
 | [spec/errors.md](spec/errors.md) | The language's `BK_` error codes |
+| [spec/results.md](spec/results.md) | The abstract run result that conformance cases assert on |
 | [spec/glossary.md](spec/glossary.md), [spec/prior-art.md](spec/prior-art.md) | Terms; related tools |
 | [schema/](schema/) | The plan JSON Schema (normative for structure) |
 | [examples/](examples/README.md) | Runnable example plans |
