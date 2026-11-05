@@ -15,3 +15,4 @@ and the specification adheres to [Semantic Versioning](https://semver.org/spec/v
 - Draft execution model (`spec/execution-model.md`): run lifecycle, modifier order, start order, leaf processes, time limits, cancellation, run budget and shutdown, status propagation, with rule IDs for conformance.
 - Draft variables (`spec/variables.md`): namespaces, names, bindings, input values and errors, captures, scope, environment, outputs and secrets.
 - Draft conditions (`spec/conditions.md`): shape, subjects, operators, composites, probes, evaluation scope and condition errors.
+- Draft shells (`spec/shells.md`): `exec` splitting, Windows command lines, script files and the invocation table, shell choice, executable resolution, the shell × OS matrix, injection properties and script analysis.
