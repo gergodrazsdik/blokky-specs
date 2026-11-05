@@ -2,31 +2,28 @@
 
 Status: **draft** (spec 0.1, not yet finalized)
 
-This document is the catalogue of built-in error codes. It is normative for the code names, their meaning, the phase they occur in and how `retry: true` treats them. The JSON shape of an error object is in [output-contract.md](output-contract.md); exit codes are in blokky-cli `cli.md` ([blokky-cli ADR 0002](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/adr/0002-cli-run-lifecycle.md)). Normative keywords are used as defined in [syntax.md §1](syntax.md#1-conventions).
+This document is the catalogue of the built-in error codes of the language: plan errors, input errors and the node errors a plan can observe. It is normative for the code names, their meaning and how `retry: true` treats them. How errors are reported is up to the implementation ([results.md](results.md) gives the abstract model). Normative keywords are used as defined in [syntax.md §1](syntax.md#1-conventions).
 
 ## 1. Codes
 
 - **ER-1.** Built-in codes start with the reserved prefix `BK_` and match `^BK_[A-Z][A-Z0-9_]*$`. User codes (from `fail` and `assert`) match `^[A-Z][A-Z0-9_]*$` and MUST NOT start with `BK_`.
-- **ER-2.** Codes are a contract. Within a major spec version a code is never renamed, removed or given a different meaning; new codes MAY be added in any release. Consumers MUST treat an unknown code as a generic failure of its phase.
+- **ER-2.** Codes are a contract. Within a major spec version a code is never renamed, removed or given a different meaning; new codes MAY be added in any release. Consumers MUST treat an unknown code as a generic failure of its kind.
 - **ER-3.** Every error carries a code, a human-readable message (masked, display-sanitized) and, where useful, a `detail` object with machine-readable fields listed below, nested `causes` and `context`. Messages are not a contract; codes and `detail` fields are.
 
-## 2. Phases
+## 2. Kinds of errors
 
-| Phase | Where it is reported | Exit code |
+| Kind | When | Where it is defined |
 |---|---|---|
-| **Usage** | pre-run envelope | 2 |
-| **Plan** | pre-run envelope; `plan`, `leaves`, `lint`, `validate` | 3 |
-| **Config** | pre-run envelope | 4 |
-| **Approval** | pre-run envelope; hook verdicts | 5, 6 or 7 (§4) |
-| **Node** | the failing node's entry in the report | 1 (if it fails the run) |
-| **Run** | the report's run-level `error` | 8, 128+N, 70 |
-| **Cleanup** | `clean`/`gc` output; the report's `artifacts` | 9 |
+| **Plan error** | Before anything runs: the plan text, its structure or a static rule is invalid. | §4; the rules in [syntax.md](syntax.md) and [reference.md §8](reference.md#8-rules-the-schema-doesnt-express) |
+| **Input error** | Before anything runs: an input value is missing or invalid. | §3; [variables.md §4](variables.md#4-plan-inputs) |
+| **Node error** | While the plan runs: a node fails. Plans observe node errors through `result: error`, `retry:` conditions and statuses. | §5 |
 
-## 3. Usage and input errors
+How an implementation reports errors (JSON formats, exit codes) and the errors it adds for its own concerns (command-line usage, configuration, approval, run budget, cleanup) are not part of the language; for the reference implementation they are in [blokky-cli `docs/contracts/errors.md`](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/contracts/errors.md).
+
+## 3. Input errors
 
 | Code | Meaning |
 |---|---|
-| `BK_USAGE` | Malformed command-line flags or arguments (unknown flag, missing value, a disallowed spelling such as `--opt=v`). |
 | `BK_INPUT_SYNTAX` | A malformed `--input` (no `=`, a bad name) or MCP `inputs` object (non-string value, duplicate key). |
 | `BK_INPUT_UNKNOWN` | An input the plan doesn't declare. `detail.suggestion` gives a close name. |
 | `BK_INPUT_DUPLICATE` | The same input given twice. |
@@ -35,7 +32,7 @@ This document is the catalogue of built-in error codes. It is normative for the 
 | `BK_INPUT_INVALID` | A value that violates `in`/`matches` (`detail.constraint`) or the character rules. |
 | `BK_INPUT_TOO_LARGE` | A value over 4 KiB or all values over 32 KiB. |
 
-## 4. Plan, config and approval errors
+## 4. Plan errors
 
 Plan errors carry a line and column. `BK_PLAN_INVALID` covers every rule of [reference.md §8](reference.md#8-rules-the-schema-doesnt-express) and the static rules of the other spec files; `detail.rule` names the rule (for example `one-kind`, `bounded-loop`, `shadowing`), so new rules don't need new codes.
 
@@ -51,15 +48,6 @@ Plan errors carry a line and column. `BK_PLAN_INVALID` covers every rule of [ref
 | `BK_PLAN_VERSION` | `blokky:` missing, malformed or naming an unsupported version. `detail.supported` lists the supported versions. |
 | `BK_PLAN_VALUE` | A value that doesn't match its field's type or grammar (a boolean that isn't `true`/`false`, a bad duration, a bare number, an empty value or list, a regex that doesn't compile). |
 | `BK_PLAN_INVALID` | A structural or static semantic rule is violated. `detail.rule`. |
-| `BK_LINT` | A lint finding at severity `error`. `detail.rule` is the lint rule id. |
-| `BK_CONFIG` | A config file can't be read or parsed, fails its schema, or a non-user file sets a user-only key. `detail.file`, `detail.key`. |
-| `BK_SHA_MISMATCH` | The plan bytes don't match `--expect-sha256` (exit 7). |
-| `BK_APPROVAL_REQUIRED` | `require_hook_approval` is on and `blokky run` got no `--approval` (exit 5). |
-| `BK_APPROVAL_NOT_FOUND` | `--approval` names a record that doesn't exist or was already used (exit 5). |
-| `BK_APPROVAL_EXPIRED` | The approval record is older than `approval_ttl` (exit 5). |
-| `BK_APPROVAL_MISMATCH` | The run's cwd or resolved config/state locations differ from the approval record (exit 5). |
-| `BK_DENIED` | The validator or runner-rules mode denied the invocation (`validate`, exit 6). |
-| `BK_VALIDATOR_FAILED` | The validator timed out, crashed, was missing or answered invalid JSON; the verdict becomes `ask` (exit 5 for `validate`). |
 
 ## 5. Node errors
 
@@ -84,7 +72,7 @@ Plan errors carry a line and column. `BK_PLAN_INVALID` covers every rule of [ref
 |---|---|---|
 | `BK_TIMEOUT_TOTAL` | The node's own `timeout` (or `defaults.leaf_timeout`) fired. | never |
 | `BK_TIMEOUT_ATTEMPT` | The node's `attempt_timeout` fired for one attempt or iteration. | yes |
-| `BK_CANCELLED` | The node was cancelled from outside (a failing sibling, a decided `any`/`race`, an ancestor's limit). Its status is `cancelled`. | never |
+| `BK_CANCELLED` | The node was cancelled from outside: a failing sibling, a decided `any`/`race`, an ancestor's limit, or the runtime stopping the run (run budget, shutdown; `detail.reason`). Its status is `cancelled`. | never |
 
 ### 5.3 Conditions, variables and captures
 
@@ -125,19 +113,3 @@ User codes from `fail` and `assert` (`code:`) are node errors too; `retry: true`
 | `BK_SERVICE_EXITED` | A service exited before it was ready. |
 | `BK_BECOME_DISABLED` | The plan uses `become`, but the user-only switch that enables it is off. |
 | `BK_BECOME_FAILED` | The user switch failed: the elevation tool needed a password, the user doesn't exist, or the platform doesn't support it. |
-
-## 6. Run errors
-
-| Code | Meaning | Exit code |
-|---|---|---|
-| `BK_BUDGET_EXCEEDED` | The run budget was reached; Blokky cancelled the run. Leaves killed by it carry `killed_by: budget`. | 8 |
-| `BK_INTERRUPTED` | Blokky received a signal or console control event and shut down. `detail.signal`. | 128+N |
-| `BK_INTERNAL` | A bug in Blokky. The message asks for a report. | 70 |
-
-## 7. Cleanup errors
-
-| Code | Meaning | Exit code |
-|---|---|---|
-| `BK_CLEANUP_INCOMPLETE` | `clean`, `gc` or `run --cleanup` couldn't remove every artefact; the output lists each failure with its path and reason. | 9 (for `clean`/`gc`) |
-| `BK_RUN_NOT_FOUND` | `clean` or `report` names a run id that isn't registered. | 2 |
-| `BK_RUN_IN_PROGRESS` | `clean` names a run that is still in progress; nothing is deleted. | 2 |

@@ -9,7 +9,7 @@ and the specification adheres to [Semantic Versioning](https://semver.org/spec/v
 
 ### Changed
 
-- The repository covers only the language; runtime contracts move to blokky-cli, and the spec is versioned as `1.0.0-draft.N` without milestone tags ([ADR 0013](adr/0013-scope-and-versioning.md)). The move itself follows in later changes.
+- The repository covers only the language; runtime contracts move to blokky-cli, and the spec is versioned as `1.0.0-draft.N` without milestone tags ([ADR 0013](adr/0013-scope-and-versioning.md)). The JSON contracts (`output-contract.md`, `leaves-and-validation.md`), their four schemas and the CLI-only error codes now live in blokky-cli; `spec/errors.md` keeps the plan, input and node errors.
 
 ### Added
 

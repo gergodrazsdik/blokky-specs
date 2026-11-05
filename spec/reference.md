@@ -132,7 +132,7 @@ Starts all children at once, in declaration order; the **first child to complete
 `log: "Watching run ${RUN_ID}"` records a message.
 
 - **Companion `level`:** `debug`, `info` (default) or `warn`.
-- The message is a display string (`${X}` interpolation, secrets masked). It goes to the report and the event log, and to stderr according to the stderr rules in [output-contract.md](output-contract.md). No process is started. `log` replaces `echo` leaves.
+- The message is a display string (`${X}` interpolation, secrets masked). It is part of the run's result ([results.md](results.md)); where an implementation shows it (report, event log, stderr) is up to the implementation (for blokky-cli: [output-contract.md](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/contracts/output-contract.md)). No process is started. `log` replaces `echo` leaves.
 
 ### 2.10 `fail` (v0.1)
 

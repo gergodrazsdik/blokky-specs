@@ -21,7 +21,6 @@ The draft spec describes **every** planned feature, tagged `v0.1` or `later`. Va
 - **Repetition:** `retry`, `while`, `until`, and `for` over `each`, `count` and `glob`.
 - **Conditions:** `var`, `env`, `path`, `host`, `result` and `probe` subjects; string, set, regex, emptiness, existence and numeric operators; `all`/`any`/`not`.
 - **Plan document:** `blokky:` version, `inputs:` (string inputs with `in:`/`matches:` constraints), `outputs:`, `defaults:`.
-- **Contracts:** the run report, event log, `leaves` output and validator protocol, each with its own `schema_version`.
 
 ## Later
 

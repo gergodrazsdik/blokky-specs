@@ -107,7 +107,7 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 
 ## Output
 
-- **Report.** The JSON document describing a run: run-level fields and one entry per node in plan order. Printed on stdout (size-capped) and stored in full as `report.json`. See [output-contract.md](output-contract.md).
+- **Report.** The JSON document describing a run: run-level fields and one entry per node in plan order. Printed on stdout (size-capped) and stored in full as `report.json`. See [blokky-cli output-contract.md](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/contracts/output-contract.md).
 - **Pre-run envelope.** The JSON printed on stdout when a run fails before execution (parse, character-lint, sha-mismatch, config or input errors). It has no run id, and every error is listed at once.
 - **Event log.** `events.jsonl`, the append-only, sequence-numbered log of a run's events.
 - **Tail.** The last part of a leaf's stdout or stderr kept for the report: the last 50 lines, at most 4 KiB per stream.
@@ -118,7 +118,7 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 
 ## Validation and approval
 
-- **`leaves`.** The document (and the `blokky leaves` command) that lists everything a plan will execute, as units, with plan-dependent effects and flags. It spawns no process. See [leaves-and-validation.md](leaves-and-validation.md).
+- **`leaves`.** The document (and the `blokky leaves` command) that lists everything a plan will execute, as units, with plan-dependent effects and flags. It spawns no process. See [blokky-cli leaves-and-validation.md](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/contracts/leaves-and-validation.md).
 - **Unit.** One entry in `leaves`: an `exec`, `script`, `probe`, `service` (*later*) or `derived` command (*later*, for example a container engine call).
 - **Rendered form.** A unit written as the equivalent one-line command in the unit's own shell syntax, with env assignments as a prefix, so humans and rule matchers can read it like the equivalent bash call.
 - **Dynamic marker.** `<dynamic>` in a unit where a value is only known at run time (a capture). Missing inputs show as `<input:NAME>` instead.

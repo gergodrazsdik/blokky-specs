@@ -12,7 +12,7 @@ The design brief is in blokky-cli: `../blokky-cli/docs/design/brief.md` when bot
 
 **Current phase: specification.** No implementation code. Spike code is allowed only on unmerged `spikes/*` branches in blokky-cli, after the maintainer approves the spike plan.
 
-Shared files in this repo are owned by the main agent; subagents propose changes to them in their PR description: `spec/glossary.md`, `schema/*.json`, `spec/errors.md`, `spec/output-contract.md`, `adr/README.md`.
+Shared files in this repo are owned by the main agent; subagents propose changes to them in their PR description: `spec/glossary.md`, `schema/blokky.schema.json`, `spec/errors.md`, `adr/README.md`.
 
 ## Working agreement
 
