@@ -1,8 +1,8 @@
 # Glossary
 
-Status: **draft** (spec 0.1, not yet finalized)
+Status: **draft** (`1.0.0-draft`, not yet finalized)
 
-Terms used across the specification, grouped by topic. Each entry gives the short meaning and names the spec file that defines it normatively. Where this glossary and a defining file disagree, the defining file wins. Terms tagged *later* belong to a later milestone: their keywords are reserved in v0.1, and a v0.1 parser rejects them with a "not supported in this version" error.
+Terms used across the specification, grouped by topic. Each entry gives the short meaning and names the spec file that defines it normatively. Where this glossary and a defining file disagree, the defining file wins. Every feature belongs to the language 1.0; implementations may support them step by step.
 
 Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are concepts.
 
@@ -11,23 +11,22 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 - **Plan.** A YAML document that describes what to run: a single root mapping with plan-only keys (`blokky:`, `inputs:`, `outputs:`, `defaults:`) and one root node. See [syntax.md](syntax.md).
 - **Plan file.** A plan stored as `*.blokky.yaml` (or `*.blokky.yml`) and run by path.
 - **Stdin plan.** A plan passed on standard input, typically from a bash heredoc with a quoted delimiter.
-- **Spec version.** The version of this specification a plan targets, written as `MAJOR.MINOR` in the required `blokky:` field (`blokky: 0.1`). Spec patch releases never change the language. See [syntax.md](syntax.md).
+- **Spec version.** The version of this specification a plan targets, written as `MAJOR.MINOR` in the required `blokky:` field (`blokky: 1.0`). Spec patch releases never change the language. See [syntax.md](syntax.md).
 - **Plan SHA-256.** The SHA-256 of the exact plan bytes. It is part of the run result, and implementations can use it to check that the plan reviewed is the plan run.
 - **Surface rules.** The YAML restrictions every plan obeys: no anchors, aliases, merge keys, explicit tags, multi-document streams, duplicate keys or unknown keys; every scalar is a string. See [syntax.md](syntax.md).
 - **Character lint.** One pass over the raw decoded plan text, comments and keys included, before parsing. It allows only TAB, LF and CR as part of CRLF among control characters.
 - **Canonical form.** The single preferred spelling of a construct. Examples, the agent guide and fix-it snippets use canonical forms only; other accepted spellings are shorthands.
 - **Targeted error.** A parse or validation error that names the problem and includes a corrected YAML snippet (a *fix-it*).
-- **Milestone tag.** `v0.1` or `later`, carried by every feature in the reference. Value shapes are fixed for both, so adding a later feature never breaks a plan.
-- **Reserved keyword.** A keyword of a later feature (for example `race`, `lock`, `container`, `become`, `services`, `collect`) or one held back for future use (`consent`). Using it is an error in v0.1.
+- **Not supported.** A feature an implementation doesn't support yet. Plans that use it are rejected before anything runs (`BK_PLAN_NOT_SUPPORTED`); the language itself is the same for every implementation. `consent` is a keyword held back for future use; using it is a plan error.
 
 ## Nodes
 
 - **Node.** One element of the plan tree. Every node has exactly one **kind** and any number of **modifiers**. See [reference.md](reference.md).
-- **Kind.** What a node does: `exec`, `script`, `do`, `all`, `any`, `if`, `sleep`, `log`, `fail`, `assert` (v0.1); `race` (*later*).
+- **Kind.** What a node does: `exec`, `script`, `do`, `all`, `any`, `if`, `sleep`, `log`, `fail`, `assert`, `race`.
 - **Leaf.** A node that runs a process: an `exec` or `script` node. Probes and services also run processes but are not leaves.
 - **`exec` leaf.** Runs a program directly, without a shell, from an argv array (canonical) or a string split with POSIX shell-like rules and no expansion. See [shells.md](shells.md).
 - **`script` leaf.** Writes shell text to a script file owned by the run and runs it with the chosen shell. It compiles to an `exec` of that shell.
-- **Group.** A node whose kind runs child nodes: `do` (sequence), `all` (parallel, all must succeed), `any` (first success wins), `race` (*later*, first completion decides).
+- **Group.** A node whose kind runs child nodes: `do` (sequence), `all` (parallel, all must succeed), `any` (first success wins), `race` (first completion decides).
 - **Modifier.** A key that scopes, repeats, limits or labels a node, such as `when`, `timeout`, `cwd`, `env`, `finally`, `retry` or `capture`. Modifiers apply in a fixed order. See [execution-model.md](execution-model.md).
 - **Modifier order.** The normative nesting of modifiers, outermost to innermost: `when` → `timeout` → `lock` → `tempdir` → `cwd` → `env` → `container`/`become` → `services` → `finally` → repetition → `attempt_timeout` → kind.
 - **Companion field.** A field that belongs to one kind or modifier, such as `then`/`else` for `if`, `shell` for `script`, or `concurrency` and `fail_fast` for `all`.
@@ -63,12 +62,12 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 - **`outputs`.** The root key that names the variables a plan publishes in its run result.
 - **Secret.** A value marked as sensitive: from `{ from_env: NAME, secret: true }`, a `var` reference to a secret, or a capture with `secret: true`. Secrets come only by reference, never as inputs or literals.
 - **Masking.** Replacing secret values with `***` in everything an implementation shows, keeps or passes on about a run. Masking is hygiene, not secrecy.
-- **`collect`** (*later*). Gathers one captured value per `for` iteration into a list variable, ordered by item index.
+- **`collect`**. Gathers one captured value per `for` iteration into a list variable, ordered by item index.
 
 ## Conditions
 
-- **Condition.** The construct used by `if`, `when`, `assert`, `while`, `until`, `retry` and (*later*) `ready`: one subject key plus one operator key, or a composite, or a bare probe. See [conditions.md](conditions.md).
-- **Subject.** What a condition looks at: `var`, `env`, `path`, `host`, `result`, `probe` (v0.1); `port`, `output` (*later*, services only).
+- **Condition.** The construct used by `if`, `when`, `assert`, `while`, `until`, `retry` and `ready`: one subject key plus one operator key, or a composite, or a bare probe. See [conditions.md](conditions.md).
+- **Subject.** What a condition looks at: `var`, `env`, `path`, `host`, `result`, `probe`; `port`, `output` (services only).
 - **Operator.** How the subject is tested: `equals`, `in`, `contains`, `matches`, `empty`, `defined`, `exists`, `is_file`, `is_dir`, `open`, `gt`/`ge`/`lt`/`le`, and their negations where defined.
 - **Composite.** `all`, `any` or `not` over nested conditions.
 - **Probe.** A condition subject that runs a short `exec` or `script` and is true or false by its exit code. The only subject that spawns a process. Default `probe_timeout` 30s, stdout limit 64 KiB.
@@ -88,7 +87,7 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 - **Process tree kill.** Stopping a leaf together with everything it started.
 - **Descendants.** Processes a leaf started. By default the leaf's remaining process tree is stopped when the leaf completes; `keep_descendants: true` opts out. Every descendant dies no later than run end.
 - **Invocation.** The exact command line run for a leaf, including the shell flags and prologue for `script` leaves. It is determined statically ([shells.md](shells.md)).
-- **Shell.** A program that runs `script` leaves: `bash`, `sh`, `pwsh`, `powershell` (v0.1); `zsh`, `fish` (*later*). `cmd` is not supported.
+- **Shell.** A program that runs `script` leaves: `bash`, `sh`, `pwsh`, `powershell`, `zsh`, `fish`. `cmd` is not supported.
 - **Prologue.** Setup applied to every script of a shell, part of the invocation: `-o pipefail` for bash, `$ErrorActionPreference = 'Stop'` for PowerShell, none for `sh`.
 
 ## Runs and results
@@ -107,7 +106,7 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 - **Hygiene vs control.** Hygiene (warnings, masking, display sanitization) makes plans cleaner and more reviewable. Controls (the runner's permission system and the implementation's approval mechanisms) decide what may run. The spec never presents hygiene as a control.
 - **Implementation terms.** The report, event log, `leaves` document, hook, validator, approval records, run budget, configuration and lint rules belong to the implementation, not the language; for blokky-cli see [`docs/contracts/`](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/contracts/) and its configuration docs.
 
-## Containers, privilege and locks (*later*)
+## Containers, privilege and locks
 
 - **`container`.** A modifier that runs a node's leaves in an ephemeral container started for the node and stopped afterwards. By default the cwd is mounted read-write at the same path. See [containers-and-privilege.md](containers-and-privilege.md).
 - **Mount.** A host path made visible in a container: `{ host, path, read_only }`.

@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:blokky:schema:0.1:plan",
+  "$id": "urn:blokky:schema:1.0:plan",
   "title": "Blokky plan",
-  "description": "Blokky plan documents (spec 0.1, draft). Normative for structure; spec/reference.md is normative for semantics and lists the rules this schema can't express. Every plan scalar is a string to Blokky; so that YAML editors (which type unquoted scalars) validate too, scalar fields also accept JSON booleans and numbers of the right form.",
+  "description": "Blokky plan documents (spec 1.0.0-draft). Normative for structure; spec/reference.md is normative for semantics and lists the rules this schema can't express. Every plan scalar is a string to Blokky; so that YAML editors (which type unquoted scalars) validate too, scalar fields also accept JSON booleans and numbers of the right form.",
   "$ref": "#/$defs/root",
   "$defs": {
     "scalar": {

@@ -1,6 +1,6 @@
 # Errors
 
-Status: **draft** (spec 0.1, not yet finalized)
+Status: **draft** (`1.0.0-draft`, not yet finalized)
 
 This document is the catalogue of the built-in error codes of the language: plan errors, input errors and the node errors a plan can observe. It is normative for the code names, their meaning and how `retry: true` treats them. How errors are reported is up to the implementation ([results.md](results.md) gives the abstract model). Normative keywords are used as defined in [syntax.md §1](syntax.md#1-conventions).
 
@@ -44,7 +44,7 @@ Plan errors carry a line and column. `BK_PLAN_INVALID` covers every rule of [ref
 | `BK_PLAN_YAML` | Not valid YAML, or a rejected YAML feature (anchor, alias, merge key, tag, directive, second document, complex key). |
 | `BK_PLAN_DUPLICATE_KEY` | A key repeated in a mapping. |
 | `BK_PLAN_UNKNOWN_KEY` | A key that isn't valid at its position. `detail.suggestion` from did-you-mean or the synonym table. |
-| `BK_PLAN_NOT_SUPPORTED` | A keyword of a later feature, or the reserved `consent`, in a spec version that doesn't support it. |
+| `BK_PLAN_NOT_SUPPORTED` | A feature the implementation doesn't support yet, or the reserved `consent`. `detail.feature`. |
 | `BK_PLAN_VERSION` | `blokky:` missing, malformed or naming an unsupported version. `detail.supported` lists the supported versions. |
 | `BK_PLAN_VALUE` | A value that doesn't match its field's type or grammar (a boolean that isn't `true`/`false`, a bad duration, a bare number, an empty value or list, a regex that doesn't compile). |
 | `BK_PLAN_INVALID` | A structural or static semantic rule is violated. `detail.rule`. |
@@ -98,7 +98,7 @@ Plan errors carry a line and column. `BK_PLAN_INVALID` covers every rule of [ref
 | `BK_ANY_ALL_FAILED` | Every child of an `any` failed; each child's error is a cause, in plan order. | as its causes |
 | `BK_FINALLY_FAILED` | The node's body succeeded but its `finally` failed; the `finally` error is the cause. (If the body failed, its error stays primary and the `finally` error is attached.) | no |
 | `BK_GLOB_EMPTY` | A `for: { glob }` matched nothing and `allow_empty` isn't set. | no |
-| `BK_ITEMS_TOO_MANY` (*later*) | `items`/`lines` produced more than `max_items`. | no |
+| `BK_ITEMS_TOO_MANY` | `items`/`lines` produced more than `max_items`. | no |
 
 User codes from `fail` and `assert` (`code:`) are node errors too; `retry: true` doesn't retry them.
 

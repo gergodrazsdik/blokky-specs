@@ -1,8 +1,8 @@
 # Conditions
 
-Status: **draft** (spec 0.1, not yet finalized)
+Status: **draft** (`1.0.0-draft`, not yet finalized)
 
-This document is normative for conditions: the one construct used by `if`, `when`, `assert`, `while`, `until`, `retry` and (*later*) `ready`. It defines the shape, subjects, operators, composites, probes, condition errors and the scope a condition is evaluated in. Normative keywords are used as defined in [syntax.md §1](syntax.md#1-conventions). Rules carry IDs (`CO-n`) for conformance cases.
+This document is normative for conditions: the one construct used by `if`, `when`, `assert`, `while`, `until`, `retry` and `ready`. It defines the shape, subjects, operators, composites, probes, condition errors and the scope a condition is evaluated in. Normative keywords are used as defined in [syntax.md §1](syntax.md#1-conventions). Rules carry IDs (`CO-n`) for conformance cases.
 
 ## 1. Shape
 
@@ -24,16 +24,16 @@ A condition is a mapping in one of four forms:
 
 All subjects are evaluated by Blokky without starting a process, except `probe`.
 
-| Subject | Milestone | Value tested |
-|---|---|---|
-| `var: NAME` | v0.1 | Plan variable `NAME` ([variables.md](variables.md)). |
-| `env: NAME` | v0.1 | Environment variable `NAME` in the **effective** environment of the scope where the condition is evaluated (Blokky's environment plus enclosing `env`/`export`). |
-| `path: P` | v0.1 | Host filesystem path `P` (literal or `{ var: X }`), relative to the cwd of the evaluating scope. |
-| `host: os \| arch` | v0.1 | `os` ∈ {`linux`, `macos`, `windows`} (WSL is `linux`); `arch` ∈ {`x64`, `arm64`}. |
-| `result: stdout \| stderr \| exit \| error` | v0.1 | The node's own last attempt or iteration (§2.1). |
-| `probe: { … }` | v0.1 | A probe's exit code, or its trimmed stdout when an operator is given (§5). |
-| `port: N` | *later* | A loopback TCP port; `services` `ready:` conditions only. |
-| `output: stdout \| stderr` | *later* | A service's output so far; `services` `ready:` conditions only. |
+| Subject | Value tested |
+|---|---|
+| `var: NAME` | Plan variable `NAME` ([variables.md](variables.md)). |
+| `env: NAME` | Environment variable `NAME` in the **effective** environment of the scope where the condition is evaluated (Blokky's environment plus enclosing `env`/`export`). |
+| `path: P` | Host filesystem path `P` (literal or `{ var: X }`), relative to the cwd of the evaluating scope. |
+| `host: os \| arch` | `os` ∈ {`linux`, `macos`, `windows`} (WSL is `linux`); `arch` ∈ {`x64`, `arm64`}. |
+| `result: stdout \| stderr \| exit \| error` | The node's own last attempt or iteration (§2.1). |
+| `probe: { … }` | A probe's exit code, or its trimmed stdout when an operator is given (§5). |
+| `port: N` | A loopback TCP port; `services` `ready:` conditions only. |
+| `output: stdout \| stderr` | A service's output so far; `services` `ready:` conditions only. |
 
 ### 2.1 `result`
 
@@ -50,13 +50,13 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 |---|---|---|---|
 | `equals` | `not_equals` | string | `var`, `env`, `result`, `probe`, `host` |
 | `in` | `not_in` | non-empty list of strings | `var`, `env`, `result`, `probe`, `host` |
-| `contains` | `not_contains` | string (plain substring) | `var`, `env`, `result` (`stdout`, `stderr`), `probe`, `output` (*later*) |
-| `matches` | `not_matches` | regex | `var`, `env`, `result` (`stdout`, `stderr`), `probe`, `output` (*later*) |
+| `contains` | `not_contains` | string (plain substring) | `var`, `env`, `result` (`stdout`, `stderr`), `probe`, `output` |
+| `matches` | `not_matches` | regex | `var`, `env`, `result` (`stdout`, `stderr`), `probe`, `output` |
 | `empty` | `not_empty` | `true` | `var`, `env`, `result` (`stdout`, `stderr`, `error`), `probe` |
 | `defined` | `not_defined` | `true` | `var`, `env` |
 | `exists` | `not_exists` | `true` | `path` |
 | `is_file`, `is_dir` | — (use `not:`) | `true` | `path` |
-| `open` | — | `true` | `port` (*later*) |
+| `open` | — | `true` | `port` |
 | `gt`, `ge`, `lt`, `le` | (complementary) | number | `var`, `env`, `result` (`stdout`, `exit`), `probe` |
 
 - **CO-8.** Unary operators take the value `true` only.
@@ -137,7 +137,7 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 | `while` | before each iteration | the node's own scope; the first check sees only the enclosing bindings |
 | `until` | after each successful iteration | the node's own scope, plus the iteration's captures |
 | `retry: <condition>` | after each failed attempt | the node's own scope, plus the attempt's captures and `result:` |
-| `ready` (*later*) | polled until true | the service's scope |
+| `ready` | polled until true | the service's scope |
 
 - **CO-36.** "The node's own scope" means after the node's `tempdir`, `cwd`, `env`, `container` and `become` apply ([execution-model.md](execution-model.md), EM-8).
 - **CO-37.** Implementations SHOULD warn about a `when` that uses a relative `path:` or a probe on a node that sets `cwd`, `container` or `become`, because those apply only inside the node.

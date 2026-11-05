@@ -1,6 +1,6 @@
 # Run results
 
-Status: **draft** (spec 0.1, not yet finalized)
+Status: **draft** (`1.0.0-draft`, not yet finalized)
 
 This document defines the **run result**: the abstract outcome of a run that every implementation must be able to produce, and that conformance cases assert on. It fixes what is recorded, not how it is serialized; for blokky-cli the run result is serialized as the JSON run report ([output-contract.md](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/contracts/output-contract.md)). Normative keywords are used as defined in [syntax.md §1](syntax.md#1-conventions). Rules carry IDs (`RS-n`).
 
@@ -53,8 +53,8 @@ This document defines the **run result**: the abstract outcome of a run that eve
 | killed by | If the run stopped the leaf: `timeout`, `attempt_timeout`, `cancel`, or the external stop's cause. |
 | descendants held output | Whether a descendant kept the output open after the leaf completed (EM-20). |
 | survivors | Processes still alive after a join's reap timeout (EM-32). |
-| user | *(later)* The effective user, and the elevation tool if any (CP-34). |
-| container | *(later)* The engine, image digest and container id (CP-6). |
+| user | The effective user, and the elevation tool if any (CP-34). |
+| container | The engine, image digest and container id (CP-6). |
 
 How much of a leaf's output the run result keeps (if any) is implementation-defined; conformance cases assert on output only through captures, `result:` conditions and outputs.
 
