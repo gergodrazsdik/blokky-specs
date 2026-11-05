@@ -25,11 +25,9 @@ A change that touches both repos gets two linked pull requests; the spec PR merg
 | [spec/conditions.md](spec/conditions.md) | Subjects, operators, composites, probes |
 | [spec/shells.md](spec/shells.md) | `exec` splitting, per-shell invocation, OS matrix |
 | [spec/containers-and-privilege.md](spec/containers-and-privilege.md) | `container` and `become` (later milestone) |
-| [spec/errors.md](spec/errors.md) | `BK_` error catalogue |
-| [spec/output-contract.md](spec/output-contract.md) | Report, events, stderr rules, truncation |
-| [spec/leaves-and-validation.md](spec/leaves-and-validation.md) | `leaves` and validator contracts |
+| [spec/errors.md](spec/errors.md) | The language's `BK_` error codes |
 | [spec/glossary.md](spec/glossary.md), [spec/prior-art.md](spec/prior-art.md) | Terms; related tools |
-| [schema/](schema/) | JSON Schemas (normative for structure) |
+| [schema/](schema/) | The plan JSON Schema (normative for structure) |
 | [examples/](examples/README.md) | Runnable example plans |
 | [conformance/](conformance/README.md) | Conformance suite format and testkit interface |
 | [adr/](adr/README.md) | Language decision records |
@@ -38,7 +36,7 @@ A change that touches both repos gets two linked pull requests; the spec PR merg
 
 - The specification has its **own semantic version**, independent of blokky-cli. A plan's `blokky:` field names the spec version it targets (the exact scheme is open question Q13).
 - Each blokky-cli release declares which spec versions it supports.
-- Each JSON contract (report, events, `leaves`, validator protocol) carries its own `schema_version`; consumers ignore unknown fields. Schema `$id`s are versioned per spec release.
+- The plan schema's `$id` is versioned per spec release. The JSON formats of the reference implementation (report, events, `leaves`, validator protocol) are specified in [blokky-cli `docs/contracts/`](https://github.com/gergodrazsdik/blokky-cli/tree/main/docs/contracts).
 - Unknown keys in a plan are errors, so an older binary fails clearly on a newer plan.
 - **Everything may change until 1.0.** The spec and the tool stay 0.x until the plan format is frozen. Features are tagged `v0.1` or `later`; `later` keywords are already reserved so they can be added without breaking plans.
 - Releases are signed, annotated `vX.Y.Z` tags; [CHANGELOG.md](CHANGELOG.md) lists them.

@@ -144,7 +144,7 @@ All input errors are found and reported together, before the run starts (EM-1).
 
 ### 7.3 Execution-influencing variables
 
-Setting these changes what a program loads or runs. A unit whose environment sets one through `env` is flagged `exec_env_risk: true` in `leaves`, and the hook never auto-allows it without an explicit validator verdict ([leaves-and-validation.md](leaves-and-validation.md)):
+Setting these changes what a program loads or runs. A unit whose environment sets one through `env` is flagged `exec_env_risk: true` in `leaves`, and the hook never auto-allows it without an explicit validator verdict (blokky-cli [leaves-and-validation.md](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/contracts/leaves-and-validation.md)):
 
 `LD_*`, `DYLD_*`, `BASH_FUNC_*`, `NODE_OPTIONS`, `NODE_PATH`, `PYTHONPATH`, `PYTHONSTARTUP`, `PYTHONHOME`, `PERL5OPT`, `PERL5LIB`, `RUBYOPT`, `RUBYLIB`, `JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS`, `_JAVA_OPTIONS`, `DOTNET_STARTUP_HOOKS`, `DOTNET_ADDITIONAL_DEPS`, `CORECLR_PROFILER*`, `COR_PROFILER*`, `GIT_SSH_COMMAND`, `GIT_SSH`, `GIT_CONFIG_*`, `GIT_EXEC_PATH`, `GIT_ASKPASS`, `SSH_ASKPASS`, `GIT_PROXY_COMMAND`, `GIT_EXTERNAL_DIFF`, `DOCKER_HOST`, `DOCKER_CONFIG`, `KUBECONFIG`.
 
