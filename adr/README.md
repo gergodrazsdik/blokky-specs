@@ -16,6 +16,7 @@ ADRs are **grouped**: a baseline ADR, then one ADR per batch of answered open qu
 | [0006](0006-shims-and-license.md) | `.cmd` shims and the spec license (open-question batch 6) | accepted | Q-l, Q-q (license, testkit) |
 | [0007](0007-syntax-details.md) | Syntax details (draft round 1) | accepted | — (raised in T-0015) |
 | [0008](0008-repetition-details.md) | Repetition details (draft round 2) | accepted | — (brief §3.1 D15, raised in T-0016) |
+| [0009](0009-status-propagation.md) | Status propagation and joins (draft round 3) | accepted | — (brief §3.8 D15, raised in T-0017) |
 
 ## Format
 
