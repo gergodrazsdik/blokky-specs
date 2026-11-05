@@ -140,7 +140,7 @@ When a run fails before it starts (EM-1), stdout carries:
 {
   "schema_version": "0.1",
   "status": "invalid",
-  "phase": "input",
+  "phase": "usage",
   "errors": [
     { "code": "BK_INPUT_MISSING",
       "message": "required input BRANCH is missing: blokky run --input BRANCH=<value> --expect-sha256 9f2c41… wait-ci.blokky.yaml",
