@@ -10,6 +10,7 @@ and the specification adheres to [Semantic Versioning](https://semver.org/spec/v
 ### Changed
 
 - The repository covers only the language; runtime contracts move to blokky-cli, and the spec is versioned as `1.0.0-draft.N` without milestone tags ([ADR 0013](adr/0013-scope-and-versioning.md)). The JSON contracts (`output-contract.md`, `leaves-and-validation.md`), their four schemas and the CLI-only error codes now live in blokky-cli; `spec/errors.md` keeps the plan, input and node errors. The spec text no longer describes runtime mechanics (reports, run dir, configuration, budget, hook, lint, OS process control): it keeps the observable rules and points to blokky-cli. The execution model's run budget and shutdown rules become implementation-neutral **external stops** (EM-55 to EM-57).
+- No milestone tags: the spec describes the whole language 1.0; plans write `blokky: 1.0`; status lines read `1.0.0-draft`; features an implementation doesn't support are rejected with `BK_PLAN_NOT_SUPPORTED`; the plan schema's `$id` is `urn:blokky:schema:1.0:plan`; ROADMAP and README describe the 1.0 draft path.
 
 ### Added
 

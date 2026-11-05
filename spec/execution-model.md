@@ -1,6 +1,6 @@
 # Execution model
 
-Status: **draft** (spec 0.1, not yet finalized)
+Status: **draft** (`1.0.0-draft`, not yet finalized)
 
 This document is normative for how a plan runs: the run lifecycle, the order in which modifiers apply, start order and concurrency, leaf processes, time limits, cancellation, external stops, and status propagation. It is OS-independent and describes what a plan and its processes can observe; how an implementation achieves it (process groups, Job Objects, run budgets, reports) is up to the implementation (for blokky-cli: [`docs/contracts/run-control.md`](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/contracts/run-control.md) and the design docs). Statements marked *provisional — verify in spike* depend on spike results. Normative keywords are used as defined in [syntax.md §1](syntax.md#1-conventions). Rules carry IDs (`EM-n`) so that conformance cases can cite them; IDs of rules that moved to blokky-cli are not reused.
 
@@ -27,11 +27,11 @@ Entering a node means applying each layer in this order; leaving it unwinds them
 |---|---|---|
 | `when` | Evaluate the condition in the **parent's** scope. False: the node is `skipped` and nothing below happens. | — |
 | `timeout` | Start the node's total timer. | Stop the timer. |
-| `lock` (*later*) | Acquire the lock, waiting at most `wait`. | Release the lock. |
+| `lock` | Acquire the lock, waiting at most `wait`. | Release the lock. |
 | `tempdir` | Create the directory; it becomes the cwd. | Keep the directory (it isn't deleted). |
 | `cwd`, `env` | Set the scope for everything inside. | — |
-| `container`/`become` (*later*) | Start the container / select the user. | Stop the container. |
-| `services` (*later*) | Start services and wait until ready. | Stop services (whole tree). |
+| `container`/`become` | Start the container / select the user. | Stop the container. |
+| `services` | Start services and wait until ready. | Stop services (whole tree). |
 | `finally` | — | Run the `finally` list once. |
 | repetition | Run attempts or iterations. | — |
 | `attempt_timeout` | Start the per-attempt timer for each attempt. | Stop it. |
@@ -47,7 +47,7 @@ Entering a node means applying each layer in this order; leaving it unwinds them
 - **EM-9.** Children of `do` start one at a time, in declaration order.
 - **EM-10.** Children of `all` and `any` and iterations of `for` start **in declaration (item) order**. With a concurrency limit N, at most N run at once, and the next one starts as soon as a slot frees, still in order.
 - **EM-11.** An implementation MAY cap the effective concurrency of a node below its `concurrency` (or its default), for example to protect the machine (for blokky-cli: `max_concurrency`, default 16). A cap reduces parallelism only; it never changes start order, statuses or results.
-- **EM-12.** `race` (*later*) starts all children immediately, in declaration order.
+- **EM-12.** `race` starts all children immediately, in declaration order.
 - **EM-13.** The run result lists nodes in plan order, whatever the completion order. Only completion order, timings and the winners of `any`/`race` are non-deterministic.
 
 ## 4. Leaf processes
@@ -96,7 +96,7 @@ Implementations MAY let users change the 30s and 5m defaults and the grace perio
 A node is **cancelled** when something outside it stops it:
 
 - a failing sibling under `fail_fast: true` (`do`, `all`, `for`);
-- a decided `any` (a sibling succeeded) or `race` (*later*; a sibling completed);
+- a decided `any` (a sibling succeeded) or `race` (a sibling completed);
 - an ancestor's `timeout` or `attempt_timeout`;
 - an external stop of the whole run (§7).
 
@@ -154,7 +154,7 @@ An implementation can stop a whole run from outside the plan, for example when a
 ## 9. Worked example: a cancellation timeline
 
 ```yaml
-blokky: 0.1
+blokky: 1.0
 timeout: 1m
 finally:
   - exec: [docker, compose, down]

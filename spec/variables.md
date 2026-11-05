@@ -1,6 +1,6 @@
 # Variables
 
-Status: **draft** (spec 0.1, not yet finalized)
+Status: **draft** (`1.0.0-draft`, not yet finalized)
 
 This document is normative for plan variables: names, the kinds of bindings, plan inputs and their values, captures, scope and binding rules, how variables reach processes, the environment, outputs and secrets. How variable references are *written* (forms, the per-field table, interpolation syntax) is in [syntax.md §7](syntax.md#7-values-literals-references-and-interpolation). Normative keywords are used as defined in [syntax.md §1](syntax.md#1-conventions). Rules carry IDs (`VA-n`) for conformance cases.
 
@@ -13,7 +13,7 @@ This document is normative for plan variables: names, the kinds of bindings, pla
 ## 2. Names
 
 - **VA-4.** Plan variable names match `^[A-Z][A-Z0-9_]*$`. Names starting with `BLOKKY_` are reserved and can't be bound by a plan.
-- **VA-5.** Derived names count as declarations for every collision check: `<AS>_INDEX` for a `for` with `as: AS`, `MATRIX_INDEX` and the matrix keys for `matrix` (*later*).
+- **VA-5.** Derived names count as declarations for every collision check: `<AS>_INDEX` for a `for` with `as: AS`, `MATRIX_INDEX` and the matrix keys for `matrix`.
 - **VA-6.** Environment variable names match `^[A-Za-z_][A-Za-z0-9_]*$`. On Windows they are compared case-insensitively, including for collisions between `env` and `export` names.
 
 ## 3. Kinds of bindings
@@ -25,10 +25,10 @@ This document is normative for plan variables: names, the kinds of bindings, pla
 | Field capture | `capture: { NAME: .path, … }` | a JSON field of stdout | §6 |
 | File capture | `capture_file: NAME` | the absolute path of a file holding stdout | §6 |
 | Loop item | `for: { …, as: NAME }` | the item | the loop body, per iteration |
-| Loop index | `<AS>_INDEX`, `MATRIX_INDEX` (*later*) | the 0-based index | the loop body, per iteration |
-| Matrix key (*later*) | `for: { matrix: { KEY: [...] } }` | the combination's value | the loop body, per iteration |
+| Loop index | `<AS>_INDEX`, `MATRIX_INDEX` | the 0-based index | the loop body, per iteration |
+| Matrix key | `for: { matrix: { KEY: [...] } }` | the combination's value | the loop body, per iteration |
 | Temp dir | `tempdir: { as: NAME }` | the directory's absolute path | the node's body |
-| Collected list (*later*) | `collect: { CAPTURE: LIST }` | a JSON array of per-iteration values | like a capture of the `for` node |
+| Collected list | `collect: { CAPTURE: LIST }` | a JSON array of per-iteration values | like a capture of the `for` node |
 
 ## 4. Plan inputs
 
@@ -159,7 +159,7 @@ The list is versioned with the spec; adding a name is a non-breaking change.
 - **VA-45.** `outputs: [NAME, …]` at the root returns the final value of each listed variable in the run result's outputs ([results.md](results.md)). Inputs may be listed.
 - **VA-46.** A listed variable that is unbound at the end of the run has no value (`null`).
 - **VA-47.** A secret variable is marked as secret, without its value (never a masked value).
-- **VA-48.** A variable bound only inside a loop body can't be an output (plan error; *later*: unless collected). A `capture_file` output is the path.
+- **VA-48.** A variable bound only inside a loop body can't be an output (plan error, unless gathered with `collect`). A `capture_file` output is the path.
 
 ## 9. Secrets
 

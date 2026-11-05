@@ -1,14 +1,14 @@
 # Containers and privilege
 
-Status: **draft** (spec 0.1, not yet finalized). Milestone: ***later*** for `container` and `become`; the path model in §1 applies in v0.1.
+Status: **draft** (`1.0.0-draft`, not yet finalized)
 
-This document is normative for the language-level behaviour of the `container` and `become` modifiers: value shapes, the path model, mounts, users, scoping and interactions. Their keywords are reserved in v0.1, and a v0.1 implementation rejects them with "not supported in this version". Engine detection, termination inside containers and killing across a privilege boundary depend on spikes and are specified in the blokky-cli design notes; statements marked *provisional — verify in spike* depend on spike results. Normative keywords are used as defined in [syntax.md §1](syntax.md#1-conventions). Rules carry IDs (`CP-n`).
+This document is normative for the language-level behaviour of the `container` and `become` modifiers: value shapes, the path model, mounts, users, scoping and interactions. Engine detection, termination inside containers and killing across a privilege boundary depend on spikes and are specified in the blokky-cli design notes; statements marked *provisional — verify in spike* depend on spike results. Normative keywords are used as defined in [syntax.md §1](syntax.md#1-conventions). Rules carry IDs (`CP-n`).
 
 Decisions: [ADR 0005](../adr/0005-containers-become-locks.md), [ADR 0012](../adr/0012-container-details.md).
 
-## 1. Path model (v0.1)
+## 1. Path model
 
-- **CP-1.** `path:` subjects, `for: { glob }`, `tempdir`, `cwd`, `capture_file`, `stdin: { file }` and `mounts[].host` are **host** paths, evaluated by Blokky on the host, in every milestone.
+- **CP-1.** `path:` subjects, `for: { glob }`, `tempdir`, `cwd`, `capture_file`, `stdin: { file }` and `mounts[].host` are **host** paths, evaluated on the host, whether or not a node runs in a container.
 - **CP-2.** Under `container`, only processes run inside the container: leaves, probes and services. A `path:` condition on a container node still checks the host; implementations SHOULD warn about it.
 
 ## 2. `container`
@@ -75,7 +75,7 @@ Containers are not a sandbox by default. Mounting the engine socket, adding capa
 ### 3.1 Shape
 
 ```yaml
-blokky: 0.1
+blokky: 1.0
 defaults:
   become: invoker               # as root: drop to the sudo/doas caller
 do:
@@ -112,4 +112,4 @@ do:
 
 ### 3.6 Windows
 
-- **CP-35.** `become` is Unix-only until out-of-band consent (*later*, Q18) exists; on Windows a reached `become` that would change the user fails the node.
+- **CP-35.** `become` is Unix-only until out-of-band consent (Q18) exists; on Windows a reached `become` that would change the user fails the node.

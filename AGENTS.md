@@ -52,8 +52,8 @@ The single tracker for both repos is in blokky-cli: `../blokky-cli/docs/plan/TRA
 
 - Precise and concise. No marketing fluff.
 - Normative language (MUST/SHOULD/MAY, RFC 2119) in the spec.
-- Every v0.1 example must be something a user could actually run; examples and sketches use canonical forms only.
-- Every feature carries a milestone tag (`v0.1` or `later`); every `later` feature appears in [ROADMAP.md](ROADMAP.md).
+- Every example must be something a user could actually run once an implementation supports its features; examples and sketches use canonical forms only.
+- The spec describes the whole language 1.0 without milestone tags; [ROADMAP.md](ROADMAP.md) lists every feature.
 
 ## Security posture (don't over-engineer)
 

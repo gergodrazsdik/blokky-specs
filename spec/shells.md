@@ -1,6 +1,6 @@
 # Shells and leaf execution
 
-Status: **draft** (spec 0.1, not yet finalized)
+Status: **draft** (`1.0.0-draft`, not yet finalized)
 
 This document is normative for how leaves become processes: splitting `exec` strings, building Windows command lines, writing and invoking `script` files per shell, choosing a shell, resolving executables, the shell × OS matrix, and the injection properties of each shell. Process lifecycle (sessions, kills, completion) is in [execution-model.md](execution-model.md). Normative keywords are used as defined in [syntax.md §1](syntax.md#1-conventions). Rules carry IDs (`SH-n`) for conformance cases.
 
@@ -49,8 +49,8 @@ This document is normative for how leaves become processes: splitting `exec` str
 | `sh` | `<sh> <file>` | none |
 | `pwsh` | `<pwsh> -NoProfile -NonInteractive -File <file>` | prologue `$ErrorActionPreference = 'Stop'` |
 | `powershell` | `<powershell> -NoProfile -NonInteractive -ExecutionPolicy Bypass -File <file>` | prologue `$ErrorActionPreference = 'Stop'` |
-| `zsh` (*later*) | defined when added | |
-| `fish` (*later*) | defined when added | |
+| `zsh` | defined when added | |
+| `fish` | defined when added | |
 
 `<bash>` etc. are absolute paths (§4).
 
@@ -87,8 +87,8 @@ This document is normative for how leaves become processes: splitting `exec` str
 | `sh` | ✓ | ✓ | only via `shells.sh.path` |
 | `pwsh` | ✓ | ✓ | ✓ |
 | `powershell` | — | — | ✓ |
-| `zsh` (*later*) | ✓ | ✓ | — |
-| `fish` (*later*) | ✓ | ✓ | — |
+| `zsh` | ✓ | ✓ | — |
+| `fish` | ✓ | ✓ | — |
 | `cmd` | not supported | | |
 
 `cmd` is not supported on any OS: cmd.exe expands `%X%` textually before parsing every command, so passing values through the environment would degrade to text substitution.

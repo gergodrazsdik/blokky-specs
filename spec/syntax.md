@@ -1,6 +1,6 @@
 # Syntax
 
-Status: **draft** (spec 0.1, not yet finalized)
+Status: **draft** (`1.0.0-draft`, not yet finalized)
 
 This document defines how a plan is written: encoding, the YAML subset, the root document, plan inputs, scalar grammars, how values reach fields (literals, references, interpolation), the per-field table, plain-scalar pitfalls and targeted errors. What each node and modifier *does* is in [reference.md](reference.md); terms are defined in the [glossary](glossary.md).
 
@@ -20,7 +20,7 @@ A plan is read from a file (`blokky run <path>`, conventionally `*.blokky.yaml` 
 
 ```bash
 blokky run <<'BLOKKY_PLAN_EOF'
-blokky: 0.1
+blokky: 1.0
 exec: [git, status, --short]
 BLOKKY_PLAN_EOF
 ```
@@ -67,7 +67,7 @@ Each of these is a plan error:
 - **duplicate keys** in any mapping;
 - **unknown keys** (§3.4);
 - a key with no value (`timeout:` followed by nothing): an empty value is never "unset". Write `''` where an empty string is allowed;
-- an empty list (`[]`), except in fields whose entry in the per-field table (§7) says an empty list is meaningful. Today only `mounts` (*later*);
+- an empty list (`[]`), except in fields whose entry in the per-field table (§7) says an empty list is meaningful. Today only `mounts`;
 - an empty mapping (`{}`).
 
 ### 3.2 Every scalar is a string
@@ -106,7 +106,7 @@ An unknown key is a plan error. The message suggests the closest valid key at th
 | `value` (in an input) | `default` |
 | `params`, `parameters`, `args`, `arguments`, `vars`, `variables` (at the root) | `inputs` |
 
-A keyword of a later feature (`race`, `lock`, `container`, `become`, `services`, `collect`, `items`, `lines`, `matrix`, `defaults.become`) or the reserved `consent` is not unknown: it is a plan error that says the feature isn't supported in this spec version.
+A keyword of a feature the implementation doesn't support yet is not unknown: it is a plan error (`BK_PLAN_NOT_SUPPORTED`) that names the feature.
 
 ## 4. The plan document
 
@@ -119,12 +119,12 @@ The root MUST be a single mapping. It holds the **plan-only keys** below plus ex
 | `blokky` | yes | The spec version, `MAJOR.MINOR` (§6.1). |
 | `inputs` | no | Plan inputs (§5). |
 | `outputs` | no | A list of variable names whose final values the run result returns. |
-| `defaults` | no | A closed mapping: `shell`, `leaf_timeout`, `become` (*later*). |
+| `defaults` | no | A closed mapping: `shell`, `leaf_timeout`, `become`. |
 
 Plan-only keys anywhere other than the root are plan errors ("`inputs:` is allowed only at the root").
 
 ```yaml
-blokky: 0.1
+blokky: 1.0
 name: build and test
 defaults:
   shell: bash
@@ -136,7 +136,7 @@ do:
 
 ### 4.2 `blokky:`
 
-- REQUIRED; a missing `blokky:` is a plan error with the fix-it `blokky: 0.1`.
+- REQUIRED; a missing `blokky:` is a plan error with the fix-it `blokky: 1.0`.
 - The value is the spec version the plan targets (§6.1). A version the implementation doesn't support is a plan error listing the supported versions.
 - Spec patch releases never change the language, so plans never name a patch version.
 
@@ -146,13 +146,13 @@ do:
 |---|---|
 | `shell` | The shell for `script` leaves and script probes without their own `shell:` (before the implementation's configuration and detection). |
 | `leaf_timeout` | A `timeout` for every `exec`/`script` leaf and probe that has none. Never applies to groups. |
-| `become` (*later*) | The user for every leaf and probe without its own `become` (a user name or `invoker`). |
+| `become` | The user for every leaf and probe without its own `become` (a user name or `invoker`). |
 
 Any other key under `defaults:` is a plan error. All `defaults` values are literal.
 
 ### 4.4 `outputs:`
 
-A list of variable names (inputs, captures or tempdir paths in the plan's top-level scope). A name that is bound only inside a loop body is a plan error (*later*: unless gathered with `collect`). Semantics, including `null` for undefined outputs and the shape of secret outputs, are in [variables.md](variables.md).
+A list of variable names (inputs, captures or tempdir paths in the plan's top-level scope). A name that is bound only inside a loop body is a plan error (unless gathered with `collect`). Semantics, including `null` for undefined outputs and the shape of secret outputs, are in [variables.md](variables.md).
 
 ## 5. Plan inputs
 
@@ -199,7 +199,7 @@ How values are supplied, the value rules and the input error codes are in [varia
 
 ### 6.1 Spec version
 
-`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`, for example `0.1`. Because every scalar is a string, `blokky: 0.10` is version 0.10, not 0.1.
+`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`, for example `1.0`. Because every scalar is a string, `blokky: 1.10` is version 1.10, not 1.1.
 
 ### 6.2 Names
 
@@ -208,8 +208,8 @@ How values are supplied, the value rules and the input error codes are in [varia
 | Variable (input, capture, `as`, `tempdir.as`, `collect`) | `^[A-Z][A-Z0-9_]*$` | The `BLOKKY_` prefix is reserved. Derived names (`<AS>_INDEX`, `MATRIX_INDEX`) count as declarations. |
 | Environment variable (`env:` keys, `from_env`, `env:` subject, `env_pass`) | `^[A-Za-z_][A-Za-z0-9_]*$` | Compared case-insensitively on Windows. Forbidden and reserved names: [variables.md](variables.md). |
 | User error code (`fail`, `assert` `code:`) | `^[A-Z][A-Z0-9_]*$` | MUST NOT start with `BK_`. |
-| Lock name (*later*) | `^[a-z0-9][a-z0-9._-]{0,63}$` | |
-| User name (`become`, `container.user`, *later*) | literal string, or `invoker` (`become` only) | Checked against the OS at run time. |
+| Lock name | `^[a-z0-9][a-z0-9._-]{0,63}$` | |
+| User name (`become`, `container.user`) | literal string, or `invoker` (`become` only) | Checked against the OS at run time. |
 
 ### 6.3 Booleans
 
@@ -250,7 +250,7 @@ Where a value affects execution and may come from a variable, the field accepts 
 
 | Form | Meaning | Allowed in |
 |---|---|---|
-| `{ var: X }` | The value of plan variable `X`. | `exec` array elements (not argv[0]); `env` values; `cwd`; `path:` subjects; `stdin`; `stdin.file`; `mounts[].host` (*later*). |
+| `{ var: X }` | The value of plan variable `X`. | `exec` array elements (not argv[0]); `env` values; `cwd`; `path:` subjects; `stdin`; `stdin.file`; `mounts[].host`. |
 | `{ from_env: NAME }` | The value of environment variable `NAME` in Blokky's own environment. | `env` values. |
 | `stdin: { var: X }` | The variable's value as the leaf's stdin. | `stdin`. |
 | `stdin: { file: P }` | The content of host file `P` (a literal path or `{ var: X }`). | `stdin`. |
@@ -272,130 +272,130 @@ Where a value affects execution and may come from a variable, the field accepts 
 
 ### 7.4 Per-field table
 
-Legend: **L** = literal only; **`${}`** = display string with interpolation; **R** = literal or whole-value reference (forms in §7.2); **C** = a condition ([conditions.md](conditions.md)); **N** = a list of nodes. The type column refers to §6. Every field of every milestone is listed.
+Legend: **L** = literal only; **`${}`** = display string with interpolation; **R** = literal or whole-value reference (forms in §7.2); **C** = a condition ([conditions.md](conditions.md)); **N** = a list of nodes. The type column refers to §6. Every field of the language is listed.
 
 #### Root and inputs
 
-| Field | Milestone | Type | Form |
-|---|---|---|---|
-| `blokky` | v0.1 | spec version | L |
-| `inputs.<NAME>.default` | v0.1 | string | L |
-| `inputs.<NAME>.description` | v0.1 | string | L (never interpolated) |
-| `inputs.<NAME>.in` | v0.1 | list of strings | L |
-| `inputs.<NAME>.matches` | v0.1 | regex | L |
-| `outputs` | v0.1 | list of variable names | L |
-| `defaults.shell` | v0.1 | shell name | L |
-| `defaults.leaf_timeout` | v0.1 | duration | L |
-| `defaults.become` | later | user name or `invoker` | L |
+| Field | Type | Form |
+|---|---|---|
+| `blokky` | spec version | L |
+| `inputs.<NAME>.default` | string | L |
+| `inputs.<NAME>.description` | string | L (never interpolated) |
+| `inputs.<NAME>.in` | list of strings | L |
+| `inputs.<NAME>.matches` | regex | L |
+| `outputs` | list of variable names | L |
+| `defaults.shell` | shell name | L |
+| `defaults.leaf_timeout` | duration | L |
+| `defaults.become` | user name or `invoker` | L |
 
 #### Kinds and their companions
 
-| Field | Milestone | Type | Form |
-|---|---|---|---|
-| `exec` (array) | v0.1 | list of strings | element 0: L; other elements: R (`var` only) |
-| `exec` (string) | v0.1 | string, split into argv | L |
-| `script` | v0.1 | shell text | L |
-| `shell` | v0.1 | shell name | L |
-| `do`, `all`, `any`, `then`, `else` | v0.1 | list of nodes | N |
-| `race` | later | list of nodes | N |
-| `if` | v0.1 | condition | C |
-| `sleep` | v0.1 | duration (`0s` allowed) | L |
-| `log` | v0.1 | string | `${}` |
-| `level` | v0.1 | `debug`, `info`, `warn` | L |
-| `fail` | v0.1 | string | `${}` |
-| `assert` | v0.1 | condition | C |
-| `message` | v0.1 | string | `${}` |
-| `code` | v0.1 | user error code | L |
-| `concurrency` (`all`, `any`) | v0.1 | integer | L |
-| `fail_fast` (`do`, `all`) | v0.1 | boolean | L |
+| Field | Type | Form |
+|---|---|---|
+| `exec` (array) | list of strings | element 0: L; other elements: R (`var` only) |
+| `exec` (string) | string, split into argv | L |
+| `script` | shell text | L |
+| `shell` | shell name | L |
+| `do`, `all`, `any`, `then`, `else` | list of nodes | N |
+| `race` | list of nodes | N |
+| `if` | condition | C |
+| `sleep` | duration (`0s` allowed) | L |
+| `log` | string | `${}` |
+| `level` | `debug`, `info`, `warn` | L |
+| `fail` | string | `${}` |
+| `assert` | condition | C |
+| `message` | string | `${}` |
+| `code` | user error code | L |
+| `concurrency` (`all`, `any`) | integer | L |
+| `fail_fast` (`do`, `all`) | boolean | L |
 
 #### Leaf options
 
-| Field | Milestone | Type | Form |
-|---|---|---|---|
-| `stdin` | v0.1 | string, `{ var }` or `{ file }` | R |
-| `ok_exit` | v0.1 | list of integers | L |
-| `stderr` | v0.1 | `merge` | L |
-| `encoding` | v0.1 | encoding name | L |
-| `max_log_bytes` | v0.1 | size | L |
-| `keep_descendants` | v0.1 | boolean | L |
-| `capture` | v0.1 | variable name, or mapping name → JSON path | L |
-| `capture_file` | v0.1 | variable name | L |
-| `secret` | v0.1 | boolean | L |
+| Field | Type | Form |
+|---|---|---|
+| `stdin` | string, `{ var }` or `{ file }` | R |
+| `ok_exit` | list of integers | L |
+| `stderr` | `merge` | L |
+| `encoding` | encoding name | L |
+| `max_log_bytes` | size | L |
+| `keep_descendants` | boolean | L |
+| `capture` | variable name, or mapping name → JSON path | L |
+| `capture_file` | variable name | L |
+| `secret` | boolean | L |
 
 #### Modifiers
 
-| Field | Milestone | Type | Form |
-|---|---|---|---|
-| `name` | v0.1 | string | `${}` |
-| `when` | v0.1 | condition | C |
-| `timeout` | v0.1 | duration | L |
-| `attempt_timeout` | v0.1 | duration | L |
-| `tempdir` | v0.1 | `true`, or mapping | L |
-| `tempdir.as` | v0.1 | variable name | L |
-| `tempdir.prefix` | v0.1 | string | L |
-| `cwd` | v0.1 | path | R (`var` only) |
-| `env.<NAME>` | v0.1 | string, `{ var }`, `{ from_env }` | R |
-| `export` | v0.1 | list of variable names | L |
-| `finally` | v0.1 | list of nodes | N |
-| `finally_timeout` | v0.1 | duration | L |
-| `ignore_errors` | v0.1 | boolean | L |
-| `retry` | v0.1 | `true` or condition | L / C |
-| `while`, `until` | v0.1 | condition | C |
-| `max` | v0.1 | integer | L |
-| `every` | v0.1 | duration (`0s` allowed) | L |
-| `on_body_failure` | v0.1 | `stop`, `continue` | L |
-| `backoff.factor` | v0.1 | decimal, 1–10 | L |
-| `backoff.max` | v0.1 | duration | L |
-| `jitter` | v0.1 | decimal, 0 < j ≤ 1 | L |
-| `lock` | later | lock name, or `{ name, wait }` | L |
-| `lock.wait` | later | duration | L |
-| `container.image` | later | image reference | L |
-| `container.mounts` | later | list of mounts (**empty list allowed**) | — |
-| `container.mounts[].host` | later | path | R (`var` only) |
-| `container.mounts[].path` | later | absolute container path | L |
-| `container.mounts[].read_only` | later | boolean | L |
-| `container.user` | later | user name | L |
-| `container.env_pass` | later | list of environment variable names | L |
-| `become` | later | user name or `invoker`, or `{ user }` | L |
-| `services[]` fields | later | `name`, `exec`/`script`, `shell`, `env`, `export`, `cwd` as for leaves and modifiers; `ready` C; `ready_timeout` duration L | as listed |
+| Field | Type | Form |
+|---|---|---|
+| `name` | string | `${}` |
+| `when` | condition | C |
+| `timeout` | duration | L |
+| `attempt_timeout` | duration | L |
+| `tempdir` | `true`, or mapping | L |
+| `tempdir.as` | variable name | L |
+| `tempdir.prefix` | string | L |
+| `cwd` | path | R (`var` only) |
+| `env.<NAME>` | string, `{ var }`, `{ from_env }` | R |
+| `export` | list of variable names | L |
+| `finally` | list of nodes | N |
+| `finally_timeout` | duration | L |
+| `ignore_errors` | boolean | L |
+| `retry` | `true` or condition | L / C |
+| `while`, `until` | condition | C |
+| `max` | integer | L |
+| `every` | duration (`0s` allowed) | L |
+| `on_body_failure` | `stop`, `continue` | L |
+| `backoff.factor` | decimal, 1–10 | L |
+| `backoff.max` | duration | L |
+| `jitter` | decimal, 0 < j ≤ 1 | L |
+| `lock` | lock name, or `{ name, wait }` | L |
+| `lock.wait` | duration | L |
+| `container.image` | image reference | L |
+| `container.mounts` | list of mounts (**empty list allowed**) | — |
+| `container.mounts[].host` | path | R (`var` only) |
+| `container.mounts[].path` | absolute container path | L |
+| `container.mounts[].read_only` | boolean | L |
+| `container.user` | user name | L |
+| `container.env_pass` | list of environment variable names | L |
+| `become` | user name or `invoker`, or `{ user }` | L |
+| `services[]` fields | `name`, `exec`/`script`, `shell`, `env`, `export`, `cwd` as for leaves and modifiers; `ready` C; `ready_timeout` duration L | as listed |
 
 #### `for`
 
-| Field | Milestone | Type | Form |
-|---|---|---|---|
-| `for.each` | v0.1 | list of strings | L |
-| `for.count` | v0.1 | integer | L |
-| `for.glob` | v0.1 | glob pattern | L |
-| `for.allow_empty` | v0.1 | boolean | L |
-| `for.as` | v0.1 | variable name | L |
-| `for.concurrency` | v0.1 | integer | L |
-| `for.fail_fast` | v0.1 | boolean | L |
-| `for.items` | later | `{ var, json }` | `var` names a variable; `json` L |
-| `for.lines` | later | `{ var }` | `var` names a variable |
-| `for.max_items` | later | integer (default 1000) | L |
-| `for.matrix` | later | mapping of variable name → list of strings | L |
-| `collect` | later | mapping capture name → list variable name | L |
+| Field | Type | Form |
+|---|---|---|
+| `for.each` | list of strings | L |
+| `for.count` | integer | L |
+| `for.glob` | glob pattern | L |
+| `for.allow_empty` | boolean | L |
+| `for.as` | variable name | L |
+| `for.concurrency` | integer | L |
+| `for.fail_fast` | boolean | L |
+| `for.items` | `{ var, json }` | `var` names a variable; `json` L |
+| `for.lines` | `{ var }` | `var` names a variable |
+| `for.max_items` | integer (default 1000) | L |
+| `for.matrix` | mapping of variable name → list of strings | L |
+| `collect` | mapping capture name → list variable name | L |
 
 #### Conditions
 
-| Field | Milestone | Type | Form |
-|---|---|---|---|
-| `var` | v0.1 | variable name | L |
-| `env` (subject) | v0.1 | environment variable name | L |
-| `path` | v0.1 | host path | R (`var` only) |
-| `host` | v0.1 | `os`, `arch` | L |
-| `result` | v0.1 | `stdout`, `stderr`, `exit`, `error` | L |
-| `probe` | v0.1 | probe mapping | see below |
-| `probe.exec`, `probe.script`, `probe.shell`, `probe.env`, `probe.export` | v0.1 | as for leaves | as for leaves |
-| `probe.timeout` | v0.1 | duration | L |
-| `probe.true_exit`, `probe.false_exit` | v0.1 | list of integers | L |
-| `probe.timeout_result` | v0.1 | boolean | L |
-| operator values (`equals`, `in`, `contains`, `matches`, `gt`, …) | v0.1 | string, list of strings, regex or number | L |
-| `json` | v0.1 | JSON path | L |
-| `ignore_case` | v0.1 | boolean | L |
-| `port` | later | integer | L |
-| `output` | later | `stdout`, `stderr` | L |
+| Field | Type | Form |
+|---|---|---|
+| `var` | variable name | L |
+| `env` (subject) | environment variable name | L |
+| `path` | host path | R (`var` only) |
+| `host` | `os`, `arch` | L |
+| `result` | `stdout`, `stderr`, `exit`, `error` | L |
+| `probe` | probe mapping | see below |
+| `probe.exec`, `probe.script`, `probe.shell`, `probe.env`, `probe.export` | as for leaves | as for leaves |
+| `probe.timeout` | duration | L |
+| `probe.true_exit`, `probe.false_exit` | list of integers | L |
+| `probe.timeout_result` | boolean | L |
+| operator values (`equals`, `in`, `contains`, `matches`, `gt`, …) | string, list of strings, regex or number | L |
+| `json` | JSON path | L |
+| `ignore_case` | boolean | L |
+| `port` | integer | L |
+| `output` | `stdout`, `stderr` | L |
 
 ## 8. Plain-scalar pitfalls
 
@@ -436,5 +436,5 @@ Each of these plan errors names the problem and includes a corrected snippet. Co
 
 - A plan names the spec version it targets in `blokky:` (§4.2).
 - Unknown keys are errors (§3.4), so an older implementation fails clearly on a plan that uses newer keys.
-- Keywords of `later` features are reserved; v0.1 rejects them with "not supported in this version".
+- An implementation that doesn't support a feature yet rejects every plan that uses it with `BK_PLAN_NOT_SUPPORTED` before anything runs ([errors.md](errors.md)).
 - The plan schema (`schema/blokky.schema.json`) is normative for structure; its `$id` is versioned per spec release. Rules the schema can't express are listed in [reference.md](reference.md).
