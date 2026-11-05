@@ -20,6 +20,7 @@ ADRs are **grouped**: a baseline ADR, then one ADR per batch of answered open qu
 | [0010](0010-variables-details.md) | Short budgets and variable details (draft round 4) | accepted | — (F-0006, raised in T-0018) |
 | [0011](0011-pwsh-prologue.md) | PowerShell prologue placement (draft round 5) | accepted | — (left open by 0003, raised in T-0020) |
 | [0012](0012-container-details.md) | Container mount path on Windows and default user (draft round 6) | accepted | — (left open by 0005, raised in T-0021) |
+| [0013](0013-scope-and-versioning.md) | Language-only scope and 1.0 draft versioning | accepted | — (direction revision; supersedes parts of 0001, 0002) |
 
 ## Format
 
