@@ -43,16 +43,16 @@ The declaration syntax (`default`, `description`, `in`, `matches`) and its stati
 
 ### 4.2 Values
 
-- **VA-11.** Values come only from the command line (`--input NAME=VALUE`, repeatable, two tokens, split on the first `=`) or the MCP `inputs` object. Never from stdin, environment variables, config or files in v0.1, and missing inputs are never prompted for.
+- **VA-11.** Values are supplied by whoever starts the run, as name/value pairs, before it starts (for blokky-cli: `--input NAME=VALUE` or the MCP `inputs` object). They never come from the environment, configuration or the plan itself, and missing inputs are never prompted for.
 - **VA-12.** An explicit value beats the default, including an empty one: `--input NOTE=` gives `''`. An empty value for a required input is `BK_INPUT_EMPTY`.
 - **VA-13.** A value MUST NOT contain NUL, any C0 or C1 control character except TAB (CR and LF included), bidirectional or zero-width characters, or U+FFFD. Multi-line data belongs in the plan or a file.
-- **VA-14.** Each value is at most 4 KiB and all values together at most 32 KiB, in UTF-8 bytes (a free config key; [ADR 0007](../adr/0007-syntax-details.md)).
+- **VA-14.** Implementations limit value sizes and reject larger values with `BK_INPUT_TOO_LARGE` (for blokky-cli: 4 KiB per value and 32 KiB in total, in UTF-8 bytes; [ADR 0007](../adr/0007-syntax-details.md)).
 - **VA-15.** MCP values MUST be JSON strings; numbers, booleans, `null` and duplicate keys are rejected, with no coercion.
 - **VA-16.** A value is checked against its constraint with condition semantics (`in`: exact string match; `matches`: unanchored search, `NonBacktracking`, no trimming).
 
 ### 4.3 Input errors
 
-All input errors are found and reported together, before the run starts (EM-1).
+All input errors are found and reported together, before anything runs (EM-1).
 
 | Code | Cause |
 |---|---|
@@ -64,7 +64,7 @@ All input errors are found and reported together, before the run starts (EM-1).
 | `BK_INPUT_INVALID` | A value that violates `in`/`matches` (the message quotes the constraint) or the character rules. |
 | `BK_INPUT_TOO_LARGE` | A value or the total over the cap. |
 
-`blokky plan` and `leaves` accept a missing required input and show it as `<input:NAME>`, with `inputs_complete: false`; unknown and duplicate inputs are still errors there.
+Static views of a plan (for review, before a run) MAY accept a missing required input and show it as a placeholder; unknown and duplicate inputs are still errors there.
 
 ## 5. Captures
 
@@ -108,8 +108,8 @@ All input errors are found and reported together, before the run starts (EM-1).
 
 ### 5.4 File captures
 
-- **VA-25.** `capture_file: NAME` writes stdout's raw bytes (not decoded, not trimmed) to a runtime-owned file in the run dir (mode 0600) and binds its absolute path. `max_capture_bytes` doesn't apply.
-- **VA-26.** The file is an artefact of the run: it stays until `blokky clean` or `gc`. A plan that needs it afterwards copies or moves it.
+- **VA-25.** `capture_file: NAME` writes stdout's raw bytes (not decoded, not trimmed) to a file owned by the run (readable only by the run's user) and binds its absolute path. `max_capture_bytes` doesn't apply.
+- **VA-26.** The file outlives the node and the run, but it belongs to the run: the implementation may remove it later (for blokky-cli: `blokky clean`). A plan that needs it afterwards copies or moves it.
 
 ### 5.5 Secret captures
 
@@ -127,7 +127,7 @@ All input errors are found and reported together, before the run starts (EM-1).
 - **VA-35.** **`finally`.** `finally` nodes see everything the body bound. Captures under `finally` are visible only to later nodes in the same `finally` list and their descendants; referencing one outside is a plan error ([ADR 0002](../adr/0002-language-core.md), Q-s).
 - **VA-36.** **Shadowing** is a plan error: a name can't be bound where an enclosing scope already binds it, including loop variables, tempdir names and inputs.
 - **VA-37.** **Own variables.** The modifiers outside repetition (`when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`, `container`, `become`, `services`) MUST NOT reference variables the node itself introduces (`as`, `tempdir.as`, its own captures). The error says "move it into the body".
-- **VA-38.** Referencing a variable that isn't bound at that point is a condition error in conditions and a node error in display strings and references. Statically certain cases are plan errors; possible cases are lint warnings.
+- **VA-38.** Referencing a variable that isn't bound at that point is a condition error in conditions and a node error in display strings and references. Statically certain cases are plan errors; possible cases are warnings.
 
 ## 7. Environment
 
@@ -144,7 +144,7 @@ All input errors are found and reported together, before the run starts (EM-1).
 
 ### 7.3 Execution-influencing variables
 
-Setting these changes what a program loads or runs. A unit whose environment sets one through `env` is flagged `exec_env_risk: true` in `leaves`, and the hook never auto-allows it without an explicit validator verdict (blokky-cli [leaves-and-validation.md](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/contracts/leaves-and-validation.md)):
+Setting these changes what a program loads or runs. Setting one through `env` is statically visible, so implementations can flag it for review (for blokky-cli: `exec_env_risk` in [`leaves`](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/contracts/leaves-and-validation.md)):
 
 `LD_*`, `DYLD_*`, `BASH_FUNC_*`, `NODE_OPTIONS`, `NODE_PATH`, `PYTHONPATH`, `PYTHONSTARTUP`, `PYTHONHOME`, `PERL5OPT`, `PERL5LIB`, `RUBYOPT`, `RUBYLIB`, `JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS`, `_JAVA_OPTIONS`, `DOTNET_STARTUP_HOOKS`, `DOTNET_ADDITIONAL_DEPS`, `CORECLR_PROFILER*`, `COR_PROFILER*`, `GIT_SSH_COMMAND`, `GIT_SSH`, `GIT_CONFIG_*`, `GIT_EXEC_PATH`, `GIT_ASKPASS`, `SSH_ASKPASS`, `GIT_PROXY_COMMAND`, `GIT_EXTERNAL_DIFF`, `DOCKER_HOST`, `DOCKER_CONFIG`, `KUBECONFIG`.
 
@@ -152,14 +152,14 @@ The list is versioned with the spec; adding a name is a non-breaking change.
 
 ### 7.4 Variables Blokky sets
 
-- **VA-44.** Every leaf gets `BLOKKY_RUN_ID` (the run id) and `BLOKKY_MAX_DURATION` (the remaining run budget as a duration, rounded down to whole milliseconds), so a nested `blokky run` inherits the remaining budget. Plans can't set `BLOKKY_*` names.
+- **VA-44.** Every leaf gets `BLOKKY_RUN_ID`, the run's id. Implementations MAY set further `BLOKKY_*` variables for their own needs (for blokky-cli: `BLOKKY_MAX_DURATION`, the remaining run budget for nested runs). Plans can't set `BLOKKY_*` names.
 
 ## 8. Outputs
 
-- **VA-45.** `outputs: [NAME, …]` at the root returns the final value of each listed variable in the report's `outputs` object. Inputs may be listed.
-- **VA-46.** A listed variable that is unbound at the end of the run reports `null`.
-- **VA-47.** A secret variable reports `{ "secret": true }`, never a masked value.
-- **VA-48.** A variable bound only inside a loop body can't be an output (plan error; *later*: unless collected). A `capture_file` output reports the path.
+- **VA-45.** `outputs: [NAME, …]` at the root returns the final value of each listed variable in the run result's outputs ([results.md](results.md)). Inputs may be listed.
+- **VA-46.** A listed variable that is unbound at the end of the run has no value (`null`).
+- **VA-47.** A secret variable is marked as secret, without its value (never a masked value).
+- **VA-48.** A variable bound only inside a loop body can't be an output (plan error; *later*: unless collected). A `capture_file` output is the path.
 
 ## 9. Secrets
 
@@ -170,10 +170,10 @@ The list is versioned with the spec; adding a name is a non-breaking change.
 
 ### 9.2 Masking
 
-- **VA-51.** Every secret value of at least **6 characters** is replaced with `***` in runtime sinks: stderr lines, report tails, log files, events, interpolated display strings and the validator request. Log files are masked while streaming, with an overlap window so a value split across chunks is still caught.
-- **VA-52.** A secret shorter than 6 characters isn't masked; Blokky warns on stderr, naming the reference (never the value) ([ADR 0010](../adr/0010-variables-details.md)).
-- **VA-53.** `blokky plan` and `leaves` never resolve secret references; they show the source, for example `TOKEN ← env GH_TOKEN (secret)`.
+- **VA-51.** Every secret value of at least **6 characters** MUST be replaced with `***` in everything an implementation shows, keeps or passes on about a run: displayed and stored output, the run result, rendered display strings, and data handed to other tools. Output must be masked even when a value is split across chunks.
+- **VA-52.** A secret shorter than 6 characters isn't masked; the implementation warns, naming the reference (never the value) ([ADR 0010](../adr/0010-variables-details.md)).
+- **VA-53.** Static views of a plan never resolve secret references; they show the source, for example `TOKEN ← env GH_TOKEN (secret)`.
 
 ### 9.3 Limits
 
-Masking is hygiene, not secrecy. It matches exact values only and doesn't follow derived or transformed values (base64, substrings, URL encoding). A process that receives a secret can print or send it anywhere. Conditions on secrets act as oracles: `matches` or `gt` on a secret leaks information through the condition result. Inputs with secret-looking names (`*TOKEN*`, `*SECRET*`, `*PASSWORD*`, `*_KEY`) get the `input-secret-name` lint warning, because input values are reported verbatim.
+Masking is hygiene, not secrecy. It matches exact values only and doesn't follow derived or transformed values (base64, substrings, URL encoding). A process that receives a secret can print or send it anywhere. Conditions on secrets act as oracles: `matches` or `gt` on a secret leaks information through the condition result. Implementations SHOULD warn about inputs with secret-looking names (`*TOKEN*`, `*SECRET*`, `*PASSWORD*`, `*_KEY`), because input values appear in the run result verbatim.

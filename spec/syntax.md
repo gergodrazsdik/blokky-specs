@@ -8,8 +8,8 @@ This document defines how a plan is written: encoding, the YAML subset, the root
 
 The key words MUST, MUST NOT, REQUIRED, SHALL, SHALL NOT, SHOULD, SHOULD NOT, RECOMMENDED, MAY and OPTIONAL are to be interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) and [RFC 8174](https://www.rfc-editor.org/rfc/rfc8174) when, and only when, they appear in all capitals.
 
-- A **plan error** is detected before anything runs: by `blokky run` (reported in the pre-run envelope, exit 3), and by `plan`, `leaves`, `lint` and `validate`. Every plan error carries a code from [errors.md](errors.md), a line and column, and, where this document says so, a corrected snippet.
-- A **lint finding** comes from a named lint rule with a configurable severity (blokky-cli ADR 0003); only findings at severity `error` block a run.
+- A **plan error** is detected before anything runs, and prevents the run. Every plan error carries a code from [errors.md](errors.md), a line and column, and, where this document says so, a corrected snippet.
+- A **warning** points at something legal but likely wrong. Warnings never block a run by themselves; implementations decide how they are shown and whether users can tune them (for blokky-cli: lint rules).
 - An implementation MUST report all plan errors it can find in one pass, not just the first.
 
 ## 2. Plan text
@@ -32,7 +32,7 @@ The quoted delimiter stops the caller's shell from expanding `$X` and backticks 
 - A plan MUST be UTF-8, with or without a byte-order mark (BOM). A UTF-8 BOM is ignored.
 - A UTF-16 or UTF-32 BOM is a plan error whose message names the likely cause (PowerShell `Out-File` or `>` redirection) and the fix (`-Encoding utf8`, or the file form).
 - Invalid UTF-8 is a plan error that gives the byte offset, line and column.
-- Text that looks mangled by a lossy pipe (for example Windows PowerShell 5.1 replacing non-ASCII characters with `?`) gets the `mangled-encoding` lint hint.
+- Text that looks mangled by a lossy pipe (for example Windows PowerShell 5.1 replacing non-ASCII characters with `?`) SHOULD get a warning.
 
 ### 2.3 Size and depth caps
 
@@ -118,7 +118,7 @@ The root MUST be a single mapping. It holds the **plan-only keys** below plus ex
 |---|---|---|
 | `blokky` | yes | The spec version, `MAJOR.MINOR` (§6.1). |
 | `inputs` | no | Plan inputs (§5). |
-| `outputs` | no | A list of variable names whose final values the report returns. |
+| `outputs` | no | A list of variable names whose final values the run result returns. |
 | `defaults` | no | A closed mapping: `shell`, `leaf_timeout`, `become` (*later*). |
 
 Plan-only keys anywhere other than the root are plan errors ("`inputs:` is allowed only at the root").
@@ -144,7 +144,7 @@ do:
 
 | Key | Meaning |
 |---|---|
-| `shell` | The shell for `script` leaves and script probes without their own `shell:` (before config and detection). |
+| `shell` | The shell for `script` leaves and script probes without their own `shell:` (before the implementation's configuration and detection). |
 | `leaf_timeout` | A `timeout` for every `exec`/`script` leaf and probe that has none. Never applies to groups. |
 | `become` (*later*) | The user for every leaf and probe without its own `become` (a user name or `invoker`). |
 
@@ -163,7 +163,7 @@ A list of variable names (inputs, captures or tempdir paths in the plan's top-le
 | Key | Value |
 |---|---|
 | `default` | The value used when the caller gives none. Its presence makes the input optional. |
-| `description` | Display text for `blokky plan` and the missing-input error. Never interpolated, never shown in hook `ask` reasons. |
+| `description` | Display text for static views of the plan and the missing-input error. Never interpolated. Implementations MUST NOT show it where someone approves a run, because it can mislead. |
 | `in` | A non-empty list of allowed values. |
 | `matches` | A regex the whole value is searched with ([conditions.md](conditions.md), `matches`). |
 
@@ -193,7 +193,7 @@ An input with no keys at all is written `NAME: { description: … }` or given a 
 - `description` MUST NOT contain `${`.
 - Inputs bind into the plan scope that encloses the root node; they are used only through the variable forms of §7 and never reach literal fields.
 
-How values are passed (`--input NAME=VALUE`, the MCP `inputs` object), the value rules and the input error codes are in [variables.md](variables.md) and the blokky-cli `cli.md`. Value caps: 4 KiB per value and 32 KiB in total, UTF-8 bytes (a free config key; ADR 0007).
+How values are supplied, the value rules and the input error codes are in [variables.md §4](variables.md#4-plan-inputs).
 
 ## 6. Scalar grammars
 
@@ -266,7 +266,7 @@ Where a value affects execution and may come from a variable, the field accepts 
 
 - `${X}` is replaced by the value of plan variable `X`; process environment variables are never interpolated.
 - `$${` produces a literal `${`.
-- A `${X}` whose variable might be undefined is a static lint warning; at run time an undefined variable is an error of the node.
+- A `${X}` whose variable might be undefined is a warning; at run time an undefined variable is an error of the node.
 - Non-scalar values (multi-field captures of objects or arrays) render as compact JSON; a `capture_file` variable renders as its path.
 - Secret values are masked in the rendered text.
 
@@ -399,17 +399,17 @@ Legend: **L** = literal only; **`${}`** = display string with interpolation; **R
 
 ## 8. Plain-scalar pitfalls
 
-YAML plain (unquoted) scalars have traps. Implementations MUST detect the cases below with the stated error or lint finding.
+YAML plain (unquoted) scalars have traps. Implementations MUST detect the cases below with the stated error or warning.
 
 | Pitfall | Example | Result | Detection |
 |---|---|---|---|
-| A space then `#` starts a comment | `exec: echo done # tidy` | The command loses `# tidy`. | Lint warning when a comment follows an `exec`/`script` value on the same line. |
+| A space then `#` starts a comment | `exec: echo done # tidy` | The command loses `# tidy`. | Warning when a comment follows an `exec`/`script` value on the same line. |
 | `[` starts a flow sequence | `script: [ -f x ]` | `script` becomes a list. | Plan error with the fix-it `script: '[ -f x ]'` or a block scalar. |
-| `[` in `exec` | `exec: [ -f x ]` | A valid argv array for `[`. | Lint `exec-bracket-test` suggests `{ path: x, is_file: true }`. |
+| `[` in `exec` | `exec: [ -f x ]` | A valid argv array for `[`. | Warning that suggests `{ path: x, is_file: true }`. |
 | A leading `"` | `exec: "a" b` | YAML parses a quoted scalar, then fails. | Plan error that explains the quoting. |
 | Backslash escapes in double quotes | `matches: "^\d+$"` | `\d` is an invalid YAML escape. | Plan error with the fix-it `matches: '^\d+$'`. |
 | Flow mappings with `,` `[` `]` `{` `}` | `{ probe: { exec: a,b } }` | The probe breaks apart. | Plan error that suggests a block mapping. |
-| `script:` not a block scalar | `script: npm test && npm run lint` | Works, but fragile. | Lint `script-block-scalar` (warning). |
+| `script:` not a block scalar | `script: npm test && npm run lint` | Works, but fragile. | Warning. |
 
 Plans and examples SHOULD use: plain scalars only for simple `exec` strings; `script:` text always as a `|` or `|-` block scalar; regexes always single-quoted; block mappings for non-trivial probes.
 

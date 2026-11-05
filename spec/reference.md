@@ -59,7 +59,7 @@ Runs one program directly, without a shell.
 
 - **Array form (canonical):** `exec: [prog, arg, { var: X }]`. Element 0 MUST be a literal; other elements are literals or `{ var: X }`, each becoming exactly one argument.
 - **String form:** `exec: dotnet build -c Release` is split into argv with the rules in [shells.md](shells.md): whitespace, single and double quotes and backslash only; no expansion, globbing or operators. Unquoted shell metacharacters, and `$` or backticks outside single quotes, are plan errors that point to the array form or `script`.
-- argv[0] is resolved against `PATH` from Blokky's own environment (never the cwd); the resolved absolute path is shown in `blokky plan`, `leaves` and the report. A program that can't be found fails the node with a spawn error.
+- argv[0] is resolved against `PATH` from Blokky's own environment (never the cwd); the resolved absolute path is part of the run result. A program that can't be found fails the node with a spawn error.
 - On Windows, `.bat` and `.cmd` targets are plan or run errors (cmd.exe re-parses them); the message suggests a PowerShell `script`.
 - The node succeeds if the process exits with 0 or a code listed in `ok_exit`.
 
@@ -74,8 +74,8 @@ Runs shell text with a shell.
   shell: bash
 ```
 
-- The text is written to a script file in the run dir (mode 0600) and passed to the shell as a file, with the invocation and prologue from [shells.md](shells.md) (bash: `-o pipefail`; PowerShell: `$ErrorActionPreference = 'Stop'`; sh: none).
-- **Companion `shell`:** `bash`, `sh`, `pwsh`, `powershell` (v0.1); `zsh`, `fish` (*later*). Without `shell`, the shell comes from `defaults.shell`, then config, then detection (bash → sh on Unix, pwsh → powershell on Windows).
+- The text is written to a script file (readable only by the run's user) and passed to the shell as a file, with the invocation and prologue from [shells.md](shells.md) (bash: `-o pipefail`; PowerShell: `$ErrorActionPreference = 'Stop'`; sh: none).
+- **Companion `shell`:** `bash`, `sh`, `pwsh`, `powershell` (v0.1); `zsh`, `fish` (*later*). Without `shell`, the shell comes from `defaults.shell`, then the implementation's configuration, then detection (bash → sh on Unix, pwsh → powershell on Windows).
 - A reached `script` whose shell isn't supported on the current OS fails the node; statically false `host:` branches are pruned first.
 - The text is executed as written; it never interpolates `${…}`. Plan variables reach it only through `env:` and `export:`.
 - Success: exit 0 or a code in `ok_exit`.
@@ -91,7 +91,7 @@ Runs its children in order.
 
 Runs its children in parallel; succeeds when all succeed.
 
-- **Companion `concurrency`** (integer ≥ 1). Default: all children at once. The effective value is capped by the config key `max_concurrency` (default 16); a larger literal is clamped, with the `concurrency-clamped` lint warning. Children start in declaration order; with a limit, the next child starts when a slot frees.
+- **Companion `concurrency`** (integer ≥ 1). Default: all children at once. An implementation MAY cap the effective concurrency of a node (for blokky-cli: `max_concurrency`, default 16); a cap reduces parallelism but never changes start order or results. Children start in declaration order; with a limit, the next child starts when a slot frees.
 - **Companion `fail_fast`** (boolean, default `true`). With `true`, the first failure cancels the running children, prevents unstarted ones from starting, and fails the `all` once the cancelled children are confirmed dead. With `false`, all children run to completion and the `all` fails if any failed; errors are attached as with `do`.
 - Two children MUST NOT capture the same variable name.
 
@@ -121,7 +121,7 @@ Starts all children at once, in declaration order; the **first child to complete
 
 - `if:` takes a condition ([conditions.md](conditions.md)). **Companions:** `then` (required, list of nodes) and `else` (optional, list of nodes). An else-if is an `if` node inside `else`.
 - The condition is evaluated once, in the node's own scope (after its `cwd`, `env` and other scoping modifiers). True runs `then`, false runs `else` (or nothing). A condition error fails the node.
-- The node's status is that of the branch that ran; with no `else` and a false condition, the node succeeds. An `if` without `else` gets the `if-without-else` lint hint (use `when`).
+- The node's status is that of the branch that ran; with no `else` and a false condition, the node succeeds. Implementations SHOULD suggest `when` for an `if` without `else`.
 
 ### 2.8 `sleep` (v0.1)
 
@@ -132,7 +132,7 @@ Starts all children at once, in declaration order; the **first child to complete
 `log: "Watching run ${RUN_ID}"` records a message.
 
 - **Companion `level`:** `debug`, `info` (default) or `warn`.
-- The message is a display string (`${X}` interpolation, secrets masked). It is part of the run's result ([results.md](results.md)); where an implementation shows it (report, event log, stderr) is up to the implementation (for blokky-cli: [output-contract.md](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/contracts/output-contract.md)). No process is started. `log` replaces `echo` leaves.
+- The message is a display string (`${X}` interpolation, secrets masked). It is part of the run result ([results.md](results.md)); where an implementation also shows it (for example on stderr) is up to the implementation. No process is started. `log` replaces `echo` leaves.
 
 ### 2.10 `fail` (v0.1)
 
@@ -163,7 +163,7 @@ Leaf options are node-level siblings of `exec` or `script`; on any other kind th
 | `ok_exit` | v0.1 | none | Extra exit codes that count as success. |
 | `stderr` | v0.1 | separate | `merge` sends stderr into the stdout stream. |
 | `encoding` | v0.1 | `utf-8` | How output is decoded for tails, captures and conditions. |
-| `max_log_bytes` | v0.1 | 100MiB (config) | Cap on this leaf's log files. |
+| `max_log_bytes` | v0.1 | implementation-defined | Cap on how much of this leaf's output the implementation keeps. |
 | `keep_descendants` | v0.1 | `false` | Don't kill the leaf's remaining processes at leaf completion. |
 | `capture` | v0.1 | — | Bind stdout (or JSON fields of it) to variables. |
 | `capture_file` | v0.1 | — | Write stdout to a runtime-owned file and bind its path. |
@@ -172,9 +172,9 @@ Leaf options are node-level siblings of `exec` or `script`; on any other kind th
 - **`stdin`.** By default a leaf's stdin is empty (`/dev/null`, or `NUL` on Windows); leaves never read the terminal. `stdin: "text"` passes literal text; `stdin: { var: X }` passes a variable's value; `stdin: { file: P }` passes the content of host file `P` (literal or `{ var: X }`, relative to the node's cwd).
 - **`ok_exit`.** A list of integers; exit 0 always succeeds. On Windows, exit codes are unsigned 32-bit values.
 - **`stderr: merge`.** Both streams go to one pipe, so their interleaving is kept; captures and `result: stdout` then include stderr text.
-- **`encoding`.** `utf-8`, `utf-16le`, `utf-16be` or `latin1`. Invalid sequences become U+FFFD in the report; logs keep the raw bytes.
-- **`max_log_bytes`.** A size; past it, logging stops with a truncation marker and the leaf keeps running. The per-run cap (1 GiB, config) applies as well.
-- **`keep_descendants: true`.** By default, when the leaf's direct child exits, its remaining process group, session or job is killed. With `true` they keep running, which `leaves` shows. Every descendant still dies no later than run end.
+- **`encoding`.** `utf-8`, `utf-16le`, `utf-16be` or `latin1`. Invalid sequences become U+FFFD wherever output is shown as text; captures treat them as errors ([variables.md](variables.md)).
+- **`max_log_bytes`.** A size; past it, the implementation stops keeping the leaf's output (with a truncation marker), and the leaf keeps running. It never limits what a capture or `result:` condition sees beyond their own limits.
+- **`keep_descendants: true`.** By default, when the leaf's direct child exits, its remaining process group, session or job is killed. With `true` they keep running. Every descendant still dies no later than run end.
 - **`capture`, `capture_file`, `secret`.** `capture: NAME` binds stdout with trailing CR/LF removed; `capture: { NUM: .number, STATE: .state }` binds JSON fields of stdout; `capture_file: NAME` binds the path of a file holding stdout. Over `max_capture_bytes` (1 MiB) or containing a NUL byte, a capture fails the node; it never truncates. Captures are bound only if the node succeeds. Binding and scope: [variables.md](variables.md).
 
 ## 4. Modifiers
@@ -199,7 +199,7 @@ Leaf options are node-level siblings of `exec` or `script`; on any other kind th
 
 ### 4.1 `name` (v0.1)
 
-A display string, rendered per attempt or iteration (`name: build ${PROJ}`). The node-level report entry shows the raw template; attempt and iteration entries show the rendered text. `name` never affects execution and need not be unique; nodes are identified by path ids. Identical static names among siblings get the `duplicate-sibling-name` lint hint.
+A display string, rendered per attempt or iteration (`name: build ${PROJ}`). The run result keeps the raw template for the node and the rendered text for each attempt and iteration. `name` never affects execution and need not be unique; nodes are identified by path ids. Implementations SHOULD warn about identical static names among siblings.
 
 ### 4.2 `when` (v0.1)
 
@@ -209,7 +209,7 @@ A guard condition, evaluated **once, before anything else, in the parent's scope
 
 The node's **total** wall-clock limit, measured on a monotonic clock. It covers lock wait, tempdir creation, container and service startup, the body and every repetition, but not `finally` (which has its own limit). When it fires, running processes get the graceful signal, then the forced kill after the grace period (5s), and the node fails with `BK_TIMEOUT_TOTAL`, status `timed_out`. The grace period comes after the limit ([ADR 0003](../adr/0003-execution-defaults.md), Q-k). Nested limits combine as the minimum.
 
-There is no implicit `timeout` on groups or the root; `defaults.leaf_timeout` sets one for leaves and probes only. The run budget bounds the whole run.
+There is no implicit `timeout` on groups or the root; `defaults.leaf_timeout` sets one for leaves and probes only. An implementation may also stop a whole run from outside ([execution-model.md §7](execution-model.md#7-external-stops)).
 
 ### 4.4 `lock` (*later*)
 
@@ -222,7 +222,7 @@ There is no implicit `timeout` on groups or the root; `defaults.leaf_timeout` se
 - Creates a fresh directory (mode 0700, unpredictable name, optional `prefix`) under the per-user temp root, **once per node** (not per attempt; nest `retry` inside to get a fresh dir per attempt).
 - The directory **becomes the node's cwd**. A relative `cwd` on the same node resolves inside it; an absolute `cwd` together with `tempdir` is a plan error.
 - `as` binds the directory's absolute path to a variable visible inside the node.
-- The directory is kept until `blokky clean` or `gc`; it is registered as an artefact of the run.
+- The directory is not deleted when the node or the run ends; removing it is the implementation's business (for blokky-cli: `blokky clean`).
 - `prefix` matches `^[A-Za-z0-9._-]{1,32}$`.
 
 ### 4.6 `cwd` (v0.1)
@@ -246,11 +246,11 @@ export: [BRANCH]
 
 ### 4.8 `container` (*later*)
 
-`container: { image, mounts, user, env_pass }` runs the node's leaves in an ephemeral container that Blokky starts for the node and stops (not removes) afterwards. By default the cwd is mounted read-write at the same path. Full semantics: [containers-and-privilege.md](containers-and-privilege.md).
+`container: { image, mounts, user, env_pass }` runs the node's leaves in an ephemeral container started for the node and stops (not removes) afterwards. By default the cwd is mounted read-write at the same path. Full semantics: [containers-and-privilege.md](containers-and-privilege.md).
 
 ### 4.9 `become` (*later*)
 
-`become: USER`, `become: invoker` or `become: { user: USER }` runs the node's leaves and probes as another user, through `sudo -n` or `doas -n`, or by dropping privileges when Blokky runs as root. Requires the user-only config switch that enables `become`. Full semantics: [containers-and-privilege.md](containers-and-privilege.md).
+`become: USER`, `become: invoker` or `become: { user: USER }` runs the node's leaves and probes as another user, through `sudo -n` or `doas -n`, or by dropping privileges when the run has root privileges. Implementations MAY require an explicit opt-in to enable `become`. Full semantics: [containers-and-privilege.md](containers-and-privilege.md).
 
 ### 4.10 `services` (*later*)
 
@@ -260,7 +260,7 @@ export: [BRANCH]
 
 A list of cleanup nodes that runs **once per node** (not per attempt or iteration) after the node's body ends, whether it succeeded, failed, timed out or was cancelled.
 
-- **Companion `finally_timeout`** (duration, default 5m from config). `finally` runs under it even after the node's `timeout` fired; in cancel, budget or shutdown mode it is clamped by the cleanup deadline.
+- **Companion `finally_timeout`** (duration, default 5m). `finally` runs under it even after the node's `timeout` fired; when the runtime stops the whole run, it may get less time ([execution-model.md §7](execution-model.md#7-external-stops)).
 - A node skipped by `when` runs no `finally`.
 - `finally` runs inside the node's tempdir, cwd, env, container and services, and sees what the body bound.
 - **Errors:** a failing `finally` fails an otherwise successful node. If the body failed too, the body error is primary and the `finally` error is attached.
@@ -268,7 +268,7 @@ A list of cleanup nodes that runs **once per node** (not per attempt or iteratio
 
 ### 4.12 `ignore_errors` (v0.1)
 
-`ignore_errors: true`: if the node fails, its parent treats it as not failed. The report shows status `failed` with `ignored: true`. It never hides an outer cancellation, timeout of an ancestor, budget kill or shutdown. A node whose failure is ignored binds no captures (the `ignore-errors-capture` lint hint suggests `ok_exit`).
+`ignore_errors: true`: if the node fails, its parent treats it as not failed. The run result shows status `failed` with `ignored: true`. It never hides an outer cancellation, an ancestor's timeout or an external stop. A node whose failure is ignored binds no captures (use `ok_exit` when a capture should survive a known exit code).
 
 ### 4.13 `attempt_timeout` (v0.1)
 
@@ -280,7 +280,7 @@ A limit for each attempt (`retry`) or iteration (`while`, `until`, `for`), valid
 
 - A node has **at most one** of `retry`, `while`, `until`, `for`. Combinations are written by nesting nodes.
 - Repetition sits inside `finally` in the modifier order, so `finally`, `tempdir`, `cwd`, `env` and the scoping modifiers apply once around all attempts or iterations.
-- The report records the number of attempts or iterations, which bound ended the loop (`condition`, `max`, `timeout`), the last condition result, and per-iteration entries (rendered name, index, item).
+- The run result records the number of attempts or iterations, which bound ended the loop (`condition`, `max`, `timeout`), the last condition result, and per-iteration entries (rendered name, index, item).
 
 ### 5.2 Sibling fields
 
@@ -324,7 +324,7 @@ Using a field where the table says "—" is a plan error.
 | `fail` or `assert` with a user code | no | if the condition matches the code |
 | Condition error | no | if the condition matches the condition-error code |
 | Spawn error (program not found, not executable) | no | if the condition matches the code |
-| `BK_TIMEOUT_TOTAL`, cancellation, run budget, shutdown | never | never |
+| `BK_TIMEOUT_TOTAL`, cancellation, external stops | never | never |
 
 For a group node with `retry`, "attempt failed" means the group failed, and the group's error code is what the table and condition see.
 
@@ -360,7 +360,7 @@ All `for` options live inside the `for:` mapping:
 
 **Options:**
 
-- `as` (variable name): **required** for every source except `matrix`, where it is forbidden. It binds the item; `<AS>_INDEX` binds the **0-based** index. For `matrix`, the index is `MATRIX_INDEX` and the report's item is an object.
+- `as` (variable name): **required** for every source except `matrix`, where it is forbidden. It binds the item; `<AS>_INDEX` binds the **0-based** index. For `matrix`, the index is `MATRIX_INDEX` and the result's item is an object.
 - `concurrency` (integer ≥ 1, default 1, capped by `max_concurrency`): above 1 the loop is a fan-out; iterations start in item order.
 - `fail_fast` (boolean, default `true`): as for `all`.
 - `allow_empty` (boolean, default `false`, `glob` only): zero matches succeed with zero iterations instead of failing.
@@ -368,7 +368,7 @@ All `for` options live inside the `for:` mapping:
 
 **Glob rules:** ordinal sort of the matches; no dotfiles unless the pattern names them; no symlink following; `/` separators in item values; no `..` escaping the cwd subtree; zero matches is an error unless `allow_empty: true`. Patterns are host paths relative to the node's cwd.
 
-**Iterations** never publish captures to the enclosing scope (*later*: only through `collect`). A for-loop's iteration count and items are in the report. Item values and inputs used as `exec` arguments get the `argument-injection-dashdash` lint hint (put `--` before them).
+**Iterations** never publish captures to the enclosing scope (*later*: only through `collect`). A for-loop's iteration count and items are in the run result. Item values and inputs used as `exec` arguments should be preceded by `--` where the program supports it.
 
 **`collect`** (*later*): `collect: { CAPTURE: LISTVAR }` on a `for` node binds `LISTVAR` to the list of each iteration's `CAPTURE` value, in item order, with `null` for failed or skipped iterations.
 
@@ -422,15 +422,15 @@ Implementations MUST enforce these as plan errors (unless noted) in addition to 
 20. An input's `default` satisfies its constraint; at most one of `in`/`matches`.
 21. Empty lists only in fields that allow them (`mounts`).
 22. A regex compiles under `RegexOptions.NonBacktracking`.
-23. `${X}` names a variable in scope (lint warning when it might be undefined; a run-time error when it is).
+23. `${X}` names a variable in scope (a warning when it might be undefined; a run-time error when it is).
 
 ## 9. Security considerations
 
-- **Baseline.** Running a plan is equivalent to running the same commands in bash: Blokky grants no capability, bypasses no permission system and hides nothing that will run. `leaves`, `blokky plan` and the validator request show every process and plan-dependent effect.
-- **Hygiene is not a control.** Lint rules, strict mode, secret masking and display sanitization make plans cleaner and more reviewable; they don't decide what may run. The controls are the runner's permission system, `blokky hook check` and the optional validator.
-- **Dynamic code.** A variable used as code (`sh -c` with a variable, `eval`, `iex`), execution-influencing environment variables, dynamic nested plans, dynamic stdin into an interpreter and a dynamic cwd are flagged in `leaves` and force `ask` in the hook unless a validator allows the unit.
+- **Baseline.** Running a plan is equivalent to running the same commands in bash: Blokky grants no capability, bypasses no permission system and hides nothing that will run. Everything a plan can execute is determinable from the plan and its inputs before it runs, so implementations can show it for review (for blokky-cli: [`leaves`](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/contracts/leaves-and-validation.md)).
+- **Hygiene is not a control.** Lint, secret masking and display sanitization make plans cleaner and more reviewable; they don't decide what may run. Deciding is the job of controls outside the language: the agent runner's permission system and the implementation's approval mechanisms (for blokky-cli: the hook and validator).
+- **Dynamic code.** A variable used as code (`sh -c` with a variable, `eval`, `iex`), execution-influencing environment variables, dynamic nested plans, dynamic stdin into an interpreter and a dynamic cwd are statically recognizable, so implementations can flag them for review.
 - **Argument injection.** Item values, captures and inputs passed as `exec` arguments can start with `-`; put `--` before them where the program supports it.
-- **Secrets.** Masking doesn't follow derived values, and conditions on secrets act as oracles. Secrets come only by reference and never appear in `leaves` or `blokky plan` as values.
+- **Secrets.** Masking doesn't follow derived values, and conditions on secrets act as oracles. Secrets come only by reference, so their values never appear in the plan or in a static view of it.
 - **Probes** should be side-effect-free; they run as real processes in the node's scope.
 - **Containers** (*later*) are not a sandbox by default; mounting the engine socket or running privileged is equivalent to host root.
 - **`become`** (*later*) uses passwordless `sudo -n`/`doas -n` only; Blokky never prompts for or forwards passwords.

@@ -42,7 +42,7 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 
 ### 2.2 `host`
 
-- **CO-7.** `host:` is the only subject evaluated statically: a branch whose `host:` condition is false on this machine is **pruned** before the shell and OS checks and in `leaves`. A `host:` condition inside a composite with other subjects is evaluated at run time like any other.
+- **CO-7.** `host:` is the only subject evaluated statically: a branch whose `host:` condition is false on this machine is **pruned** before the shell and OS checks and in static views of the plan. A `host:` condition inside a composite with other subjects is evaluated at run time like any other.
 
 ## 3. Operators
 
@@ -117,9 +117,9 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 
 - **CO-28.** A probe is a real process with full process control: its own session or job, empty stdin, tree kill. It is killed when its own timeout expires, when an enclosing limit fires or when the evaluating node is cancelled.
 - **CO-29.** Its limit is its own `timeout`, else the smaller of `probe_timeout` (default 30s) and `defaults.leaf_timeout` if set ([ADR 0003](../adr/0003-execution-defaults.md)).
-- **CO-30.** Its stdout is limited to 64 KiB (a free config key); more is a condition error. Its stderr goes to the node's log.
-- **CO-31.** Every executed probe is recorded in the report (command, exit code, duration, result) and appears in `leaves` as a `probe` unit.
-- **CO-32.** Probes SHOULD be side-effect-free. Startup cost matters for tight polling: `exec` probes and Blokky-evaluated subjects (`path`, `var`) are fast; a `pwsh` probe can take a second to start (the `slow-probe` lint hint).
+- **CO-30.** Its stdout is limited to 64 KiB (implementations MAY let users raise it); more is a condition error. Its stderr is treated like the node's other output.
+- **CO-31.** Every executed probe is recorded in the run result (command, exit code, duration, result), and every probe is part of what a plan can execute ([reference.md §9](reference.md#9-security-considerations)).
+- **CO-32.** Probes SHOULD be side-effect-free. Startup cost matters for tight polling: `exec` probes and Blokky-evaluated subjects (`path`, `var`) are fast; a `pwsh` probe can take a second to start.
 
 ### 5.3 Truth value
 
@@ -140,7 +140,7 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 | `ready` (*later*) | polled until true | the service's scope |
 
 - **CO-36.** "The node's own scope" means after the node's `tempdir`, `cwd`, `env`, `container` and `become` apply ([execution-model.md](execution-model.md), EM-8).
-- **CO-37.** A `when` that uses a relative `path:` or a probe on a node that sets `cwd`, `container` or `become` gets the `when-scope` lint warning.
+- **CO-37.** Implementations SHOULD warn about a `when` that uses a relative `path:` or a probe on a node that sets `cwd`, `container` or `become`, because those apply only inside the node.
 
 ## 7. Condition errors
 
