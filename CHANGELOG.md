@@ -17,3 +17,4 @@ and the specification adheres to [Semantic Versioning](https://semver.org/spec/v
 - Draft conditions (`spec/conditions.md`): shape, subjects, operators, composites, probes, evaluation scope and condition errors.
 - Draft shells (`spec/shells.md`): `exec` splitting, Windows command lines, script files and the invocation table, shell choice, executable resolution, the shell × OS matrix, injection properties and script analysis.
 - Draft containers and privilege (`spec/containers-and-privilege.md`, later milestone): the host path model, `container` (shape, lifecycle, mounts, user, nesting) and `become` (users, mechanism, files, running as root).
+- Draft error catalogue (`spec/errors.md`): code rules and stability, phases and exit codes, and every built-in `BK_` code with its `detail` fields and retry behaviour.

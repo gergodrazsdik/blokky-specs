@@ -11,7 +11,7 @@ Other files define the details this reference points to:
 - [conditions.md](conditions.md): subjects, operators, composites, probes, condition errors;
 - [shells.md](shells.md): `exec` splitting, the shell invocation table, executable resolution;
 - [containers-and-privilege.md](containers-and-privilege.md): `container` and `become` (*later*);
-- [errors.md](errors.md): the `BK_` code catalogue. Code names used here are provisional until that file is drafted.
+- [errors.md](errors.md): the `BK_` code catalogue.
 
 Every feature carries a milestone tag: **v0.1** or ***later***. A later keyword is reserved: a v0.1 implementation rejects it with "not supported in this version".
 
