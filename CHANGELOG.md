@@ -14,6 +14,7 @@ and the specification adheres to [Semantic Versioning](https://semver.org/spec/v
 
 ### Added
 
+- The remaining features, specified in full ([ADR 0014](adr/0014-remaining-features.md)): `race` (skips, ignored failures, captures), `lock` (per-user scope, waiting, exclusive), `services` (parallel start with `depends_on`, required `ready:`, `on_exit`, stop order, `port`/`output` subjects), `for` over `items` (with `fields`), `lines` (with `keep_blank`) and `matrix`, `collect` as a JSON array, and the `zsh`/`fish` invocations. `consent` is dropped from 1.0.
 - `spec/results.md`: the abstract run result (run, node, leaf and error fields; non-deterministic fields) that conformance cases assert on.
 - Draft glossary (`spec/glossary.md`).
 - Draft syntax (`spec/syntax.md`): plan text, YAML subset, root document, inputs, scalar grammars, references and interpolation, the per-field table, pitfalls and targeted errors.

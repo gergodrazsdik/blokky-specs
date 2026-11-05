@@ -27,6 +27,7 @@ This document is normative for plan variables: names, the kinds of bindings, pla
 | Loop item | `for: { …, as: NAME }` | the item | the loop body, per iteration |
 | Loop index | `<AS>_INDEX`, `MATRIX_INDEX` | the 0-based index | the loop body, per iteration |
 | Matrix key | `for: { matrix: { KEY: [...] } }` | the combination's value | the loop body, per iteration |
+| Item field | `for: { items: …, fields: { NAME: .path } }` | a JSON field of the item | the loop body, per iteration |
 | Temp dir | `tempdir: { as: NAME }` | the directory's absolute path | the node's body |
 | Collected list | `collect: { CAPTURE: LIST }` | a JSON array of per-iteration values | like a capture of the `for` node |
 
@@ -119,11 +120,13 @@ Static views of a plan (for review, before a run) MAY accept a missing required 
 
 - **VA-28.** **Sequences.** In `do`, a capture is visible to later siblings, their descendants and, after the `do`, to the `do`'s later siblings.
 - **VA-29.** **Parallel children.** Two `all` children MUST NOT capture the same name. A capture of an `all` child is visible after the `all` completes.
-- **VA-30.** **`any`.** Only the winning child's captures are bound. Different children MAY capture the same name (never an input's name).
+- **VA-30.** **`any` and `race`.** Only the deciding child's captures are bound. Different children MAY capture the same name (never an input's name).
 - **VA-31.** **Branches.** A capture inside `then` or `else` is *possibly undefined* after the `if`; using it without a `defined` check gets a static warning.
 - **VA-32.** **Repetition on the node itself.** A capture on a node with `retry`, `while` or `until` is visible to that attempt's own condition (even if the attempt failed) and is **published** to the enclosing scope from the terminating attempt, only if the node succeeds.
 - **VA-33.** **Loop bodies.** Captures of nodes inside a `while`, `until` or `for` body are scoped to the iteration: later nodes in the same iteration see them, the next iteration's condition sees them (`while`, `until`), but they are never published outside the loop. The first `while` check sees only the enclosing scope; a `while` condition that reads a body capture without `defined` gets a lint warning.
-- **VA-34.** **`for` iterations never publish.** *Later:* values leave a `for` only through `collect`, ordered by item index, with `null` for failed or skipped iterations.
+- **VA-34.** **`for` iterations never publish.** Values leave a `for` only through `collect`, ordered by item index, with `null` for failed or skipped iterations.
+- **VA-54.** **Item fields.** `fields` binds its variables per iteration, like `as`, with the conversion of VA-23; they count as declarations for collision and shadowing checks.
+- **VA-55.** **`collect`.** The list variable is bound after the loop, in the `for` node's enclosing scope like a capture of the node, as a compact JSON array of strings with `null` entries. It is secret if the collected capture is secret.
 - **VA-35.** **`finally`.** `finally` nodes see everything the body bound. Captures under `finally` are visible only to later nodes in the same `finally` list and their descendants; referencing one outside is a plan error ([ADR 0002](../adr/0002-language-core.md), Q-s).
 - **VA-36.** **Shadowing** is a plan error: a name can't be bound where an enclosing scope already binds it, including loop variables, tempdir names and inputs.
 - **VA-37.** **Own variables.** The modifiers outside repetition (`when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`, `container`, `become`, `services`) MUST NOT reference variables the node itself introduces (`as`, `tempdir.as`, its own captures). The error says "move it into the body".

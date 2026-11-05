@@ -17,7 +17,7 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 - **Character lint.** One pass over the raw decoded plan text, comments and keys included, before parsing. It allows only TAB, LF and CR as part of CRLF among control characters.
 - **Canonical form.** The single preferred spelling of a construct. Examples, the agent guide and fix-it snippets use canonical forms only; other accepted spellings are shorthands.
 - **Targeted error.** A parse or validation error that names the problem and includes a corrected YAML snippet (a *fix-it*).
-- **Not supported.** A feature an implementation doesn't support yet. Plans that use it are rejected before anything runs (`BK_PLAN_NOT_SUPPORTED`); the language itself is the same for every implementation. `consent` is a keyword held back for future use; using it is a plan error.
+- **Not supported.** A feature an implementation doesn't support yet. Plans that use it are rejected before anything runs (`BK_PLAN_NOT_SUPPORTED`); the language itself is the same for every implementation.
 
 ## Nodes
 
@@ -112,8 +112,9 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 - **Mount.** A host path made visible in a container: `{ host, path, read_only }`.
 - **`become`.** A modifier that runs a node's leaves as another user, through `sudo -n` or `doas -n`, or by dropping privileges when the run has root privileges.
 - **`invoker`.** A special `become` value: the user who invoked sudo or doas (from `SUDO_UID` or the doas equivalent), or the current user when not elevated.
-- **`lock`.** A named advisory lock a node holds while it runs. Locks don't nest.
-- **`services`.** Background processes started before a node, checked with a `ready:` condition, and stopped (whole tree) after it.
+- **`lock`.** A named, exclusive lock a node holds while it runs, shared by all runs of the same user on the machine. Locks don't nest. See [reference.md §4.4](reference.md#44-lock).
+- **`services`.** Background processes started before a node (in parallel, honouring `depends_on`), each checked with a required `ready:` condition, and stopped (whole tree, reverse dependency order) after it. See [reference.md §4.10](reference.md#410-services).
+- **`fields`.** A `for: { items }` option that binds variables from each JSON item per iteration.
 
 ## Project
 

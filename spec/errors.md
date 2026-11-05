@@ -44,7 +44,7 @@ Plan errors carry a line and column. `BK_PLAN_INVALID` covers every rule of [ref
 | `BK_PLAN_YAML` | Not valid YAML, or a rejected YAML feature (anchor, alias, merge key, tag, directive, second document, complex key). |
 | `BK_PLAN_DUPLICATE_KEY` | A key repeated in a mapping. |
 | `BK_PLAN_UNKNOWN_KEY` | A key that isn't valid at its position. `detail.suggestion` from did-you-mean or the synonym table. |
-| `BK_PLAN_NOT_SUPPORTED` | A feature the implementation doesn't support yet, or the reserved `consent`. `detail.feature`. |
+| `BK_PLAN_NOT_SUPPORTED` | A feature the implementation doesn't support yet. `detail.feature`. |
 | `BK_PLAN_VERSION` | `blokky:` missing, malformed or naming an unsupported version. `detail.supported` lists the supported versions. |
 | `BK_PLAN_VALUE` | A value that doesn't match its field's type or grammar (a boolean that isn't `true`/`false`, a bad duration, a bare number, an empty value or list, a regex that doesn't compile). |
 | `BK_PLAN_INVALID` | A structural or static semantic rule is violated. `detail.rule`. |
@@ -99,6 +99,7 @@ Plan errors carry a line and column. `BK_PLAN_INVALID` covers every rule of [ref
 | `BK_FINALLY_FAILED` | The node's body succeeded but its `finally` failed; the `finally` error is the cause. (If the body failed, its error stays primary and the `finally` error is attached.) | no |
 | `BK_GLOB_EMPTY` | A `for: { glob }` matched nothing and `allow_empty` isn't set. | no |
 | `BK_ITEMS_TOO_MANY` | `items`/`lines` produced more than `max_items`. | no |
+| `BK_ITEMS_INVALID` | A `for: { items }` value isn't JSON, or its path doesn't select an array. | yes |
 
 User codes from `fail` and `assert` (`code:`) are node errors too; `retry: true` doesn't retry them.
 
@@ -109,7 +110,7 @@ User codes from `fail` and `assert` (`code:`) are node errors too; `retry: true`
 | `BK_LOCK_TIMEOUT` | A `lock` wasn't acquired within `wait`. |
 | `BK_CONTAINER_FAILED` | The container couldn't be started or the engine failed. `detail.engine`. |
 | `BK_CWD_UNMAPPED` | The node's cwd maps through no container mount. |
-| `BK_SERVICE_NOT_READY` | A service's `ready:` condition didn't hold within `ready_timeout`. |
-| `BK_SERVICE_EXITED` | A service exited before it was ready. |
+| `BK_SERVICE_NOT_READY` | A service's `ready:` condition didn't hold within `ready_timeout`. `detail.service`. |
+| `BK_SERVICE_EXITED` | A service exited before it was ready, or (with `on_exit: fail`) after it was ready while the body ran. `detail.service`, `detail.exit_code`. |
 | `BK_BECOME_DISABLED` | The plan uses `become`, but the implementation requires an opt-in that the user hasn't given (CP-22). |
 | `BK_BECOME_FAILED` | The user switch failed: the elevation tool needed a password, the user doesn't exist, or the platform doesn't support it. |

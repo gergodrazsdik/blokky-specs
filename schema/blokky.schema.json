@@ -262,7 +262,14 @@
         "concurrency": { "$ref": "#/$defs/posInt" },
         "fail_fast": { "$ref": "#/$defs/bool" },
         "allow_empty": { "$ref": "#/$defs/bool" },
-        "max_items": { "$ref": "#/$defs/posInt" }
+        "max_items": { "$ref": "#/$defs/posInt" },
+        "fields": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/varName" },
+          "additionalProperties": { "$ref": "#/$defs/jsonPath" }
+        },
+        "keep_blank": { "$ref": "#/$defs/bool" }
       },
       "oneOf": [
         { "required": ["each"] },
@@ -309,7 +316,7 @@
     "service": {
       "type": "object",
       "properties": {
-        "name": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
         "exec": { "$ref": "#/$defs/exec" },
         "script": { "type": "string", "minLength": 1 },
         "shell": { "$ref": "#/$defs/shell" },
@@ -317,8 +324,15 @@
         "export": { "$ref": "#/$defs/nameList" },
         "cwd": { "$ref": "#/$defs/pathValue" },
         "ready": { "$ref": "#/$defs/condition" },
-        "ready_timeout": { "$ref": "#/$defs/duration" }
+        "ready_timeout": { "$ref": "#/$defs/duration" },
+        "depends_on": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" }
+        },
+        "on_exit": { "enum": ["fail", "ignore"] }
       },
+      "required": ["name", "ready"],
       "oneOf": [
         { "required": ["exec"] },
         { "required": ["script"] }

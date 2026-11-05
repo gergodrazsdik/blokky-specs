@@ -38,6 +38,8 @@ This document defines the **run result**: the abstract outcome of a run that eve
 | repetition | `retry`, `while`, `until`, `for` | The number of attempts or iterations; what ended them (`condition`, `max`, `timeout`, `failure`, `success`); the last condition result (`true`, `false`, `error`); and for each attempt or iteration its index, rendered name, item, status and error. |
 | children | groups, `if` | The children's results, in plan order. |
 | finally | nodes with `finally` | The `finally` list's results and its status. |
+| lock wait | nodes with `lock` | How long the node waited for its lock. |
+| services | nodes with `services` | For each service: its name, when it became ready, and how it ended (stopped by the run, exited with code N, never ready). |
 | messages | `log`, `fail`, `assert` | The rendered message and, for `log`, its level. |
 | probes | nodes whose conditions ran probes | For each executed probe: the command, exit code and result (`true`, `false`, `error`). |
 | captures | `exec`, `script` | The names of the variables the node bound (never their values). |
