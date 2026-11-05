@@ -112,4 +112,4 @@ do:
 
 ### 3.6 Windows
 
-- **CP-35.** `become` is Unix-only until out-of-band consent (Q18) exists; on Windows a reached `become` that would change the user fails the node.
+- **CP-35.** `become` is Unix-only; on Windows a reached `become` that would change the user fails the node (`BK_BECOME_FAILED`). Interactive OS consent (UAC, polkit) is not part of the language 1.0 ([ADR 0014](../adr/0014-remaining-features.md)).

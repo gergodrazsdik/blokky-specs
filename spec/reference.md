@@ -107,7 +107,24 @@ Succeeds as soon as one child succeeds; fails only when all fail.
 
 ### 2.6 `race`
 
-Starts all children at once, in declaration order; the **first child to complete**, successfully or not, decides the node's outcome, and the others are cancelled. `concurrency` and `fail_fast` are not valid on `race`.
+Starts all children at once, in declaration order; the **first child to complete** decides the node's outcome, and the others are cancelled (and confirmed, EM-32). `concurrency` and `fail_fast` are not valid on `race`.
+
+```yaml
+- name: tests, unless the log shows OOM
+  race:
+    - exec: [dotnet, test]
+    - name: OOM watchdog
+      until: { probe: { exec: [grep, -q, OutOfMemory, test.log] } }
+      every: 5s
+      timeout: 30m
+      do:
+        - fail: "test run hit OOM"
+          code: OOM
+```
+
+- A child skipped by its `when` doesn't take part. A race whose children were all skipped succeeds.
+- The deciding child's outcome is the race's: a success (or a failure hidden by `ignore_errors`) makes it succeed; a failure makes it fail with that child's error.
+- Only the deciding child's captures are bound; different children MAY capture the same name (never an input's name). If the decider failed, nothing is bound ([ADR 0014](../adr/0014-remaining-features.md)).
 
 ### 2.7 `if`
 
@@ -213,7 +230,19 @@ There is no implicit `timeout` on groups or the root; `defaults.leaf_timeout` se
 
 ### 4.4 `lock`
 
-`lock: NAME` or `lock: { name: NAME, wait: 2m }` holds an OS advisory lock (`flock`, `LockFileEx`) named `NAME` for the node's duration. Waiting is bounded by `wait` (within the node's `timeout`); giving up fails the node with a distinct code. A node with `lock` MUST NOT have a descendant with `lock`, including in `finally` and `services` ([ADR 0005](../adr/0005-containers-become-locks.md)).
+`lock: NAME` or `lock: { name: NAME, wait: 2m }` holds an exclusive lock named `NAME` for the node's duration (including its `finally`), so runs that use the same lock take turns.
+
+```yaml
+- name: deploy staging, one at a time
+  lock: deploy-staging
+  timeout: 20m
+  exec: [./deploy.sh, staging]
+```
+
+- **Scope:** lock names form one namespace per OS user on the machine: the same name in any plan, repository or run of that user is the same lock. Locks of other users never interact.
+- **Waiting:** without `wait`, the node waits as long as its `timeout` (and any external stop) allows. `wait` bounds the waiting time (`0s`: try once). Giving up fails the node with `BK_LOCK_TIMEOUT`. Waiting time counts against the node's `timeout`, and the run result records it.
+- **Release:** the lock is released when the node ends, and also when the run's process dies, so a crashed run never leaves a lock behind (implementations use OS advisory locks).
+- **No nesting:** a node with `lock` MUST NOT have a descendant with `lock`, including in `finally` and `services` ([ADR 0005](../adr/0005-containers-become-locks.md)). Locks are exclusive only ([ADR 0014](../adr/0014-remaining-features.md)).
 
 ### 4.5 `tempdir`
 
@@ -254,7 +283,40 @@ export: [BRANCH]
 
 ### 4.10 `services`
 
-`services: [ { name, exec | script, shell, env, export, cwd, ready, ready_timeout } ]` starts background processes before the node's body and stops them (whole process tree) after it. Each service's `ready:` condition is polled until it holds, within `ready_timeout`; it may use the service-only subjects `{ port: N, open: true }` (loopback) and `{ output: stdout, contains: … }`, plus `probe`. A service that exits before it is ready fails the node.
+Background processes that live for the node's duration: a database, a dev server, a mock API.
+
+```yaml
+- name: integration tests
+  services:
+    - name: db
+      exec: [postgres, -D, ./pgdata, -p, '5433']
+      ready: { port: 5433, open: true }
+    - name: api
+      depends_on: [db]
+      exec: [dotnet, run, --project, src/Api]
+      env: { DB_PORT: '5433' }
+      ready: { output: stdout, contains: 'Now listening' }
+      ready_timeout: 1m
+  exec: [dotnet, test, tests/Integration]
+```
+
+| Field | Required | Meaning |
+|---|---|---|
+| `name` | yes | Unique among the node's services (`^[a-z0-9][a-z0-9._-]{0,63}$`). |
+| `exec` or `script` (+ `shell`) | yes | The process, as for leaves. |
+| `env`, `export`, `cwd` | no | As for leaves; the service runs in the node's scope. |
+| `ready` | yes | A condition polled until it holds ([conditions.md](conditions.md)); may use the service-only subjects `port` and `output`, and probes. |
+| `ready_timeout` | no | How long readiness may take; default 30s, within the node's `timeout`. |
+| `depends_on` | no | Names of services that must be ready before this one starts. |
+| `on_exit` | no | `fail` (default) or `ignore`: what happens if the service exits on its own after it was ready. |
+
+- **Start:** services start in parallel, in list order, except that a service with `depends_on` starts only after the services it names are ready. Dependencies MUST NOT form a cycle (plan error). The node's body starts when every service is ready.
+- **Readiness:** `ready:` is polled every 250ms. A service that exits before it is ready, or isn't ready within `ready_timeout`, fails the node (`BK_SERVICE_EXITED`, `BK_SERVICE_NOT_READY`); services already started are stopped.
+- **While the body runs:** a service with `on_exit: fail` that exits on its own cancels the body and fails the node with `BK_SERVICE_EXITED` (with the service name and exit code). With `on_exit: ignore`, the exit is recorded and the body continues.
+- **Stop:** after the node's `finally`, services are stopped in reverse dependency order, each as a whole process tree (graceful, then forced). An exit caused by stopping is not a failure.
+- **Visibility:** services bind no variables. The run result records each service's readiness time and how it ended ([results.md](results.md)). Services are processes the plan executes, like leaves.
+
+([ADR 0014](../adr/0014-remaining-features.md))
 
 ### 4.11 `finally`
 
@@ -354,9 +416,9 @@ All `for` options live inside the `for:` mapping:
 | `each: [a, b, c]` | The listed strings (non-empty list). |
 | `count: N` | `0` … `N−1`; `count: 0` runs zero iterations and succeeds. |
 | `glob: "pattern"` | Matching host paths, expanded by Blokky (below). |
-| `items: { var: X, json: .path }` | Elements of a JSON array in a captured variable. |
-| `lines: { var: X }` | Lines of a captured variable. |
-| `matrix: { OS: [..], ARCH: [..] }` | The Cartesian product; binds each key as a variable. |
+| `items: { var: X, json: .path }` | Elements of the JSON array that the path (default `.`) selects in a variable; each converted to a string as in field captures ([variables.md](variables.md), VA-23). A value that isn't JSON, or a path that doesn't select an array, fails the node. |
+| `lines: { var: X }` | Lines of a variable: split on LF, a CR before an LF removed; lines that are empty or only whitespace are dropped unless `keep_blank: true`. Line content is otherwise kept exactly. |
+| `matrix: { OS: [..], ARCH: [..] }` | The Cartesian product, in key order with the first key varying slowest; binds each key as a variable. There is no `exclude`/`include`: skip combinations with a `when` inside the body. |
 
 **Options:**
 
@@ -364,13 +426,27 @@ All `for` options live inside the `for:` mapping:
 - `concurrency` (integer ≥ 1, default 1, capped by `max_concurrency`): above 1 the loop is a fan-out; iterations start in item order.
 - `fail_fast` (boolean, default `true`): as for `all`.
 - `allow_empty` (boolean, default `false`, `glob` only): zero matches succeed with zero iterations instead of failing.
-- `max_items` (integer, default 1000, `items` and `lines` only): more items fail the node before the first iteration; items are never truncated.
+- `max_items` (integer, default 1000, `items` and `lines` only): more items fail the node with `BK_ITEMS_TOO_MANY` before the first iteration; items are never truncated.
+- `fields` (`items` only): `{ NAME: .path, … }` binds a variable per field from each item, with the JSON-path subset and conversion of field captures. A path that doesn't resolve for an item fails that iteration with `BK_CAPTURE_PATH`.
+- `keep_blank` (boolean, default `false`, `lines` only): keep empty and whitespace-only lines as items.
+
+```yaml
+- exec: [gh, pr, list, --json, 'number,headRefName']
+  capture: PRS
+- name: check PR ${NUM}
+  for:
+    items: { var: PRS }
+    as: PR
+    fields: { NUM: .number, BRANCH: .headRefName }
+    concurrency: 4
+  exec: [gh, pr, checks, { var: NUM }]
+```
 
 **Glob rules:** ordinal sort of the matches; no dotfiles unless the pattern names them; no symlink following; `/` separators in item values; no `..` escaping the cwd subtree; zero matches is an error unless `allow_empty: true`. Patterns are host paths relative to the node's cwd.
 
 **Iterations** never publish captures to the enclosing scope (only through `collect`). A for-loop's iteration count and items are in the run result. Item values and inputs used as `exec` arguments should be preceded by `--` where the program supports it.
 
-**`collect`**: `collect: { CAPTURE: LISTVAR }` on a `for` node binds `LISTVAR` to the list of each iteration's `CAPTURE` value, in item order, with `null` for failed or skipped iterations.
+**`collect`**: `collect: { CAPTURE: LISTVAR }` on a `for` node binds `LISTVAR`, after the loop, to a compact JSON array of each iteration's `CAPTURE` value, in item order, with `null` for failed or skipped iterations (`["12 passed",null,"8 passed"]`). The list can feed another `for: { items }`, a `json:` condition or `outputs`.
 
 ## 6. Plan-level keys
 
@@ -423,6 +499,8 @@ Implementations MUST enforce these as plan errors (unless noted) in addition to 
 21. Empty lists only in fields that allow them (`mounts`).
 22. A regex compiles under `RegexOptions.NonBacktracking`.
 23. `${X}` names a variable in scope (a warning when it might be undefined; a run-time error when it is).
+24. Service names are present and unique within a node; `depends_on` names exist and form no cycle.
+25. `fields` only with `items`; `keep_blank` only with `lines`; `allow_empty` only with `glob`; `max_items` only with `items` and `lines`.
 
 ## 9. Security considerations
 

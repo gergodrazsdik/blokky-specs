@@ -32,8 +32,8 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 | `host: os \| arch` | `os` ∈ {`linux`, `macos`, `windows`} (WSL is `linux`); `arch` ∈ {`x64`, `arm64`}. |
 | `result: stdout \| stderr \| exit \| error` | The node's own last attempt or iteration (§2.1). |
 | `probe: { … }` | A probe's exit code, or its trimmed stdout when an operator is given (§5). |
-| `port: N` | A loopback TCP port; `services` `ready:` conditions only. |
-| `output: stdout \| stderr` | A service's output so far; `services` `ready:` conditions only. |
+| `port: N` | A loopback TCP port; `services` `ready:` conditions only (§2.3). |
+| `output: stdout \| stderr` | The service's output so far; `services` `ready:` conditions only (§2.3). |
 
 ### 2.1 `result`
 
@@ -43,6 +43,12 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 ### 2.2 `host`
 
 - **CO-7.** `host:` is the only subject evaluated statically: a branch whose `host:` condition is false on this machine is **pruned** before the shell and OS checks and in static views of the plan. A `host:` condition inside a composite with other subjects is evaluated at run time like any other.
+
+### 2.3 `port` and `output` (services)
+
+- **CO-42.** `{ port: N, open: true }` is true when a TCP connection to port N succeeds on `127.0.0.1` or `::1`; the connection is closed at once. Nothing else is sent. Ports on other hosts can't be checked.
+- **CO-43.** `output: stdout` or `stderr` is everything the service has written to that stream so far (decoded as UTF-8, trailing CR/LF removed, at most `max_capture_bytes`, the latest output kept). It is tested with `contains` or `matches`.
+- **CO-44.** Both subjects are valid only in a service's `ready:` condition, where they refer to that service ([reference.md §4.10](reference.md#410-services)).
 
 ## 3. Operators
 

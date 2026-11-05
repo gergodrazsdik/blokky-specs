@@ -208,7 +208,7 @@ How values are supplied, the value rules and the input error codes are in [varia
 | Variable (input, capture, `as`, `tempdir.as`, `collect`) | `^[A-Z][A-Z0-9_]*$` | The `BLOKKY_` prefix is reserved. Derived names (`<AS>_INDEX`, `MATRIX_INDEX`) count as declarations. |
 | Environment variable (`env:` keys, `from_env`, `env:` subject, `env_pass`) | `^[A-Za-z_][A-Za-z0-9_]*$` | Compared case-insensitively on Windows. Forbidden and reserved names: [variables.md](variables.md). |
 | User error code (`fail`, `assert` `code:`) | `^[A-Z][A-Z0-9_]*$` | MUST NOT start with `BK_`. |
-| Lock name | `^[a-z0-9][a-z0-9._-]{0,63}$` | |
+| Lock name, service name | `^[a-z0-9][a-z0-9._-]{0,63}$` | |
 | User name (`become`, `container.user`) | literal string, or `invoker` (`become` only) | Checked against the OS at run time. |
 
 ### 6.3 Booleans
@@ -227,7 +227,7 @@ Exactly `true` or `false`. Unary condition operators (`empty: true`, `exists: tr
 
 - One or more parts `<integer><unit>`, with units `h`, `m`, `s`, `ms`, in that (descending) order, each unit at most once, with no spaces: `500ms`, `10s`, `2m`, `1h30m`, `1m30s500ms`.
 - Integers have no leading zeros and no sign; there are no fractions (`1500ms`, not `1.5s`) and no bare numbers (`timeout: 30` is a plan error with the fix-it `timeout: 30s`).
-- A duration MUST be positive, except in fields that allow `0s` (`every`, `sleep`). Zero is written `0s`.
+- A duration MUST be positive, except in fields that allow `0s` (`every`, `sleep`, `lock.wait`). Zero is written `0s`.
 - The maximum is 168h (7 days).
 
 ### 6.6 Sizes
@@ -349,7 +349,7 @@ Legend: **L** = literal only; **`${}`** = display string with interpolation; **R
 | `backoff.max` | duration | L |
 | `jitter` | decimal, 0 < j ≤ 1 | L |
 | `lock` | lock name, or `{ name, wait }` | L |
-| `lock.wait` | duration | L |
+| `lock.wait` | duration (`0s` allowed) | L |
 | `container.image` | image reference | L |
 | `container.mounts` | list of mounts (**empty list allowed**) | — |
 | `container.mounts[].host` | path | R (`var` only) |
@@ -358,7 +358,7 @@ Legend: **L** = literal only; **`${}`** = display string with interpolation; **R
 | `container.user` | user name | L |
 | `container.env_pass` | list of environment variable names | L |
 | `become` | user name or `invoker`, or `{ user }` | L |
-| `services[]` fields | `name`, `exec`/`script`, `shell`, `env`, `export`, `cwd` as for leaves and modifiers; `ready` C; `ready_timeout` duration L | as listed |
+| `services[]` fields | `name` (service name, required), `exec`/`script`, `shell`, `env`, `export`, `cwd` as for leaves and modifiers; `ready` C (required); `ready_timeout` duration L; `depends_on` list of service names L; `on_exit` `fail`/`ignore` L | as listed |
 
 #### `for`
 
@@ -374,6 +374,8 @@ Legend: **L** = literal only; **`${}`** = display string with interpolation; **R
 | `for.items` | `{ var, json }` | `var` names a variable; `json` L |
 | `for.lines` | `{ var }` | `var` names a variable |
 | `for.max_items` | integer (default 1000) | L |
+| `for.fields` | mapping of variable name → JSON path | L |
+| `for.keep_blank` | boolean | L |
 | `for.matrix` | mapping of variable name → list of strings | L |
 | `collect` | mapping capture name → list variable name | L |
 

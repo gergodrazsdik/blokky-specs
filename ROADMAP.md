@@ -6,7 +6,7 @@ The spec describes the **whole language 1.0**, with every planned feature; it ha
 
 ## Versions
 
-1. **`1.0.0-draft.1`:** the complete language, every feature specified to the same depth. *(in progress)*
+1. **`1.0.0-draft.1`:** the complete language, every feature specified to the same depth. *(specified; awaiting the tag)*
 2. **Example suite** covering every feature, then a **review** by the maintainer and an agent council, which also asks whether each feature earns its place. Accepted changes produce further drafts (`1.0.0-draft.N`).
 3. **Conformance suite** for the features that survive the review.
 4. **Refinement during the runtime implementation:** decisions the runtime can't confirm are revised in further drafts.
@@ -22,12 +22,9 @@ The spec describes the **whole language 1.0**, with every planned feature; it ha
 - **Repetition:** `retry`, `while`, `until`, and `for` over `each`, `count`, `glob`, `items`, `lines` and `matrix`; `collect` for results.
 - **Conditions:** `var`, `env`, `path`, `host`, `result` and `probe` subjects (`port` and `output` for services); string, set, regex, emptiness, existence and numeric operators; `all`/`any`/`not`.
 - **Plan document:** `blokky:` version, `inputs:` (string inputs with `in:`/`matches:` constraints), `outputs:`, `defaults:`.
-- **Reserved:** `consent` (out-of-band OS consent), not yet specified.
-
-Some of these are still sketched and are being specified to full depth for `1.0.0-draft.1` (`race`, `lock`, `services`, `items`/`lines`/`matrix`, `collect`, `consent`, `zsh`/`fish`).
 
 ## Candidates
 
-Revisited after real use; no keyword reserved ([ADR 0004](adr/0004-validator-and-inputs.md)): input files (Q-in3), env-sourced secret inputs (Q-in4), references in literal fields such as `timeout: { var: T }` (Q-in5).
+Revisited after real use; no keyword reserved ([ADR 0004](adr/0004-validator-and-inputs.md), [ADR 0014](adr/0014-remaining-features.md)): input files (Q-in3), env-sourced secret inputs (Q-in4), references in literal fields such as `timeout: { var: T }` (Q-in5), out-of-band OS consent for elevation (UAC, polkit, askpass; Q18), `exclude`/`include` for `matrix`, shared (read) locks.
 
 Not planned: a native nested-plan node (Q-in1); nested runs stay a leaf that runs the implementation again.

@@ -42,12 +42,23 @@ Entering a node means applying each layer in this order; leaving it unwinds them
 - **EM-7.** `finally` runs once per node, inside the node's tempdir, cwd, env, container and services, under its own `finally_timeout`, even after `timeout` fired.
 - **EM-8.** Probes in `if`, `while`, `until` and `retry` conditions run in the node's own scope (after `cwd`, `env`, `container`, `become`); `when` probes run in the parent's scope.
 
+### 2.1 Locks and services
+
+- **EM-60.** A `lock` is acquired after the node's `timeout` starts and before anything else in the node; waiting counts against `timeout`. It is held until the node ends (after `finally`) and released when the run's process dies.
+- **EM-61.** `services` start after `container`/`become` and before `finally` and the body. They start in parallel, in list order, except that a service with `depends_on` starts only once the services it names are ready. The body starts when every service is ready.
+- **EM-62.** Readiness is polled every 250ms until the `ready:` condition holds, for at most `ready_timeout` (default 30s), within the node's `timeout`.
+- **EM-63.** If a service exits before it is ready or isn't ready in time, the services already started are stopped and the node fails (`BK_SERVICE_EXITED`, `BK_SERVICE_NOT_READY`). The body and the node's `finally` don't run, because `finally` sits inside `services` in the modifier order.
+- **EM-64.** If a ready service with `on_exit: fail` exits on its own, the body is cancelled (§6) and the node fails with `BK_SERVICE_EXITED`; `finally` still runs, with the remaining services. With `on_exit: ignore`, the exit is recorded and nothing else happens.
+- **EM-65.** After `finally`, services are stopped in reverse dependency order, each as a whole process tree (graceful, then forced, EM-26). An exit caused by stopping is not a failure.
+
 ## 3. Start order and concurrency
 
 - **EM-9.** Children of `do` start one at a time, in declaration order.
 - **EM-10.** Children of `all` and `any` and iterations of `for` start **in declaration (item) order**. With a concurrency limit N, at most N run at once, and the next one starts as soon as a slot frees, still in order.
 - **EM-11.** An implementation MAY cap the effective concurrency of a node below its `concurrency` (or its default), for example to protect the machine (for blokky-cli: `max_concurrency`, default 16). A cap reduces parallelism only; it never changes start order, statuses or results.
 - **EM-12.** `race` starts all children immediately, in declaration order.
+- **EM-58.** The first `race` child to complete decides: the race takes its outcome (an ignored failure counts as not failed), and the other children are cancelled and confirmed (EM-32) before the race completes. Skipped children don't take part; if all are skipped, the race succeeds.
+- **EM-59.** In `race` and `any`, only the deciding child's captures are bound.
 - **EM-13.** The run result lists nodes in plan order, whatever the completion order. Only completion order, timings and the winners of `any`/`race` are non-deterministic.
 
 ## 4. Leaf processes
