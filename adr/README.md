@@ -19,6 +19,7 @@ ADRs are **grouped**: a baseline ADR, then one ADR per batch of answered open qu
 | [0009](0009-status-propagation.md) | Status propagation and joins (draft round 3) | accepted | — (brief §3.8 D15, raised in T-0017) |
 | [0010](0010-variables-details.md) | Short budgets and variable details (draft round 4) | accepted | — (F-0006, raised in T-0018) |
 | [0011](0011-pwsh-prologue.md) | PowerShell prologue placement (draft round 5) | accepted | — (left open by 0003, raised in T-0020) |
+| [0012](0012-container-details.md) | Container mount path on Windows and default user (draft round 6) | accepted | — (left open by 0005, raised in T-0021) |
 
 ## Format
 
