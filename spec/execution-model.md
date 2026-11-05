@@ -116,6 +116,7 @@ Rules:
 - **EM-34.** The run budget is the smallest of the explicit sources (config, `BLOKKY_MAX_DURATION`, `--max-duration`, and the remaining budget inherited by a nested run); with no explicit source it is the fallback 1m50s (blokky-cli ADR 0002).
 - **EM-35.** At **budget − `cleanup_reserve`** (default 30s), Blokky enters **budget mode**: it cancels every running node, runs `finally` lists, writes the report and exits with 8. Leaves killed this way carry `killed_by: budget`.
 - **EM-36.** `ignore_errors` never hides a budget kill, a shutdown or an ancestor's cancellation.
+- **EM-54.** **Short budgets run without a reserve.** If the run budget is at or below `cleanup_reserve`, the effective reserve is zero: budget mode starts at the budget minus the report slice (EM-38), so cleanup gets no time — grace periods and `finally` are cut to zero and processes are force-killed — and the run ends at its budget. Blokky warns on stderr at run start ([ADR 0010](../adr/0010-variables-details.md)).
 
 ### 7.2 Single cleanup deadline
 
@@ -192,7 +193,7 @@ With the defaults (grace 5s, reap timeout 5s, `finally_timeout` 5m):
 | 28s | The root's `finally` runs `docker compose down` under `finally_timeout` (EM-7). |
 | 31s | `finally` succeeds. The root is `failed` (its own timeout didn't fire). The report is written; exit 1. |
 
-With a run budget of 1m50s and `cleanup_reserve` 30s, budget mode would start at 1m20s, after this run ends, so the budget plays no part here. A budget at or below `cleanup_reserve` would enter budget mode at once; how such a budget is handled is still open (F-0006 in the tracker).
+With a run budget of 1m50s and `cleanup_reserve` 30s, budget mode would start at 1m20s, after this run ends, so the budget plays no part here. A budget at or below `cleanup_reserve` runs without a reserve (EM-54).
 
 ## 10. Conformance
 
