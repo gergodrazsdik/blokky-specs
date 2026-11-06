@@ -1,0 +1,26 @@
+# Starting a daemon with keep_descendants: detach
+# A leaf's processes are stopped when it completes, or with `true` when the run
+# ends. `detach` leaves them running after the run, like `nohup x &` in bash;
+# the run result lists what was left running. Starts the Podman machine's VM on
+# macOS or Windows if it isn't running, then waits until Podman answers. Changes
+# machine state: the VM keeps running after the plan.
+# Run: blokky run examples/basics/keep-descendants-detach.blokky.yaml
+blokky: 1.0
+name: make sure the Podman machine is running
+when: { host: os, in: [macos, windows] }
+do:
+  - name: start the machine unless it answers already
+    if:
+      probe:
+        exec: [podman, info]
+    then:
+      - log: "Podman is already running"
+    else:
+      - exec: [podman, machine, start]
+        keep_descendants: detach
+      - name: wait until Podman answers
+        exec: [podman, info]
+        until: { result: exit, equals: '0' }
+        ok_exit: [125]
+        every: 2s
+        timeout: 2m

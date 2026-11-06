@@ -24,7 +24,8 @@ For the rules behind each feature, see the [reference](../spec/reference.md). Th
 | [host-branches](basics/host-branches.blokky.yaml) | `host:` conditions, decided before the run |
 | [finally-cleanup](basics/finally-cleanup.blokky.yaml) | `finally`: cleanup that always runs |
 | [cwd-nesting](basics/cwd-nesting.blokky.yaml) | `cwd` inherited and resolved through nesting |
-| [tempdir](basics/tempdir.blokky.yaml) | a temp dir owned by the run |
+| [tempdir](basics/tempdir.blokky.yaml) | a temp dir owned by the run, removed when the node succeeds |
+| [return-early](basics/return-early.blokky.yaml) | `return`: end a sequence early |
 
 ### Leaves and shells
 
@@ -34,8 +35,8 @@ For the rules behind each feature, see the [reference](../spec/reference.md). Th
 | [choose-shell](basics/choose-shell.blokky.yaml) | `shell:` for a script |
 | [env-export-secrets](basics/env-export-secrets.blokky.yaml) | `env`, `export` and secret values |
 | [ignore-errors-ok-exit](basics/ignore-errors-ok-exit.blokky.yaml) | `ignore_errors` compared with `ok_exit` |
-| [container-build](basics/container-build.blokky.yaml) | running a leaf in a container |
-| [become-root](basics/become-root.blokky.yaml) | `become`: a step as another user |
+| [container-build](basics/container-build.blokky.yaml) | running a leaf in a container, with `env_pass` |
+| [keep-descendants-detach](basics/keep-descendants-detach.blokky.yaml) | `keep_descendants: detach`: start a daemon |
 
 ### Variables and outputs
 
@@ -69,31 +70,32 @@ For the rules behind each feature, see the [reference](../spec/reference.md). Th
 | [for-count](basics/for-count.blokky.yaml) | `for` over a count |
 | [for-each](basics/for-each.blokky.yaml) | `for` over a list |
 | [for-items-fields](basics/for-items-fields.blokky.yaml) | `for` over JSON `items` with `fields` |
-| [for-lines](basics/for-lines.blokky.yaml) | `for` over `lines` |
+| [for-lines](basics/for-lines.blokky.yaml) | `for` over `lines`, with and without `keep_blank` |
 | [for-glob](basics/for-glob.blokky.yaml) | `for` over a `glob` |
 | [for-matrix](basics/for-matrix.blokky.yaml) | `for` over a `matrix` |
 | [for-collect](basics/for-collect.blokky.yaml) | `collect`: gather a capture from every iteration |
-| [while-draining](basics/while-draining.blokky.yaml) | `while`: repeat while a condition holds |
+| [while-batches](basics/while-batches.blokky.yaml) | `while`: work in batches while any work is left |
 | [until-polling](basics/until-polling.blokky.yaml) | `until`: poll until a condition holds |
+| [until-pagination](basics/until-pagination.blokky.yaml) | `carry`, `collect` and `index`: follow a cursor page by page |
 
 ### Retries, time and concurrency
 
 | Example | Shows |
 |---|---|
-| [retry-backoff](basics/retry-backoff.blokky.yaml) | `retry` with backoff |
+| [retry-backoff](basics/retry-backoff.blokky.yaml) | `retry` with backoff and a numbered attempt |
 | [retry-on-code](basics/retry-on-code.blokky.yaml) | `retry` only for some errors |
 | [timeout-vs-attempt-timeout](basics/timeout-vs-attempt-timeout.blokky.yaml) | `timeout` compared with `attempt_timeout` |
 | [lock-one-at-a-time](basics/lock-one-at-a-time.blokky.yaml) | `lock`: one run at a time |
-| [services-depends-on](basics/services-depends-on.blokky.yaml) | background `services` with `depends_on` and readiness |
+| [services-in-order](basics/services-in-order.blokky.yaml) | background `services`, started in order, with readiness |
 
 ## Scenarios
 
 | Scenario | Task | Features it combines |
 |---|---|---|
-| [changed-files-lint](scenarios/changed-files-lint.blokky.yaml) | Lint the files changed on a branch with the right linter per type | `for` `lines`/`items`, `all`, `any`, `if`, `collect`, `set`, `ok_exit`, `ignore_errors`, `assert` |
+| [changed-files-lint](scenarios/changed-files-lint.blokky.yaml) | Lint the files changed on a branch with the right linter per type | `return`, `for` `lines`/`items`, `all`, `any`, `collect`, `set`, `ok_exit`, `ignore_errors`, `assert` |
 | [cross-platform-setup](scenarios/cross-platform-setup.blokky.yaml) | Set up a Node.js clone on Linux, macOS and Windows | `host:` conditions, `when`, `race`, `any`, `retry`, `sleep`, `fail`, scripts in bash/zsh/pwsh |
-| [deploy-health-check](scenarios/deploy-health-check.blokky.yaml) | Deploy a systemd service, check health, roll back on failure | `become`, `lock`, `until`, `while`, `if`, `set`, `fail` |
+| [deploy-health-check](scenarios/deploy-health-check.blokky.yaml) | Deploy a systemd service, check health, roll back on failure | `sudo -n` leaves, `lock`, `until`, `if`, `set`, `fail` |
 | [dotnet-build-test](scenarios/dotnet-build-test.blokky.yaml) | Build and test a .NET solution with a per-project summary | `lock`, `for` `glob`, `all`, `collect`, `capture_file`, `finally`, `retry` |
 | [integration-tests](scenarios/integration-tests.blokky.yaml) | Integration tests against containers and the API | `services`, `container` with mounts, `lock`, secrets, `finally` |
 | [release-matrix](scenarios/release-matrix.blokky.yaml) | Cross-compile a Go tool and publish a GitHub release | `for` `matrix`, `tempdir`, secrets from the environment, `finally`, `retry` |
-| [wait-for-ci](scenarios/wait-for-ci.blokky.yaml) | Wait for a GitHub Actions run and check its result | `until` polling, `for` `items`, `capture` of JSON, `assert`, `outputs` |
+| [wait-for-ci](scenarios/wait-for-ci.blokky.yaml) | Wait for a GitHub Actions run and check its result | `until` polling with `on_body_failure: stop`, `for` `items`, `capture` of JSON, `assert`, `outputs` |

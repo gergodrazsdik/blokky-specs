@@ -1,6 +1,6 @@
 # 0014: Remaining language features (batch 7)
 
-- Status: accepted
+- Status: accepted; `depends_on` and `fish` are superseded by [ADR 0017](0017-review-features.md)
 - Date: 2026-11-05
 - Questions: Q18 (out-of-band consent); the open details of `race`, `lock`, `services`, `for` sources, `collect` and the `zsh`/`fish` shells, raised for T-0047 (brief §8 step 5)
 

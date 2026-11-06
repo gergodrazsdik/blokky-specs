@@ -33,7 +33,7 @@ This document defines the **run result**: the abstract outcome of a run that eve
 | name | if set | The raw `name` template. |
 | status | all | `succeeded`, `failed`, `skipped`, `timed_out` or `cancelled` ([execution-model.md §8](execution-model.md#8-status)). |
 | ignored | failed nodes | Whether `ignore_errors` hid the failure from the parent. |
-| skip reason | skipped nodes | `condition` or `not_reached`. |
+| skip reason | skipped nodes | `condition`, `not_reached` or `returned`. |
 | error | failed, timed out, cancelled | The node's error (§5). |
 | repetition | `retry`, `while`, `until`, `for` | The number of attempts or iterations; what ended them (`condition`, `max`, `timeout`, `failure`, `success`); the last condition result (`true`, `false`, `error`); and for each attempt or iteration its index, rendered name, item, status and error. |
 | children | groups, `if` | The children's results, in plan order. |
@@ -55,8 +55,8 @@ This document defines the **run result**: the abstract outcome of a run that eve
 | killed by | If the run stopped the leaf: `timeout`, `attempt_timeout`, `cancel`, or the external stop's cause. |
 | descendants held output | Whether a descendant kept the output open after the leaf completed (EM-20). |
 | survivors | Processes still alive after a join's reap timeout (EM-32). |
-| user | The effective user, and the elevation tool if any (CP-34). |
-| container | The engine, image digest and container id (CP-6). |
+| left running | For `keep_descendants: detach`: the processes left running after the run (program and process id, EM-22). |
+| container | The engine, image digest and container id (CP-6), and whether labelling was disabled for Blokky's mounts (CP-37). |
 
 How much of a leaf's output the run result keeps (if any) is implementation-defined; conformance cases assert on output only through captures, `result:` conditions and outputs.
 

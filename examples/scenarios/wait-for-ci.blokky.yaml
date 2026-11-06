@@ -22,6 +22,7 @@ do:
 
   - name: wait for a CI run on ${SHA}
     until: { result: stdout, matches: '^\d+$' }
+    on_body_failure: stop    # no run yet is empty output; a gh error (not logged in) won't fix itself
     every: 10s
     attempt_timeout: 30s
     timeout: 5m
@@ -35,10 +36,10 @@ do:
       - name: watch until the run completes
         exec: [gh, run, watch, { var: RUN_ID }, --exit-status, --interval, '15']
         timeout: 2h
-        max_log_bytes: 1MiB
         ignore_errors: true    # the conclusion check below decides; this keeps the outputs
       - name: fail if the run is still queued after 15m
         until: { result: stdout, not_in: [queued, requested, waiting, pending] }
+        on_body_failure: stop
         every: 20s
         attempt_timeout: 30s
         timeout: 15m

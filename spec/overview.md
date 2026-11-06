@@ -2,7 +2,7 @@
 
 Status: **draft** (`1.0.0-draft`, not yet finalized)
 
-This document is **informative**. It introduces Blokky for a first-time reader, human or agent: the problem it addresses, the mental model, an annotated example, when to use it and when not to. It defines nothing. Where it seems to disagree with the normative files ([syntax.md](syntax.md), [reference.md](reference.md), [execution-model.md](execution-model.md), [variables.md](variables.md), [conditions.md](conditions.md), [shells.md](shells.md), [containers-and-privilege.md](containers-and-privilege.md), [errors.md](errors.md), [results.md](results.md) and the schema `schema/blokky.schema.json`), they win.
+This document is **informative**. It introduces Blokky for a first-time reader, human or agent: the problem it addresses, the mental model, an annotated example, when to use it and when not to. It defines nothing. Where it seems to disagree with the normative files ([syntax.md](syntax.md), [reference.md](reference.md), [execution-model.md](execution-model.md), [variables.md](variables.md), [conditions.md](conditions.md), [shells.md](shells.md), [containers.md](containers.md), [errors.md](errors.md), [results.md](results.md) and the schema `schema/blokky.schema.json`), they win.
 
 ## 1. The problem
 
@@ -29,17 +29,17 @@ A **plan** is a YAML document: a root mapping with a few plan-only keys (`blokky
 |---|---|---|
 | Leaves | `exec`, `script` | Run a process: a program with an argv array (no shell), or shell text written to a file and run with a named shell. |
 | Groups | `do`, `all`, `any`, `race`, `if` | Run child nodes: in sequence, in parallel (all must succeed), until one succeeds, until the first one completes, or one branch of a condition. |
-| Simple nodes | `sleep`, `log`, `fail`, `assert`, `set` | Wait, record a message, fail on purpose, fail unless a condition holds, bind variables. They start no process. |
+| Simple nodes | `sleep`, `log`, `fail`, `assert`, `set`, `return` | Wait, record a message, fail on purpose, fail unless a condition holds, bind variables, end a sequence early. They start no process. |
 
 `exec` is the primitive. A `script` leaf compiles to an `exec` of its shell with the script file, so everything a plan runs is ultimately a program and its argv.
 
 ### 2.2 Modifiers wrap a node
 
-Around its kind, a node can carry **modifiers** that scope, repeat, limit or label it: `name`, `when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`/`export`, `container`, `become`, `services`, `finally`, `ignore_errors`, a repetition (`retry`, `while`, `until` or `for`) and `attempt_timeout`. Leaves also take leaf options such as `capture`, `stdin` and `ok_exit`.
+Around its kind, a node can carry **modifiers** that scope, repeat, limit or label it: `name`, `when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`/`export`, `container`, `services`, `finally`, `ignore_errors`, a repetition (`retry`, `while`, `until` or `for`) and `attempt_timeout`. Leaves also take leaf options such as `capture`, `stdin` and `ok_exit`.
 
 Modifiers always apply in the same order, outermost first, whatever order they are written in:
 
-`when` → `timeout` → `lock` → `tempdir` → `cwd` → `env` → `container`/`become` → `services` → `finally` → repetition → `attempt_timeout` → kind
+`when` → `timeout` → `lock` → `tempdir` → `cwd` → `env` → `container` → `services` → `finally` → repetition → `attempt_timeout` → kind
 
 So you can read a node from the outside in: "if this holds, within this time, holding this lock, in a fresh temp dir, with this environment, …, retry up to three times, each attempt at most a minute, run this." A few consequences follow directly from the order: a `timeout` covers every retry; `finally` runs once per node, not once per attempt; a node skipped by `when` takes no lock and runs no cleanup. A "block" in Blokky is just a `do` node with modifiers. There is at most one repetition per node; combinations are written by nesting.
 
@@ -151,7 +151,7 @@ What Blokky does aim for is **reviewability**: everything a plan can execute is 
 | Bind and pass values: inputs, `vars`, `set`, captures, scope, secrets | [variables.md](variables.md) |
 | Write conditions and probes | [conditions.md](conditions.md) |
 | Know how `exec` strings are split and how each shell is invoked | [shells.md](shells.md) |
-| Run leaves in containers or as another user | [containers-and-privilege.md](containers-and-privilege.md) |
+| Run leaves in containers | [containers.md](containers.md) |
 | Handle errors by code | [errors.md](errors.md) |
 | Know what a run reports | [results.md](results.md) |
 | See how Blokky relates to other tools | [prior-art.md](prior-art.md) |

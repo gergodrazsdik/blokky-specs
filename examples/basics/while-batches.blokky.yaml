@@ -1,0 +1,24 @@
+# Working in batches with while
+# `while` checks its condition before each iteration, so when nothing is left
+# the body never runs; `until` would run it once anyway. Deletes the completed
+# workflow runs of a workflow, 100 per iteration, while any remain. Destructive:
+# deletes run history. Needs the GitHub CLI, run inside a GitHub clone.
+# Run: blokky run examples/basics/while-batches.blokky.yaml --input WORKFLOW=ci.yml
+blokky: 1.0
+inputs:
+  WORKFLOW:
+    description: Workflow file name whose completed runs to delete
+    matches: '^[A-Za-z0-9._-]+\.ya?ml$'
+name: delete the completed runs of ${WORKFLOW}
+while:
+  probe:
+    exec: [gh, run, list, --workflow, { var: WORKFLOW }, --status, completed, --limit, '1', --json, databaseId, --jq, '.[].databaseId']
+  not_empty: true
+max: 50
+timeout: 30m
+do:
+  - exec: [gh, run, list, --workflow, { var: WORKFLOW }, --status, completed, --limit, '100', --json, databaseId, --jq, '.[].databaseId']
+    capture: IDS
+  - name: delete run ${ID}
+    for: { lines: { var: IDS }, as: ID, concurrency: 4 }
+    exec: [gh, run, delete, { var: ID }]

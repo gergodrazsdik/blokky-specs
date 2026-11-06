@@ -98,7 +98,7 @@ Plan errors carry a line and column. `BK_PLAN_INVALID` covers every rule of [ref
 | `BK_ANY_ALL_FAILED` | Every child of an `any` failed; each child's error is a cause, in plan order. | as its causes |
 | `BK_FINALLY_FAILED` | The node's body succeeded but its `finally` failed; the `finally` error is the cause. (If the body failed, its error stays primary and the `finally` error is attached.) | no |
 | `BK_GLOB_EMPTY` | A `for: { glob }` matched nothing and `allow_empty` isn't set. | no |
-| `BK_ITEMS_TOO_MANY` | `items`/`lines` produced more than `max_items`. | no |
+| `BK_ITEMS_TOO_MANY` | A `for` source produced more than `max_items` items (for `matrix`: combinations). | no |
 | `BK_ITEMS_INVALID` | A `for: { items }` value isn't JSON, or its path doesn't select an array. | yes |
 
 User codes from `fail` and `assert` (`code:`) are node errors too; `retry: true` doesn't retry them.
@@ -108,9 +108,7 @@ User codes from `fail` and `assert` (`code:`) are node errors too; `retry: true`
 | Code | Meaning |
 |---|---|
 | `BK_LOCK_TIMEOUT` | A `lock` wasn't acquired within `wait`. |
-| `BK_CONTAINER_FAILED` | The container couldn't be started or the engine failed. `detail.engine`. |
+| `BK_CONTAINER_FAILED` | The container couldn't be started, the image lacks `sh`, `sleep` or `kill` (CP-36; `detail.missing`), or the engine failed. `detail.engine`. |
 | `BK_CWD_UNMAPPED` | The node's cwd maps through no container mount. |
 | `BK_SERVICE_NOT_READY` | A service's `ready:` condition didn't hold within `ready_timeout`. `detail.service`. |
-| `BK_SERVICE_EXITED` | A service exited before it was ready, or (with `on_exit: fail`) after it was ready while the body ran. `detail.service`, `detail.exit_code`. |
-| `BK_BECOME_DISABLED` | The plan uses `become`, but the implementation requires an opt-in that the user hasn't given (CP-22). |
-| `BK_BECOME_FAILED` | The user switch failed: the elevation tool needed a password, the user doesn't exist, or the platform doesn't support it. |
+| `BK_SERVICE_EXITED` | A service exited before it was ready, or (with `on_exit: fail`) after it was ready while the body ran; an exit after the body ended is recorded, not an error. `detail.service`, `detail.exit_code`. |

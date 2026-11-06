@@ -1,0 +1,17 @@
+# Ending early with return
+# `return` ends the enclosing sequence successfully; the nodes after it are
+# skipped (`returned`). It saves wrapping the rest of the plan in an `else`.
+# In an `if` branch it ends the sequence that contains the `if`. Formats the
+# Go files changed on this branch, or does nothing if there are none.
+# Needs git and gofmt; changes files.
+# Run: blokky run examples/basics/return-early.blokky.yaml
+blokky: 1.0
+name: format the changed Go files
+do:
+  - exec: [git, diff, --name-only, --diff-filter=ACMR, origin/main...HEAD, --, '*.go']
+    capture: CHANGED
+  - when: { var: CHANGED, empty: true }
+    return: "No Go files changed; nothing to format"
+  - name: gofmt ${FILE}
+    for: { lines: { var: CHANGED }, as: FILE }
+    exec: [gofmt, -w, --, { var: FILE }]

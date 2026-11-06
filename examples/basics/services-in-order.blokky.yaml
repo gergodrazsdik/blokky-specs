@@ -1,8 +1,10 @@
 # Background services
 # `services` start processes that live for the node's duration; the body runs
-# once all are ready, and they are stopped afterwards. `depends_on` orders
-# them. Needs Docker; run in a .NET repository with src/Api.
-# Run: blokky run examples/basics/services-depends-on.blokky.yaml
+# once all are ready, and they are stopped afterwards in reverse order. They
+# start one at a time, in list order, each after the previous one is ready, so
+# the API starts once the database accepts connections. Needs Docker; run in a
+# .NET repository with src/Api.
+# Run: blokky run examples/basics/services-in-order.blokky.yaml
 blokky: 1.0
 name: integration tests against the API and its database
 exec: [dotnet, test, tests/Integration]
@@ -14,8 +16,7 @@ services:
       probe:
         exec: [docker, exec, blokky-example-db, pg_isready, -U, postgres]
     ready_timeout: 1m
-  - name: api
-    depends_on: [db]
+  - name: api                         # starts after db is ready
     exec: [dotnet, run, --project, src/Api, --urls, 'http://localhost:5080']
     env: { ConnectionStrings__Default: 'Host=localhost;Port=5433;Username=postgres' }
     ready: { output: stdout, contains: Now listening }

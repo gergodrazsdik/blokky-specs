@@ -1,6 +1,6 @@
 # 0005: Containers, `become` and locks (open-question batch 5)
 
-- Status: accepted
+- Status: accepted; the `become` decisions are superseded by [ADR 0017](0017-review-features.md)
 - Date: 2026-11-04
 - Questions: Q16, Q17, Q-j
 
@@ -104,5 +104,5 @@ File modes are never relaxed (brief §3.6). The mechanism is confirmed or revise
 
 - Brief: §3.1 (modifier table), §3.6 (containers and privilege), §3.8 (locks), §4 (questions).
 - Tracker: T-0012; the answers are linked from the [open-questions table](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/plan/TRACKER.md#open-questions).
-- Spec files that apply these answers: `spec/containers-and-privilege.md`, `spec/reference.md` (shapes, validity matrix), `spec/syntax.md` (per-field table: `mounts`, `become`, `lock`).
+- Spec files that apply these answers: `spec/containers.md`, `spec/reference.md` (shapes, validity matrix), `spec/syntax.md` (per-field table: `mounts`, `become`, `lock`).
 - blokky-cli docs: `docs/configuration.md` (the elevation-tool key, which is user-only, and the root config rule); the lint rule reference (`root-run`).

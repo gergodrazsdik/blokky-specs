@@ -29,7 +29,7 @@ conformance/
     reference/
     execution-model/
     shells/
-    containers-and-privilege/
+    containers/
     results/
     errors/
     combinations/           # … plus the pairwise modifier cases (§6)
@@ -74,11 +74,11 @@ conformance/
 
 | Group | Feature ids |
 |---|---|
-| Kinds | `exec`, `exec-string` (string form), `script`, `do`, `all`, `any`, `race`, `if`, `sleep`, `log`, `fail`, `assert`, `set` |
-| Shells (`script`, probes, services) | `shell-bash`, `shell-sh`, `shell-pwsh`, `shell-powershell`, `shell-zsh`, `shell-fish` |
-| Leaf options | `stdin`, `ok-exit`, `stderr-merge`, `encoding`, `max-log-bytes`, `keep-descendants`, `capture`, `capture-fields`, `capture-file`, `secret` |
-| Modifiers | `when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`, `export`, `container`, `become`, `services`, `finally`, `ignore-errors`, `attempt-timeout` |
-| Repetition | `retry`, `retry-condition`, `backoff`, `jitter`, `while`, `until`, `for-each`, `for-count`, `for-glob`, `for-items`, `for-lines`, `for-matrix`, `for-concurrency`, `collect` |
+| Kinds | `exec`, `exec-string` (string form), `script`, `do`, `all`, `any`, `race`, `if`, `sleep`, `log`, `fail`, `assert`, `set`, `return` |
+| Shells (`script`, probes, services) | `shell-bash`, `shell-sh`, `shell-pwsh`, `shell-powershell`, `shell-zsh` |
+| Leaf options | `stdin`, `ok-exit`, `stderr-merge`, `encoding`, `keep-descendants`, `keep-descendants-detach`, `capture`, `capture-fields`, `capture-file`, `secret` |
+| Modifiers | `when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`, `export`, `container`, `services`, `finally`, `ignore-errors`, `attempt-timeout` |
+| Repetition | `retry`, `retry-condition`, `backoff`, `jitter`, `while`, `until`, `for-each`, `for-count`, `for-glob`, `for-items`, `for-lines`, `for-matrix`, `for-concurrency`, `collect`, `carry`, `index` |
 | Conditions | `cond-var`, `cond-env`, `cond-path`, `cond-command`, `cond-host`, `cond-result`, `cond-probe`, `cond-json`, `cond-numeric`, `cond-composite` |
 | Values | `from-env`, `secret-ref`, `interpolation` |
 | Plan-level | `inputs`, `vars`, `outputs`, `defaults` |
@@ -93,7 +93,6 @@ New ids are added with the language features they name; an id is never reused fo
 | `os` | A list of `linux`, `macos`, `windows`: the case runs only there. Prefer `platforms` (§4) for small differences. |
 | `shells` | Shells that MUST be installed (`[bash]`, `[pwsh]`). |
 | `ports` | Loopback TCP ports the case listens on (`services` with `ready: { port }`). |
-| `privilege` | `root` (the run has root privileges) or `passwordless-elevation` (`sudo -n` or `doas -n` works), for `become`. |
 | `container-engine` | `true`: a container engine is available, for `container`. |
 
 - **CF-13.** A case whose requirements aren't met is skipped with the reason `requirement: <key>`. Requirements never make a case pass.

@@ -24,7 +24,7 @@ A change that touches both repos gets two linked pull requests; the spec PR merg
 | [spec/variables.md](spec/variables.md) | Names, inputs, captures, scope, outputs, secrets |
 | [spec/conditions.md](spec/conditions.md) | Subjects, operators, composites, probes |
 | [spec/shells.md](spec/shells.md) | `exec` splitting, per-shell invocation, OS matrix |
-| [spec/containers-and-privilege.md](spec/containers-and-privilege.md) | `container` and `become` |
+| [spec/containers.md](spec/containers.md) | `container` |
 | [spec/errors.md](spec/errors.md) | The language's `BK_` error codes |
 | [spec/results.md](spec/results.md) | The abstract run result that conformance cases assert on |
 | [spec/glossary.md](spec/glossary.md), [spec/prior-art.md](spec/prior-art.md) | Terms; related tools |

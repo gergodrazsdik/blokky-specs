@@ -97,6 +97,7 @@ An unknown key is a plan error. The message suggests the closest valid key at th
 | `steps`, `tasks` | `do` |
 | `run` | `script` (with `shell`) or `exec` |
 | `continue-on-error` | `ignore_errors` |
+| `exit`, `continue`, `break` | `return` (ends the enclosing sequence; there is no `break`) |
 | `timeout-minutes` | `timeout` (with a unit, e.g. `30m`) |
 | `working-directory`, `working_dir` | `cwd` |
 | `environment` | `env` |
@@ -120,7 +121,7 @@ The root MUST be a single mapping. It holds the **plan-only keys** below plus ex
 | `inputs` | no | Plan inputs (§5). |
 | `vars` | no | Plan constants: a mapping of variable names to values (literals, references, templates; [variables.md §5.6](variables.md#56-set-and-vars)). |
 | `outputs` | no | A list of variable names whose final values the run result returns. |
-| `defaults` | no | A closed mapping: `shell`, `leaf_timeout`, `become`. |
+| `defaults` | no | A closed mapping: `shell`, `leaf_timeout`. |
 
 Plan-only keys anywhere other than the root are plan errors ("`inputs:` is allowed only at the root").
 
@@ -147,7 +148,6 @@ do:
 |---|---|
 | `shell` | The shell for `script` leaves and script probes without their own `shell:` (before the implementation's configuration and detection). |
 | `leaf_timeout` | A `timeout` for every `exec`/`script` leaf and probe that has none. Never applies to groups. |
-| `become` | The user for every leaf and probe without its own `become` (a user name or `invoker`). |
 
 Any other key under `defaults:` is a plan error. All `defaults` values are literal.
 
@@ -206,11 +206,10 @@ How values are supplied, the value rules and the input error codes are in [varia
 
 | Name | Grammar | Notes |
 |---|---|---|
-| Variable (input, capture, `as`, `tempdir.as`, `collect`) | `^[A-Z][A-Z0-9_]*$` | The `BLOKKY_` prefix is reserved. Derived names (`<AS>_INDEX`, `MATRIX_INDEX`) count as declarations. |
+| Variable (input, capture, `as`, `tempdir.as`, `collect`, `carry`, `index`) | `^[A-Z][A-Z0-9_]*$` | The `BLOKKY_` prefix is reserved. Derived names (`<AS>_INDEX`, `MATRIX_INDEX`) count as declarations. |
 | Environment variable (`env:` keys, `from_env`, `env:` subject, `env_pass`) | `^[A-Za-z_][A-Za-z0-9_]*$` | Compared case-insensitively on Windows. Forbidden and reserved names: [variables.md](variables.md). |
 | User error code (`fail`, `assert` `code:`) | `^[A-Z][A-Z0-9_]*$` | MUST NOT start with `BK_`. |
 | Lock name, service name | `^[a-z0-9][a-z0-9._-]{0,63}$` | |
-| User name (`become`, `container.user`) | literal string, or `invoker` (`become` only) | Checked against the OS at run time. |
 
 ### 6.3 Booleans
 
@@ -233,7 +232,7 @@ Exactly `true` or `false`. Unary condition operators (`empty: true`, `exists: tr
 
 ### 6.6 Sizes
 
-`<integer><unit>`, with units `B`, `KiB`, `MiB`, `GiB` (powers of 1024); for example `max_log_bytes: 100MiB`. There are no bare numbers and no decimal (`MB`) units.
+`<integer><unit>`, with units `B`, `KiB`, `MiB`, `GiB` (powers of 1024); for example `100MiB`. There are no bare numbers and no decimal (`MB`) units. No plan field takes a size in 1.0; the grammar is used by the conformance testkit.
 
 ### 6.7 Regular expressions
 
@@ -288,7 +287,6 @@ Legend: **L** = literal only; **`${}`** = display string with interpolation; **T
 | `outputs` | list of variable names | L |
 | `defaults.shell` | shell name | L |
 | `defaults.leaf_timeout` | duration | L |
-| `defaults.become` | user name or `invoker` | L |
 
 #### Kinds and their companions
 
@@ -307,6 +305,7 @@ Legend: **L** = literal only; **`${}`** = display string with interpolation; **T
 | `fail` | string | `${}` |
 | `assert` | condition | C |
 | `set.<NAME>` | string, reference or template | T |
+| `return` | string | `${}` |
 | `message` | string | `${}` |
 | `code` | user error code | L |
 | `concurrency` (`all`, `any`) | integer | L |
@@ -320,8 +319,7 @@ Legend: **L** = literal only; **`${}`** = display string with interpolation; **T
 | `ok_exit` | list of integers | L |
 | `stderr` | `merge` | L |
 | `encoding` | encoding name | L |
-| `max_log_bytes` | size | L |
-| `keep_descendants` | boolean | L |
+| `keep_descendants` | `true`, `false` or `detach` | L |
 | `capture` | variable name, or mapping name → JSON path | L |
 | `capture_file` | variable name | L |
 | `secret` | boolean | L |
@@ -337,6 +335,7 @@ Legend: **L** = literal only; **`${}`** = display string with interpolation; **T
 | `tempdir` | `true`, or mapping | L |
 | `tempdir.as` | variable name | L |
 | `tempdir.prefix` | string | L |
+| `tempdir.remove` | `true`, `false` or `on_success` | L |
 | `cwd` | path | R (`var` only) |
 | `env.<NAME>` | string, `{ var }`, `{ from_env }` | R |
 | `export` | list of variable names | L |
@@ -348,6 +347,9 @@ Legend: **L** = literal only; **`${}`** = display string with interpolation; **T
 | `max` | integer | L |
 | `every` | duration (`0s` allowed) | L |
 | `on_body_failure` | `stop`, `continue` | L |
+| `index` | variable name, or `{ as, start }` (`start`: integer) | L |
+| `carry` | mapping of variable name → capture name, or → `{ from, initial }` (`initial`: string) | L |
+| `collect` (`for`, `while`, `until`) | mapping capture name → list variable name | L |
 | `backoff.factor` | decimal, 1–10 | L |
 | `backoff.max` | duration | L |
 | `jitter` | decimal, 0 < j ≤ 1 | L |
@@ -358,10 +360,8 @@ Legend: **L** = literal only; **`${}`** = display string with interpolation; **T
 | `container.mounts[].host` | path | R (`var` only) |
 | `container.mounts[].path` | absolute container path | L |
 | `container.mounts[].read_only` | boolean | L |
-| `container.user` | user name | L |
 | `container.env_pass` | list of environment variable names | L |
-| `become` | user name or `invoker`, or `{ user }` | L |
-| `services[]` fields | `name` (service name, required), `exec`/`script`, `shell`, `env`, `export`, `cwd` as for leaves and modifiers; `ready` C (required); `ready_timeout` duration L; `depends_on` list of service names L; `on_exit` `fail`/`ignore` L | as listed |
+| `services[]` fields | `name` (service name, required), `exec`/`script`, `shell`, `env`, `export`, `cwd` as for leaves and modifiers; `ready` C (required); `ready_timeout` duration L; `on_exit` `fail`/`ignore` L | as listed |
 
 #### `for`
 
@@ -380,7 +380,6 @@ Legend: **L** = literal only; **`${}`** = display string with interpolation; **T
 | `for.fields` | mapping of variable name → JSON path | L |
 | `for.keep_blank` | boolean | L |
 | `for.matrix` | mapping of variable name → list of strings | L |
-| `collect` | mapping capture name → list variable name | L |
 
 #### Conditions
 

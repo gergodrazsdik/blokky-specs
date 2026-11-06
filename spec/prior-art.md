@@ -91,7 +91,7 @@ The descriptions are short and kept to what is well established about each tool.
 
 **What it is.** Compose files declare services; `depends_on` orders their startup, and with `condition: service_healthy` a service waits until another one's `healthcheck` (a command run at an interval, with a timeout and a number of retries) reports healthy.
 
-**Takes.** The `services` modifier: background processes that start in dependency order (`depends_on`), each with a required readiness condition (`ready:`, for example an open port or a line in the output), that live as long as one node and are stopped afterwards in reverse order.
+**Takes.** The `services` modifier: background processes that start in list order, each ready before the next (a simpler form of `depends_on`), each with a required readiness condition (`ready:`, for example an open port or a line in the output), that live as long as one node and are stopped afterwards in reverse order.
 
 **Leaves.** Containers as the unit of a service (a Blokky service is a process; `container` is a separate modifier), networks, volumes, restart policies and long-running stacks. Services exist only for the duration of one node.
 

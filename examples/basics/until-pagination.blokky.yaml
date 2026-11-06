@@ -1,0 +1,23 @@
+# Following a cursor with carry
+# `carry` passes a capture from one iteration to the next, `collect` gathers one
+# from every iteration into a list, and `index` numbers the iterations. Lists the
+# tags of the hello-world image on Docker Hub by following the API's `next` link
+# page by page; a JSON null `next` binds as '' and ends the loop. Many CLIs page
+# for you (`gh api --paginate`); this is for APIs whose tools don't. Read-only.
+# Needs curl and network access.
+# Run: blokky run examples/basics/until-pagination.blokky.yaml
+blokky: 1.0
+name: list the tags of hello-world
+outputs: [PAGES]
+until: { var: NEXT, empty: true }
+carry:
+  URL: { from: NEXT, initial: 'https://hub.docker.com/v2/repositories/library/hello-world/tags?page_size=25' }
+collect: { PAGE: PAGES }
+index: { as: PAGE_NO, start: 1 }
+max: 20
+every: 0s
+timeout: 2m
+do:
+  - log: "page ${PAGE_NO}"
+  - exec: [curl, -fsS, { var: URL }]
+    capture: { PAGE: .results, NEXT: .next }

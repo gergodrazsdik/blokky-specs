@@ -2,8 +2,8 @@
 # Switches the systemd unit web-<ENVIRONMENT>.service on this host to a new image, polls its
 # health endpoint (JSON with "status": "ok") and rolls back to the previous image if it fails.
 # Destructive: restarts the service. Needs: Linux with systemd, podman and curl; the unit reads
-# WEB_IMAGE from /etc/web/<ENVIRONMENT>.env (set up once by hand); passwordless sudo for the two
-# steps marked "as root" (become). Production deploys need an image pinned by digest.
+# WEB_IMAGE from /etc/web/<ENVIRONMENT>.env (set up once by hand); passwordless sudo for the
+# commands run with `sudo -n`. Production deploys need an image pinned by digest.
 # Run: blokky run examples/scenarios/deploy-health-check.blokky.yaml --input ENVIRONMENT=staging --input IMAGE=ghcr.io/example/web:1.4.0
 blokky: 1.0
 name: deploy ${IMAGE} to ${ENVIRONMENT}
@@ -45,25 +45,19 @@ do:
   - set:
       ROLLBACK_ENV: WEB_IMAGE=${PREVIOUS_IMAGE}
 
-  - name: wait while ${UNIT} is still changing state
-    while:
-      probe:
-        exec: [systemctl, show, --property=ActiveState, --value, --, { var: UNIT }]
-      in: [activating, deactivating, reloading]
+  - name: wait until ${UNIT} has stopped changing state
+    exec: [systemctl, show, --property=ActiveState, --value, --, { var: UNIT }]
+    until: { result: stdout, not_in: [activating, deactivating, reloading] }
     max: 30
     every: 2s
-    do:
-      - log: "${UNIT} is busy; waiting"
-        level: debug
 
   - name: switch ${UNIT} to ${IMAGE} (as root)
-    become: root
     do:
-      - exec: [podman, pull, --, { var: IMAGE }]
+      - exec: [sudo, -n, podman, pull, --, { var: IMAGE }]
       - name: write ${ENV_FILE}
-        exec: [tee, --, { var: ENV_FILE }]
+        exec: [sudo, -n, tee, --, { var: ENV_FILE }]
         stdin: { var: NEW_ENV }
-      - exec: [systemctl, restart, --, { var: UNIT }]
+      - exec: [sudo, -n, systemctl, restart, --, { var: UNIT }]
 
   - name: poll ${HEALTH_URL}
     until: { result: stdout, json: .status, equals: ok }
@@ -80,11 +74,10 @@ do:
       - log: "${UNIT} is healthy on ${IMAGE}"
     else:
       - name: roll back ${UNIT} to ${PREVIOUS_IMAGE} (as root)
-        become: root
         do:
           - name: write ${ENV_FILE}
-            exec: [tee, --, { var: ENV_FILE }]
+            exec: [sudo, -n, tee, --, { var: ENV_FILE }]
             stdin: { var: ROLLBACK_ENV }
-          - exec: [systemctl, restart, --, { var: UNIT }]
+          - exec: [sudo, -n, systemctl, restart, --, { var: UNIT }]
       - fail: "${IMAGE} failed its health check on ${ENVIRONMENT}; rolled back to ${PREVIOUS_IMAGE}"
         code: HEALTH_CHECK_FAILED

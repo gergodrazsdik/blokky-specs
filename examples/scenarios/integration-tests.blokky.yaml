@@ -2,8 +2,8 @@
 # Starts PostgreSQL and Mailpit containers and the API (dotnet run) as services, seeds the
 # database, then runs tests/Integration in the .NET SDK container against the API at API_URL.
 # Needs: Docker or Podman, the .NET SDK, openssl, free ports 5433, 5080, 1025 and 8025. Holds the
-# lock integration-ports, so two runs of this user don't fight over them. With rootful Docker the
-# test container writes root-owned files into bin/ and obj/. Podman provides host.containers.internal,
+# lock integration-ports, so two runs of this user don't fight over them. Blokky maps your user into
+# the test container where the engine allows it, so bin/ and obj/ stay yours. Podman provides host.containers.internal,
 # Docker Desktop host.docker.internal; plain Docker Engine on Linux provides neither by default.
 # Run: blokky run examples/scenarios/integration-tests.blokky.yaml --input HOST_ALIAS=host.docker.internal
 blokky: 1.0
@@ -43,8 +43,7 @@ do:
             - probe:
                 exec: [docker, exec, blokky-it-db, pg_isready, -U, postgres, -h, 127.0.0.1]
         ready_timeout: 1m
-      - name: api
-        depends_on: [db]
+      - name: api        # services start in list order, so the database is ready first
         exec: [dotnet, run, --project, src/Api, --no-launch-profile]
         env:
           ASPNETCORE_URLS: http://0.0.0.0:5080
