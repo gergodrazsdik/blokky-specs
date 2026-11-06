@@ -17,7 +17,7 @@ Coding agents run a lot of shell. Much of it is not the work itself but the scaf
 
 Written by hand, this scaffolding is long and easy to get subtly wrong: an unquoted variable, a `trap` that doesn't fire on timeout, a loop with no upper bound, a child process left running, a `$?` read one command too late. It is also hard to review: the interesting command is buried in twenty lines of control flow. And it interacts badly with permission systems. A runner can allow `gh run view` and still has to ask about a compound command that wraps it in `for`, `sleep`, `timeout` and `&&`; a cleanup `rm -rf "$tmp"` triggers its own approval prompt.
 
-Blokky moves that scaffolding into a small declarative layer. The plan says "retry this three times", "wait until that holds, at most five minutes", "run these in parallel", "do this in a fresh temp directory"; the commands at the leaves stay simple, single-purpose and easy to check one by one. The runtime owns the temp directories, scripts and capture files it creates, so cleaning up never needs a hand-written `rm -rf`.
+Blokky moves that scaffolding into a small declarative layer. The plan says "retry this three times", "wait until that holds, at most five minutes", "run these in parallel", "do this in a fresh temp directory"; the commands at the leaves stay simple, single-purpose and easy to check one by one. The runtime owns the temp directories, scripts and capture files it creates; a temp directory can be removed at the end of its node with `tempdir: { remove: true }`, without a hand-written `rm -rf`.
 
 ## 2. The mental model
 
@@ -138,7 +138,7 @@ Blokky pays off when the scaffolding is a large part of what you would otherwise
 - **Not a CI system.** It runs on the machine it is invoked on, for one run, and keeps no state between runs except what the implementation keeps for cleanup and review.
 - **Not a general workflow engine or a scripting language.** It has no expression language, no functions, no mutable variables and no way to generate plan structure at run time. A feature that would need those probably doesn't belong.
 
-What Blokky does aim for is **reviewability**: everything a plan can execute is determinable from the plan and its inputs before it runs, so an implementation can list every process, argv and environment entry for a human, a classifier or a validator. The goal is "never less safe than the equivalent bash, and easier to review".
+What Blokky does aim for is **reviewability**: the programs a plan can start, the shape of every argv and environment, and the source of every value are determinable from the plan, its inputs and the environment it starts with, before it runs; only captured values are known at run time, so an implementation can list every process, argv and environment entry for a human, a classifier or a validator. The goal is "never less safe than the equivalent bash, and easier to review".
 
 ## 7. Reading guide
 

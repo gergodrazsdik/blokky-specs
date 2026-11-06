@@ -55,7 +55,7 @@ The descriptions are short and kept to what is well established about each tool.
 
 **What it is.** Tools that sit between an agent and the shell to decide what may run: permission rules in agent runners (allow and deny lists, prefix matching), pre-execution hooks, wrappers that intercept or parse commands, and approval queues such as agent-safe-runner, where an agent submits a command, a policy assesses it, a person approves it, and the run is audited.
 
-**Takes.** The problem statement: agents' commands need to be reviewed, and compound shell commands are hard to review or match against rules. Blokky's answer is to make plans easy to inspect: everything a plan can execute is determinable before it runs, so an implementation can list every process, argv and environment entry for a runner's rules, a hook or an external validator.
+**Takes.** The problem statement: agents' commands need to be reviewed, and compound shell commands are hard to review or match against rules. Blokky's answer is to make plans easy to inspect: what a plan can execute is determinable before it runs (only captured values wait for the run), so an implementation can list every process, argv and environment entry for a runner's rules, a hook or an external validator.
 
 **Leaves.** Being the control. Blokky does not decide what is allowed, does not queue or approve commands and is not a sandbox; the runner's permission system and the implementation's approval mechanisms do that. Controls that only work if agents can use *only* Blokky are out of scope, because agents keep a generic shell tool.
 

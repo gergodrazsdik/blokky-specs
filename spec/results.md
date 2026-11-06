@@ -50,6 +50,7 @@ This document defines the **run result**: the abstract outcome of a run that eve
 |---|---|
 | program | The resolved absolute path of argv[0] or of the shell. |
 | invocation | The argv as run (masked), including the shell invocation for `script`. |
+| cwd | The leaf's working directory (on the host; for a container leaf, also the container path). |
 | exit code | The exit code (an unsigned 32-bit value on Windows), if the process exited. |
 | signal | The terminating signal (Unix), if any. |
 | killed by | If the run stopped the leaf: `timeout`, `attempt_timeout`, `cancel`, or the external stop's cause. |

@@ -30,7 +30,7 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 | `env: NAME` | Environment variable `NAME` in the **effective** environment of the scope where the condition is evaluated (Blokky's environment plus enclosing `env`/`export`). |
 | `path: P` | Host filesystem path `P` (literal or `{ var: X }`), relative to the cwd of the evaluating scope. |
 | `command: NAME` | Whether program `NAME` can be found the way an `exec` argv[0] would be (§2.4). |
-| `host: os \| arch` | `os` ∈ {`linux`, `macos`, `windows`} (WSL is `linux`); `arch` ∈ {`x64`, `arm64`}. |
+| `host: os \| arch` | `os` ∈ {`linux`, `macos`, `windows`} (WSL is `linux`); `arch` ∈ {`x64`, `arm64`}, the OS's native architecture, also when Blokky runs under emulation (Rosetta, x64 on Windows on Arm). |
 | `result: stdout \| stderr \| exit \| error` | The node's own last attempt or iteration (§2.1). |
 | `probe: { … }` | A probe's exit code, or its trimmed stdout when an operator is given (§5). |
 | `port: N` | A loopback TCP port; `services` `ready:` conditions only (§2.3). |
@@ -43,7 +43,7 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 
 ### 2.2 `host`
 
-- **CO-7.** `host:` is the only subject evaluated statically: a branch whose `host:` condition is false on this machine is **pruned** before the shell and OS checks and in static views of the plan. A `host:` condition inside a composite with other subjects is evaluated at run time like any other.
+- **CO-7.** `host:` is the only subject evaluated statically: a branch whose `host:` condition is false on this machine is **pruned** before the shell and OS checks. Static views still show a pruned branch, marked as pruned with its condition, so a review on one OS sees what the plan runs on another ([ADR 0018](../adr/0018-review-semantics.md)). A `host:` condition inside a composite with other subjects is evaluated at run time like any other.
 
 ### 2.3 `port` and `output` (services)
 
@@ -85,13 +85,13 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 ### 3.1 String operators
 
 - **CO-11.** `equals`, `in` and `contains` compare strings ordinally. Nothing is trimmed except process output, which has all trailing `\n` and `\r` removed when it becomes a value ([ADR 0002](../adr/0002-language-core.md)).
-- **CO-12.** `ignore_case: true` makes `equals`, `in`, `contains` (ordinal, case-insensitive) and `matches` (as `(?i)`) ignore case, using the invariant culture. On other operators it is a plan error.
+- **CO-12.** `ignore_case: true` makes `equals`, `in`, `contains` (ordinal, case-insensitive) and `matches` (as `(?i)`) ignore case: two characters are equal if their Unicode simple uppercase mappings are equal (so `k` matches `K` but not the Kelvin sign `K`). On other operators it is a plan error.
 
 ### 3.2 `matches`
 
-- **CO-13.** `matches` is an **unanchored search over the whole value**: true if the pattern matches anywhere. It uses .NET regular expressions with `RegexOptions.NonBacktracking` and the invariant culture.
-- **CO-14.** There is no implicit multiline mode: `^` and `$` anchor at the start and end of the whole value. Inline options (`(?m)`, `(?s)`, `(?i)`) are allowed. In .NET, `$` also matches before a final newline; use `\z` for a strict end.
-- **CO-15.** A pattern that doesn't compile under `NonBacktracking` is a plan error.
+- **CO-13.** `matches` is an **unanchored search over the whole value**: true if the pattern matches anywhere. Patterns use the portable regex subset of [syntax.md §6.7](syntax.md#67-regular-expressions); implementations translate it for their engine ([ADR 0018](../adr/0018-review-semantics.md)).
+- **CO-14.** There is no multiline mode: `^` and `$` anchor at the start and end of the whole value, and `$` never matches before a final newline. `(?i)` is the only inline option.
+- **CO-15.** A pattern outside the subset is a plan error.
 
 ### 3.3 Emptiness and definedness
 
@@ -108,7 +108,7 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 
 ### 3.6 `json:`
 
-- **CO-20.** `json: PATH` parses the subject's value as one JSON value and extracts the value at `PATH` before the operator applies. Paths use the subset `.`, `.name`, `.["key"]`, `[N]` ([syntax.md](syntax.md), [ADR 0002](../adr/0002-language-core.md)).
+- **CO-20.** `json: PATH` parses the subject's value as one JSON value and extracts the value at `PATH` before the operator applies. Paths use the grammar of [syntax.md §6.8](syntax.md#68-json-paths).
 - **CO-21.** The extracted value is converted to a string as in field captures: strings unescaped, numbers as written, `true`/`false`, `null` as `''`, objects and arrays as compact JSON ([variables.md](variables.md), VA-23).
 - **CO-22.** Invalid JSON or a path that doesn't resolve is a condition error, except with `defined`/`not_defined`, where a missing path counts as undefined.
 
@@ -135,7 +135,7 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 ### 5.2 Process
 
 - **CO-28.** A probe is a real process with full process control: its own session or job, empty stdin, tree kill. It is killed when its own timeout expires, when an enclosing limit fires or when the evaluating node is cancelled.
-- **CO-29.** Its limit is its own `timeout`, else the smaller of `probe_timeout` (default 30s) and `defaults.leaf_timeout` if set ([ADR 0003](../adr/0003-execution-defaults.md)).
+- **CO-29.** Its limit is its own `timeout`, else the smaller of `probe_timeout` (default 30s) and `defaults.leaf_timeout` if set ([ADR 0003](../adr/0003-execution-defaults.md)). Hitting it is a condition error (CO-35).
 - **CO-30.** Its stdout is limited to 64 KiB (implementations MAY let users raise it); more is a condition error. Its stderr is treated like the node's other output.
 - **CO-31.** Every executed probe is recorded in the run result (command, exit code, duration, result), and every probe is part of what a plan can execute ([reference.md §9](reference.md#9-security-considerations)).
 - **CO-32.** Probes SHOULD be side-effect-free. Startup cost matters for tight polling: `exec` probes and Blokky-evaluated subjects (`path`, `var`) are fast; a `pwsh` probe can take a second to start.
@@ -176,7 +176,7 @@ A condition error makes a condition **neither true nor false**. The node that ow
   - a probe that can't be started (program not found; test for an installed program with the `command` subject instead, §2.4);
   - a permission error while checking a `path`.
 - **CO-39.** In `assert`, a condition error fails the node with the condition-error code, not the assertion's `code`; the assertion's `message` and `code` are attached as context ([ADR 0002](../adr/0002-language-core.md), Q-n).
-- **CO-40.** In `retry`, `while` and `until`, a condition error ends the repetition and fails the node; `retry: true` doesn't retry it ([reference.md §5.5](reference.md#55-what-retry-true-retries)).
+- **CO-40.** In `retry` and `while`, a condition error ends the repetition and fails the node; `retry: true` doesn't retry it. In `until`, a condition error from the `result:` subject (invalid JSON, a path that doesn't resolve, output over the limit) counts as a failed iteration and follows `on_body_failure`: with `continue` (the default) the loop goes on, with `stop` the node fails; other condition errors in `until` end the loop ([ADR 0018](../adr/0018-review-semantics.md)). See also [reference.md §5.5](reference.md#55-what-retry-true-retries).
 - **CO-41.** In `when`, a condition error fails the node; `ignore_errors` on that node applies ([ADR 0009](../adr/0009-status-propagation.md)).
 
 ## 8. Out of scope
