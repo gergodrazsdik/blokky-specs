@@ -118,6 +118,7 @@ The root MUST be a single mapping. It holds the **plan-only keys** below plus ex
 |---|---|---|
 | `blokky` | yes | The spec version, `MAJOR.MINOR` (§6.1). |
 | `inputs` | no | Plan inputs (§5). |
+| `vars` | no | Plan constants: a mapping of variable names to values (literals, references, templates; [variables.md §5.6](variables.md#56-set-and-vars)). |
 | `outputs` | no | A list of variable names whose final values the run result returns. |
 | `defaults` | no | A closed mapping: `shell`, `leaf_timeout`, `become`. |
 
@@ -152,7 +153,7 @@ Any other key under `defaults:` is a plan error. All `defaults` values are liter
 
 ### 4.4 `outputs:`
 
-A list of variable names (inputs, captures or tempdir paths in the plan's top-level scope). A name that is bound only inside a loop body is a plan error (unless gathered with `collect`). Semantics, including `null` for undefined outputs and the shape of secret outputs, are in [variables.md](variables.md).
+A list of variable names (inputs, `vars`, `set` variables, captures or tempdir paths in the plan's top-level scope). A name that is bound only inside a loop body is a plan error (unless gathered with `collect`). Semantics, including `null` for undefined outputs and the shape of secret outputs, are in [variables.md](variables.md).
 
 ## 5. Plan inputs
 
@@ -250,8 +251,8 @@ Where a value affects execution and may come from a variable, the field accepts 
 
 | Form | Meaning | Allowed in |
 |---|---|---|
-| `{ var: X }` | The value of plan variable `X`. | `exec` array elements (not argv[0]); `env` values; `cwd`; `path:` subjects; `stdin`; `stdin.file`; `mounts[].host`. |
-| `{ from_env: NAME }` | The value of environment variable `NAME` in Blokky's own environment. | `env` values. |
+| `{ var: X }` | The value of plan variable `X`. | `exec` array elements (not argv[0]); `env` values; `cwd`; `path:` subjects; `stdin`; `stdin.file`; `mounts[].host`; `set` and `vars` values. |
+| `{ from_env: NAME }` | The value of environment variable `NAME` in the environment the run started with. | `env` values; `set` and `vars` values. |
 | `stdin: { var: X }` | The variable's value as the leaf's stdin. | `stdin`. |
 | `stdin: { file: P }` | The content of host file `P` (a literal path or `{ var: X }`). | `stdin`. |
 
@@ -260,9 +261,9 @@ Where a value affects execution and may come from a variable, the field accepts 
 - argv[0] of an `exec` array MUST be a literal; a reference there is a plan error.
 - Plan variables reach processes only through `env:`, `export:` and `exec` array elements; there is no other way.
 
-### 7.3 Interpolation in display strings
+### 7.3 Interpolation in display strings and templates
 
-`${X}` interpolation exists only in **display strings**: `name`, and the messages of `log`, `fail` and `assert` (`message:`).
+`${X}` interpolation exists only in **display strings** (`name`, and the messages of `log`, `fail` and `assert`) and in **templates**, the values of `set` and `vars` ([variables.md §5.6](variables.md#56-set-and-vars)). Templates are how a plan builds a string from variables; every other executed field takes a literal or one whole variable.
 
 - `${X}` is replaced by the value of plan variable `X`; process environment variables are never interpolated.
 - `$${` produces a literal `${`.
@@ -272,7 +273,7 @@ Where a value affects execution and may come from a variable, the field accepts 
 
 ### 7.4 Per-field table
 
-Legend: **L** = literal only; **`${}`** = display string with interpolation; **R** = literal or whole-value reference (forms in §7.2); **C** = a condition ([conditions.md](conditions.md)); **N** = a list of nodes. The type column refers to §6. Every field of the language is listed.
+Legend: **L** = literal only; **`${}`** = display string with interpolation; **T** = literal, whole-value reference or template (§7.3); **R** = literal or whole-value reference (forms in §7.2); **C** = a condition ([conditions.md](conditions.md)); **N** = a list of nodes. The type column refers to §6. Every field of the language is listed.
 
 #### Root and inputs
 
@@ -283,6 +284,7 @@ Legend: **L** = literal only; **`${}`** = display string with interpolation; **R
 | `inputs.<NAME>.description` | string | L (never interpolated) |
 | `inputs.<NAME>.in` | list of strings | L |
 | `inputs.<NAME>.matches` | regex | L |
+| `vars.<NAME>` | string, reference or template | T |
 | `outputs` | list of variable names | L |
 | `defaults.shell` | shell name | L |
 | `defaults.leaf_timeout` | duration | L |
@@ -304,6 +306,7 @@ Legend: **L** = literal only; **`${}`** = display string with interpolation; **R
 | `level` | `debug`, `info`, `warn` | L |
 | `fail` | string | `${}` |
 | `assert` | condition | C |
+| `set.<NAME>` | string, reference or template | T |
 | `message` | string | `${}` |
 | `code` | user error code | L |
 | `concurrency` (`all`, `any`) | integer | L |

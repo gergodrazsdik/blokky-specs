@@ -160,6 +160,19 @@
         }
       ]
     },
+    "setMap": {
+      "description": "set and vars values: a literal or template (strings with ${X} placeholders), or a whole-value reference.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/varName" },
+      "additionalProperties": {
+        "anyOf": [
+          { "$ref": "#/$defs/scalar" },
+          { "$ref": "#/$defs/varRef" },
+          { "$ref": "#/$defs/fromEnvRef" }
+        ]
+      }
+    },
     "nodeList": {
       "type": "array",
       "minItems": 1,
@@ -353,6 +366,7 @@
         "log": { "$ref": "#/$defs/scalar" },
         "fail": { "$ref": "#/$defs/scalar" },
         "assert": { "$ref": "#/$defs/condition" },
+        "set": { "$ref": "#/$defs/setMap" },
 
         "shell": { "$ref": "#/$defs/shell" },
         "then": { "$ref": "#/$defs/nodeList" },
@@ -468,7 +482,8 @@
         { "required": ["sleep"] },
         { "required": ["log"] },
         { "required": ["fail"] },
-        { "required": ["assert"] }
+        { "required": ["assert"] },
+        { "required": ["set"] }
       ]
     },
     "node": {
@@ -505,6 +520,7 @@
           "propertyNames": { "$ref": "#/$defs/varName" },
           "additionalProperties": { "$ref": "#/$defs/input" }
         },
+        "vars": { "$ref": "#/$defs/setMap" },
         "outputs": { "$ref": "#/$defs/nameList" },
         "defaults": {
           "type": "object",

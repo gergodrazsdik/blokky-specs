@@ -21,6 +21,8 @@ This document is normative for plan variables: names, the kinds of bindings, pla
 | Binding | Bound by | Value | Scope |
 |---|---|---|---|
 | Input | `inputs:` (root) | the caller's value or the default | the whole plan (plan scope) |
+| Plan constant | `vars:` (root) | a literal, reference or template (§5.6) | the whole plan (plan scope) |
+| Set variable | `set: { NAME: value }` | a literal, reference or template (§5.6) | like a capture (§6) |
 | Capture | `capture: NAME` | the leaf's trimmed stdout | §6 |
 | Field capture | `capture: { NAME: .path, … }` | a JSON field of stdout | §6 |
 | File capture | `capture_file: NAME` | the absolute path of a file holding stdout | §6 |
@@ -67,7 +69,7 @@ All input errors are found and reported together, before anything runs (EM-1).
 
 Static views of a plan (for review, before a run) MAY accept a missing required input and show it as a placeholder; unknown and duplicate inputs are still errors there.
 
-## 5. Captures
+## 5. Captures, `set` and `vars`
 
 ### 5.1 Forms
 
@@ -116,19 +118,30 @@ Static views of a plan (for review, before a run) MAY accept a missing required 
 
 - **VA-27.** `secret: true` on the node marks the variables bound by its `capture` (both forms) as secret. A `capture_file` path is never secret, and the file's content is stored as written, not masked.
 
+### 5.6 `set` and `vars`
+
+([ADR 0015](../adr/0015-set-and-vars.md))
+
+- **VA-56.** A `set` or `vars` value is a literal, a whole-value reference (`{ var: X }`, `{ from_env: NAME }`, optionally `secret: true`), or a **template**: a string containing `${X}` placeholders, with the display-string syntax ([syntax.md §7.3](syntax.md#73-interpolation-in-display-strings)). A literal without `${` is a plain string.
+- **VA-57.** Templates join strings only: `${X}` is replaced by `X`'s value, `$${` produces `${`. There are no functions. Templates appear in `set` and `vars` values and nowhere else in executed fields.
+- **VA-58.** An undefined variable in a template or reference fails the `set` node with `BK_UNDEFINED_VARIABLE` (a plan error for `vars` and for statically certain cases); an unset `from_env` fails with `BK_FROM_ENV_UNSET`.
+- **VA-59.** A value is secret if it is a secret reference or a template that uses any secret variable.
+- **VA-60.** `set` entries are bound in order, so a later entry may use an earlier one; the bindings are scoped like a capture of the `set` node (§6).
+- **VA-61.** `vars` entries are bound in the plan scope, in order, after the inputs and before anything runs. Their values may use only inputs, earlier `vars` entries and `from_env`; never a value produced by running something. The caller can't override them.
+
 ## 6. Scope and binding
 
 - **VA-28.** **Sequences.** In `do`, a capture is visible to later siblings, their descendants and, after the `do`, to the `do`'s later siblings.
 - **VA-29.** **Parallel children.** Two `all` children MUST NOT capture the same name. A capture of an `all` child is visible after the `all` completes.
 - **VA-30.** **`any` and `race`.** Only the deciding child's captures are bound. Different children MAY capture the same name (never an input's name).
-- **VA-31.** **Branches.** A capture inside `then` or `else` is *possibly undefined* after the `if`; using it without a `defined` check gets a static warning.
+- **VA-31.** **Branches.** A name bound (by `set` or a capture) in **both** `then` and `else` of an `if`, or by **every** child of an `any` or `race`, is definitely bound after the node succeeds. Bound in only some branches or children, it is *possibly undefined* afterwards; using it without a `defined` check gets a static warning ([ADR 0015](../adr/0015-set-and-vars.md)).
 - **VA-32.** **Repetition on the node itself.** A capture on a node with `retry`, `while` or `until` is visible to that attempt's own condition (even if the attempt failed) and is **published** to the enclosing scope from the terminating attempt, only if the node succeeds.
 - **VA-33.** **Loop bodies.** Captures of nodes inside a `while`, `until` or `for` body are scoped to the iteration: later nodes in the same iteration see them, the next iteration's condition sees them (`while`, `until`), but they are never published outside the loop. The first `while` check sees only the enclosing scope; a `while` condition that reads a body capture without `defined` gets a lint warning.
 - **VA-34.** **`for` iterations never publish.** Values leave a `for` only through `collect`, ordered by item index, with `null` for failed or skipped iterations.
 - **VA-54.** **Item fields.** `fields` binds its variables per iteration, like `as`, with the conversion of VA-23; they count as declarations for collision and shadowing checks.
 - **VA-55.** **`collect`.** The list variable is bound after the loop, in the `for` node's enclosing scope like a capture of the node, as a compact JSON array of strings with `null` entries. It is secret if the collected capture is secret.
 - **VA-35.** **`finally`.** `finally` nodes see everything the body bound. Captures under `finally` are visible only to later nodes in the same `finally` list and their descendants; referencing one outside is a plan error ([ADR 0002](../adr/0002-language-core.md), Q-s).
-- **VA-36.** **Shadowing** is a plan error: a name can't be bound where an enclosing scope already binds it, including loop variables, tempdir names and inputs.
+- **VA-36.** **Single assignment.** Binding a name that is already bound is a plan error: in an enclosing scope (shadowing, including loop variables, tempdir names, inputs and `vars`), or earlier in the same scope (two sequential siblings, or a `set` of a bound name). Alternatives (`if` branches, `any`/`race` children) may bind the same name, because only one of them runs to completion.
 - **VA-37.** **Own variables.** The modifiers outside repetition (`when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`, `container`, `become`, `services`) MUST NOT reference variables the node itself introduces (`as`, `tempdir.as`, its own captures). The error says "move it into the body".
 - **VA-38.** Referencing a variable that isn't bound at that point is a condition error in conditions and a node error in display strings and references. Statically certain cases are plan errors; possible cases are warnings.
 

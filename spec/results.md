@@ -42,7 +42,7 @@ This document defines the **run result**: the abstract outcome of a run that eve
 | services | nodes with `services` | For each service: its name, when it became ready, and how it ended (stopped by the run, exited with code N, never ready). |
 | messages | `log`, `fail`, `assert` | The rendered message and, for `log`, its level. |
 | probes | nodes whose conditions ran probes | For each executed probe: the command, exit code and result (`true`, `false`, `error`). |
-| captures | `exec`, `script` | The names of the variables the node bound (never their values). |
+| bindings | `exec`, `script`, `set` | The names of the variables the node bound by `capture` or `set` (never their values). |
 
 ### 3.1 Leaves
 

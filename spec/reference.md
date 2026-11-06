@@ -52,6 +52,7 @@ Modifiers apply in a fixed order, outermost first: `when` → `timeout` → `loc
 | `log` | Record a message. |
 | `fail` | Fail with a message and code. |
 | `assert` | Fail unless a condition holds. |
+| `set` | Bind variables. |
 
 ### 2.1 `exec`
 
@@ -169,6 +170,24 @@ Starts all children at once, in declaration order; the **first child to complete
 - `assert:` takes a condition. If it is true, the node succeeds; if false, the node fails with `code` (default `BK_ASSERT`) and `message`.
 - **Companions:** `message` (display string, optional; the default names the condition) and `code` (optional).
 - **A condition error** fails the node with the built-in condition-error code, not with `code`; the assertion's `message` and `code` are attached as context ([ADR 0002](../adr/0002-language-core.md), Q-n).
+
+### 2.12 `set`
+
+```yaml
+- if: { var: ENVIRONMENT, equals: production }
+  then:
+    - set: { REPLICAS: '3', HOST: example.com }
+  else:
+    - set: { REPLICAS: '1', HOST: staging.example.com }
+- set:
+    URL: https://${HOST}/healthz
+- exec: [curl, -fsS, { var: URL }]
+```
+
+- `set:` takes a mapping of variable names to values and binds each, in order (a later entry may use an earlier one). It starts no process and always succeeds unless a value can't be resolved.
+- **Values:** a literal; a whole-value reference (`{ var: X }`, `{ from_env: NAME }`, each optionally `secret: true`); or a **template**, a string with `${X}` placeholders and the display-string syntax (`$${` escapes). Templates are allowed only in `set` and `vars`; every executed argument stays a literal or one whole variable. There are no functions.
+- An undefined variable in a template or reference fails the node (`BK_UNDEFINED_VARIABLE`; `BK_FROM_ENV_UNSET` for `from_env`). A value built from any secret part is secret.
+- **Scope:** like a capture. Variables are single-assignment: setting a bound name is an error, and a name bound in every branch of an `if` is defined after it ([variables.md §6](variables.md#6-scope-and-binding), [ADR 0015](../adr/0015-set-and-vars.md)).
 
 ## 3. Leaf options
 
@@ -450,7 +469,7 @@ All `for` options live inside the `for:` mapping:
 
 ## 6. Plan-level keys
 
-`blokky`, `inputs`, `outputs` and `defaults` are allowed only at the root; see [syntax.md §4](syntax.md#4-the-plan-document) and [variables.md](variables.md). The root mapping is also the root node: it holds exactly one kind and may carry modifiers.
+`blokky`, `inputs`, `vars`, `outputs` and `defaults` are allowed only at the root; see [syntax.md §4](syntax.md#4-the-plan-document) and [variables.md](variables.md). The root mapping is also the root node: it holds exactly one kind and may carry modifiers.
 
 ## 7. Validity matrix
 
@@ -469,6 +488,7 @@ Which modifiers and companion groups each kind accepts. ✓ = valid; — = plan 
 | `log` | — | — | ✓ | — | — | `for` only | `for` only |
 | `sleep` | — | — | — | — | — | — | — |
 | `fail` | — | — | — | — | — | — | — |
+| `set` | — | — | — | — | — | — | — |
 
 "`for` only" means the field is valid only inside the `for:` mapping of that node. Companion fields of a kind (`then`/`else`, `shell`, `level`, `message`, `code`) are valid only on their kind.
 
@@ -501,6 +521,8 @@ Implementations MUST enforce these as plan errors (unless noted) in addition to 
 23. `${X}` names a variable in scope (a warning when it might be undefined; a run-time error when it is).
 24. Service names are present and unique within a node; `depends_on` names exist and form no cycle.
 25. `fields` only with `items`; `keep_blank` only with `lines`; `allow_empty` only with `glob`; `max_items` only with `items` and `lines`.
+26. A name isn't bound twice: not by two sequential siblings, not by `set` for a bound name, not by `vars` for an input or another `vars` entry.
+27. Templates (`${…}` in executed values) appear only in `set` and `vars` values; `vars` values use only inputs, earlier `vars` and `from_env`.
 
 ## 9. Security considerations
 
