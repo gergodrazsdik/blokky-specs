@@ -37,7 +37,7 @@ This document is normative for how leaves become processes: splitting `exec` str
 - **SH-11.** The script text is written to a file owned by the run (readable only by the run's user) before the leaf starts. Its name is derived from the node's path id, never from `name`. The extension is `.sh` for `bash` and `sh`, `.zsh` for `zsh`, `.fish` for `fish`, and `.ps1` for `pwsh` and `powershell`.
 - **SH-12.** The file holds the text as written (YAML block scalars give LF line endings), encoded as UTF-8 without a BOM, except for `powershell` (Windows PowerShell 5.1), which gets a UTF-8 BOM so it reads non-ASCII text correctly.
 - **SH-13.** The file is passed to the shell **as a file**, never with `-c`: there are no command-line length limits, no quoting layer, and the exact script stays inspectable until `clean`. Consequences: `$0` (POSIX) and `$PSCommandPath` (PowerShell) are the script file's path, and shell error messages name that file.
-- **SH-14.** The text never interpolates `${…}`. Plan variables reach it only through `env:` and `export:` as environment variables.
+- **SH-14.** Blokky never interpolates `${…}` in script text; `${…}` there is the shell's own syntax and reaches the shell unchanged. Plan variables reach the script only through `env:` and `export:` as environment variables.
 
 ### 2.2 Invocation table
 

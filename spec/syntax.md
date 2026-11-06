@@ -8,7 +8,7 @@ This document defines how a plan is written: encoding, the YAML subset, the root
 
 The key words MUST, MUST NOT, REQUIRED, SHALL, SHALL NOT, SHOULD, SHOULD NOT, RECOMMENDED, MAY and OPTIONAL are to be interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) and [RFC 8174](https://www.rfc-editor.org/rfc/rfc8174) when, and only when, they appear in all capitals.
 
-- A **plan error** is detected before anything runs, and prevents the run. Every plan error carries a code from [errors.md](errors.md), a line and column, and, where this document says so, a corrected snippet.
+- A **plan error** is detected before anything runs, and prevents the run. Every plan error carries a code from [errors.md](errors.md), a line and column (of the offending key, or of its value when the value is what is wrong), and, where this document says so, a corrected snippet.
 - A **warning** points at something legal but likely wrong. Warnings never block a run by themselves; implementations decide how they are shown and whether users can tune them (for blokky-cli: lint rules).
 - An implementation MUST report all plan errors it can find in one pass, not just the first.
 
@@ -243,7 +243,7 @@ Regex values (`matches`, `not_matches`, input `matches`) use .NET syntax with `R
 
 ### 7.1 Literals
 
-Most fields are **literal**: the value is taken from the plan text as written. Literal fields never interpolate `${…}` and never accept a reference or an input. A `${` in a literal field is a plan error (§9). Executed text — `exec` strings, `script` text, probe commands — is always literal.
+Most fields are **literal**: the value is taken from the plan text as written. Literal fields never interpolate `${…}` and never accept a reference or an input. A `${` in a literal field other than `script` text is a plan error (§9). Executed text (`exec` strings, `script` text, probe commands) is always literal. In `script` text, `${…}` is the shell's own syntax (`${VAR:-default}`, `${#arr[@]}`, PowerShell `${env:X}`) and is passed to the shell unchanged; implementations SHOULD warn when `${NAME}` in a POSIX script names a plan variable that the node doesn't export, because the author probably expected interpolation.
 
 ### 7.2 Whole-value references
 
@@ -389,6 +389,7 @@ Legend: **L** = literal only; **`${}`** = display string with interpolation; **T
 | `var` | variable name | L |
 | `env` (subject) | environment variable name | L |
 | `path` | host path | R (`var` only) |
+| `command` | program name or path | L |
 | `host` | `os`, `arch` | L |
 | `result` | `stdout`, `stderr`, `exit`, `error` | L |
 | `probe` | probe mapping | see below |
@@ -427,7 +428,7 @@ Each of these plan errors names the problem and includes a corrected snippet. Co
 | A mapping or a single node where a body list is expected (`do: { exec: … }`) | Prefix each node with a dash (`- exec: …`). |
 | A string condition (`if: "$X == 1"`) | `if: { var: X, equals: '1' }` |
 | GitHub-Actions-style `if:` next to another kind (`exec: …` plus `if: …`) | Use `when:` for a guard. |
-| `${X}` in a literal or executed field | Use `{ var: X }` where references are allowed, nest a relative `cwd`, or `"$X"` in shell text with `export: [X]`. |
+| `${X}` in a literal field or an `exec` string | Use `{ var: X }` where references are allowed, nest a relative `cwd`, or `"$X"` in shell text with `export: [X]`. |
 | `retry: 3` | `retry: true` plus `max: 3` |
 | A bare number for a duration (`timeout: 30`) | `timeout: 30s` |
 | A mapping as the value of `exec:`/`script:` (`exec: { cmd: …, timeout: 5m }`) | Move `timeout` (and other options) to the node level. |

@@ -29,6 +29,7 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 | `var: NAME` | Plan variable `NAME` ([variables.md](variables.md)). |
 | `env: NAME` | Environment variable `NAME` in the **effective** environment of the scope where the condition is evaluated (Blokky's environment plus enclosing `env`/`export`). |
 | `path: P` | Host filesystem path `P` (literal or `{ var: X }`), relative to the cwd of the evaluating scope. |
+| `command: NAME` | Whether program `NAME` can be found the way an `exec` argv[0] would be (§2.4). |
 | `host: os \| arch` | `os` ∈ {`linux`, `macos`, `windows`} (WSL is `linux`); `arch` ∈ {`x64`, `arm64`}. |
 | `result: stdout \| stderr \| exit \| error` | The node's own last attempt or iteration (§2.1). |
 | `probe: { … }` | A probe's exit code, or its trimmed stdout when an operator is given (§5). |
@@ -50,6 +51,18 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 - **CO-43.** `output: stdout` or `stderr` is everything the service has written to that stream so far (decoded as UTF-8, trailing CR/LF removed, at most `max_capture_bytes`, the latest output kept). It is tested with `contains` or `matches`.
 - **CO-44.** Both subjects are valid only in a service's `ready:` condition, where they refer to that service ([reference.md §4.10](reference.md#410-services)).
 
+### 2.4 `command`
+
+- **CO-45.** `{ command: NAME, exists: true }` is true if `NAME` resolves to a program by the rules for `exec` argv[0] ([shells.md §4](shells.md#4-executable-resolution)): on `PATH` from the environment the run started with (never the cwd), with the Windows `.com`/`.exe` rule, and as a path relative to the evaluating scope's cwd when `NAME` contains a separator. Nothing is started. `not_exists` is its negation.
+- **CO-46.** `NAME` is a literal. Like `path:`, `command:` looks at the host, also under `container` (implementations SHOULD warn there). It is the portable way to choose between tools:
+
+```yaml
+- any:
+    - when: { command: ruff, exists: true }
+      exec: [ruff, check, .]
+    - exec: [python3, -m, flake8, .]
+```
+
 ## 3. Operators
 
 | Operator | Negation | Operand | Valid subjects |
@@ -60,7 +73,7 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 | `matches` | `not_matches` | regex | `var`, `env`, `result` (`stdout`, `stderr`), `probe`, `output` |
 | `empty` | `not_empty` | `true` | `var`, `env`, `result` (`stdout`, `stderr`, `error`), `probe` |
 | `defined` | `not_defined` | `true` | `var`, `env` |
-| `exists` | `not_exists` | `true` | `path` |
+| `exists` | `not_exists` | `true` | `path`, `command` |
 | `is_file`, `is_dir` | — (use `not:`) | `true` | `path` |
 | `open` | — | `true` | `port` |
 | `gt`, `ge`, `lt`, `le` | (complementary) | number | `var`, `env`, `result` (`stdout`, `exit`), `probe` |
@@ -160,7 +173,7 @@ A condition error makes a condition **neither true nor false**. The node that ow
   - a probe exit code outside both `true_exit` and `false_exit`, or not "true" when an operator is given;
   - a probe timeout without `timeout_result`;
   - probe output over the limit, or `result:` output over `max_capture_bytes`;
-  - a probe that can't be started (program not found);
+  - a probe that can't be started (program not found; test for an installed program with the `command` subject instead, §2.4);
   - a permission error while checking a `path`.
 - **CO-39.** In `assert`, a condition error fails the node with the condition-error code, not the assertion's `code`; the assertion's `message` and `code` are attached as context ([ADR 0002](../adr/0002-language-core.md), Q-n).
 - **CO-40.** In `retry`, `while` and `until`, a condition error ends the repetition and fails the node; `retry: true` doesn't retry it ([reference.md §5.5](reference.md#55-what-retry-true-retries)).

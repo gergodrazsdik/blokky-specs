@@ -7,11 +7,12 @@ The spec describes the **whole language 1.0**, with every planned feature; it ha
 ## Versions
 
 1. **`1.0.0-draft.1`:** the complete language, every feature specified to the same depth. *(tagged 2026-11-05)*
-2. **`1.0.0-draft.2`:** `set` and `vars` ([ADR 0015](adr/0015-set-and-vars.md)). *(in progress)*
-3. **Example suite** covering every feature, then a **review** by the maintainer and an agent council, which also asks whether each feature earns its place. Accepted changes produce further drafts (`1.0.0-draft.N`).
-4. **Conformance suite** for the features that survive the review.
-5. **Refinement during the runtime implementation:** decisions the runtime can't confirm are revised in further drafts.
-6. **`1.0.0`** once the runtime has validated the draft.
+2. **`1.0.0-draft.2`:** `set` and `vars` ([ADR 0015](adr/0015-set-and-vars.md)). *(tagged 2026-11-06)*
+3. **`1.0.0-draft.3`:** fixes found while writing the examples, and the `command` subject ([ADR 0016](adr/0016-fixes-from-examples.md)). *(in progress)*
+4. **Example suite** covering every feature, then a **review** by the maintainer and an agent council, which also asks whether each feature earns its place. Accepted changes produce further drafts (`1.0.0-draft.N`).
+5. **Conformance suite** for the features that survive the review.
+6. **Refinement during the runtime implementation:** decisions the runtime can't confirm are revised in further drafts.
+7. **`1.0.0`** once the runtime has validated the draft.
 
 ## The language 1.0
 
@@ -21,7 +22,7 @@ The spec describes the **whole language 1.0**, with every planned feature; it ha
 - **Simple nodes:** `sleep`, `log`, `fail`, `assert`, `set`.
 - **Modifiers:** `name`, `when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`, `export`, `container`, `become`, `services`, `finally`, `ignore_errors`, `attempt_timeout`, `capture` / `capture_file`.
 - **Repetition:** `retry`, `while`, `until`, and `for` over `each`, `count`, `glob`, `items`, `lines` and `matrix`; `collect` for results.
-- **Conditions:** `var`, `env`, `path`, `host`, `result` and `probe` subjects (`port` and `output` for services); string, set, regex, emptiness, existence and numeric operators; `all`/`any`/`not`.
+- **Conditions:** `var`, `env`, `path`, `command`, `host`, `result` and `probe` subjects (`port` and `output` for services); string, set, regex, emptiness, existence and numeric operators; `all`/`any`/`not`.
 - **Variables:** `set` (bind variables from literals, references or `${}` templates), single assignment.
 - **Plan document:** `blokky:` version, `inputs:` (string inputs with `in:`/`matches:` constraints), `vars:` (plan constants), `outputs:`, `defaults:`.
 
