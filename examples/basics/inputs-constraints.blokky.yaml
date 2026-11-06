@@ -1,0 +1,20 @@
+# Plan inputs and their constraints
+# An input without `default` is required; `in` and `matches` check values
+# before anything runs. Starts the repository's deploy.yml workflow on GitHub.
+# Run: blokky run examples/basics/inputs-constraints.blokky.yaml --input BRANCH=main --input ENVIRONMENT=staging
+blokky: 1.0
+inputs:
+  BRANCH:
+    description: Branch to deploy
+    matches: '^[A-Za-z0-9._/][A-Za-z0-9._/-]*$'   # also rules out a leading '-'
+  ENVIRONMENT:
+    default: staging
+    in: [staging, production]
+  REASON:
+    default: ''                                    # optional, may be blank
+name: deploy ${BRANCH} to ${ENVIRONMENT}
+do:
+  - set:
+      ENV_FIELD: environment=${ENVIRONMENT}
+  - exec: [gh, workflow, run, deploy.yml, --ref, { var: BRANCH }, -f, { var: ENV_FIELD }]
+  - log: "Deploy requested. Reason: ${REASON}"

@@ -1,0 +1,13 @@
+# all: run in parallel
+# `all` starts its children together and succeeds when all of them succeed.
+# `concurrency` limits how many run at once; `fail_fast: false` lets the
+# others finish after one fails. Run in a Node.js project.
+# Run: blokky run examples/basics/all-parallel.blokky.yaml
+blokky: 1.0
+name: checks
+all:
+  - exec: [npm, run, lint]
+  - exec: [npm, run, build]
+  - exec: [npm, test]
+concurrency: 2
+fail_fast: false

@@ -1,0 +1,8 @@
+# for count
+# `for: { count: N }` runs the node N times with the index 0 to N-1 in the
+# `as` variable. Useful to shake out a flaky test. Run in a Go module.
+# Run: blokky run examples/basics/for-count.blokky.yaml
+blokky: 1.0
+name: flaky-test hunt, run ${RUN}
+for: { count: 10, as: RUN }
+exec: [go, test, -count=1, -run, TestFlaky, ./...]

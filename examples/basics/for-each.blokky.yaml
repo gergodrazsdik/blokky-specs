@@ -1,0 +1,9 @@
+# for each
+# `for: { each: [...] }` runs the node once per listed value, bound to the
+# `as` variable. The name is rendered per iteration. Run in a .NET project
+# that targets these frameworks.
+# Run: blokky run examples/basics/for-each.blokky.yaml
+blokky: 1.0
+name: test on ${TFM}
+for: { each: [net8.0, net9.0, net10.0], as: TFM }
+exec: [dotnet, test, -f, { var: TFM }]

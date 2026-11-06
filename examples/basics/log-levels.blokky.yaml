@@ -1,0 +1,16 @@
+# log and its levels
+# `log` records a message in the run result without starting a process (it
+# replaces `echo` leaves). `level` is `debug`, `info` (the default) or `warn`.
+# Run inside a git repository.
+# Run: blokky run examples/basics/log-levels.blokky.yaml
+blokky: 1.0
+do:
+  - exec: [git, rev-parse, --abbrev-ref, HEAD]
+    capture: BRANCH
+  - log: "Raw branch capture: ${BRANCH}"
+    level: debug
+  - log: "Working on ${BRANCH}"
+  - name: warn on a detached HEAD
+    when: { var: BRANCH, equals: HEAD }
+    log: "Detached HEAD: new commits won't belong to any branch"
+    level: warn

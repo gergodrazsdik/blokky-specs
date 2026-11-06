@@ -1,0 +1,20 @@
+# Choosing a shell
+# `defaults.shell` sets the shell for every `script` in the plan; `shell:` on a
+# node overrides it. Without either, Blokky picks bash (else sh) on Unix and
+# pwsh (else powershell) on Windows. This plan needs bash, sh and pwsh.
+# Run: blokky run examples/basics/choose-shell.blokky.yaml
+blokky: 1.0
+defaults:
+  shell: bash
+do:
+  - name: uses the default shell (bash)
+    script: |
+      echo "bash $BASH_VERSION"
+  - name: POSIX sh for this one
+    script: |
+      echo "running $0 with sh"
+    shell: sh
+  - name: PowerShell 7
+    script: |
+      "pwsh $($PSVersionTable.PSVersion)"
+    shell: pwsh

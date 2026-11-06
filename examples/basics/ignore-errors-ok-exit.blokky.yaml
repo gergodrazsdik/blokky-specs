@@ -1,0 +1,16 @@
+# ignore_errors vs ok_exit
+# `ok_exit` makes a known exit code a success, so captures are still bound.
+# `ignore_errors` keeps a failure from failing the parent, but the node binds
+# nothing. Run inside a git repository.
+# Run: blokky run examples/basics/ignore-errors-ok-exit.blokky.yaml
+blokky: 1.0
+do:
+  - name: list TODOs (git grep exits 1 when there are none)
+    exec: [git, grep, -n, TODO]
+    ok_exit: [1]
+    capture: TODOS
+  - name: prune stale remote branches, best effort
+    exec: [git, fetch, --prune, origin]
+    ignore_errors: true
+  - when: { var: TODOS, not_empty: true }
+    log: "Open TODOs:\n${TODOS}"

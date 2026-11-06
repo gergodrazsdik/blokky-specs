@@ -1,0 +1,18 @@
+# Cleanup with finally
+# `finally` runs once after the node's body, whether it succeeded, failed,
+# timed out or was cancelled. Starts a throwaway PostgreSQL container on port
+# 5433 and always removes it. Needs Docker; run in a .NET repository.
+# Run: blokky run examples/basics/finally-cleanup.blokky.yaml
+blokky: 1.0
+name: integration tests against a throwaway database
+timeout: 15m
+do:
+  - exec: [docker, run, -d, --name, blokky-example-pg, -e, POSTGRES_HOST_AUTH_METHOD=trust, -p, '5433:5432', 'postgres:17']
+  - name: wait for postgres
+    exec: [docker, exec, blokky-example-pg, pg_isready, -U, postgres]
+    retry: true
+    max: 30
+  - exec: [dotnet, test, tests/Integration]
+finally:
+  - exec: [docker, rm, -f, blokky-example-pg]
+finally_timeout: 1m

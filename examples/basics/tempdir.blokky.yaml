@@ -1,0 +1,13 @@
+# Working in a temp dir
+# `tempdir` creates a fresh private directory and makes it the node's cwd;
+# `as` binds its path. Builds the GitHub CLI from a clean shallow clone.
+# Needs git, Go and network access.
+# Run: blokky run examples/basics/tempdir.blokky.yaml
+blokky: 1.0
+name: build gh from a clean clone
+tempdir: { as: WORK, prefix: gh-build }
+timeout: 15m
+do:
+  - exec: [git, clone, --depth, '1', https://github.com/cli/cli.git, .]
+  - exec: [go, build, -o, bin/gh, ./cmd/gh]
+  - log: "Built ${WORK}/bin/gh"

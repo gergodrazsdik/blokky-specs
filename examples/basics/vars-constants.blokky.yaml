@@ -1,0 +1,17 @@
+# Plan constants with vars
+# Root `vars:` names values used in several places. They are bound before
+# anything runs, may use inputs and earlier `vars`, and callers can't override
+# them. Run in a directory with a Dockerfile.
+# Run: blokky run examples/basics/vars-constants.blokky.yaml --input VERSION=1.4.0
+blokky: 1.0
+inputs:
+  VERSION:
+    description: Image version to build
+    matches: '^[0-9]+\.[0-9]+\.[0-9]+$'
+vars:
+  REPOSITORY: ghcr.io/example/web
+  IMAGE: ${REPOSITORY}:${VERSION}
+  LATEST: ${REPOSITORY}:latest
+do:
+  - exec: [docker, build, -t, { var: IMAGE }, -t, { var: LATEST }, .]
+  - log: "Built ${IMAGE}"

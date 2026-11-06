@@ -1,0 +1,22 @@
+# race: a watchdog
+# `race` starts all children at once; the first one to finish decides and the
+# others are cancelled. Here a watchdog polls the test log and fails the race
+# as soon as an out-of-memory error shows up. Run in a .NET repository.
+# Run: blokky run examples/basics/race-watchdog.blokky.yaml
+blokky: 1.0
+name: tests, unless the log shows an OOM
+race:
+  - name: tests
+    script: |
+      dotnet test 2>&1 | tee test.log
+    shell: bash
+  - name: OOM watchdog
+    do:
+      - name: poll test.log
+        exec: [grep, -q, OutOfMemoryException, test.log]
+        ok_exit: [1, 2]               # 1: no match yet, 2: no log yet
+        until: { result: exit, equals: '0' }
+        every: 5s
+        timeout: 30m                  # also ends the race if the tests hang
+      - fail: "The test run hit an out-of-memory error, see test.log"
+        code: OOM

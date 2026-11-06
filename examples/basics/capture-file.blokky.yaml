@@ -1,0 +1,11 @@
+# Capturing output to a file
+# `capture_file: NAME` writes stdout to a file owned by the run and binds its
+# path; use it for large or binary output. The file may be cleaned up later,
+# so copy it if you need to keep it. Run in a .NET repository.
+# Run: blokky run examples/basics/capture-file.blokky.yaml
+blokky: 1.0
+do:
+  - exec: [dotnet, list, package, --outdated, --format, json]
+    capture_file: REPORT
+  - log: "Outdated packages report: ${REPORT}"
+  - exec: [cp, { var: REPORT }, outdated-packages.json]

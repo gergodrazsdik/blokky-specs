@@ -1,0 +1,15 @@
+# exec vs script
+# `exec` runs one program directly, with no shell: use it by default.
+# `script` runs shell text: use it only for pipes, redirection or shell logic.
+# Run inside a git repository.
+# Run: blokky run examples/basics/exec-vs-script.blokky.yaml
+blokky: 1.0
+do:
+  - name: simple static command, string form
+    exec: git status --short
+  - name: an argument with a space, array form
+    exec: [git, log, '-5', '--format=%h %s']
+  - name: a pipeline needs a shell
+    script: |
+      git log --format=%an | sort | uniq -c | sort -rn | head -n 5
+    shell: bash

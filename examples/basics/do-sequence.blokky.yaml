@@ -1,0 +1,14 @@
+# do: a sequence
+# `do` runs its children in order and stops at the first failure. With
+# `fail_fast: false` the remaining children still run, and every failure is
+# reported at the end. Run in a .NET repository.
+# Run: blokky run examples/basics/do-sequence.blokky.yaml
+blokky: 1.0
+do:
+  - exec: dotnet restore
+  - exec: [dotnet, build, --no-restore, -c, Release]
+  - name: all checks, even if one fails
+    do:
+      - exec: [dotnet, format, --verify-no-changes]
+      - exec: [dotnet, test, --no-build, -c, Release]
+    fail_fast: false

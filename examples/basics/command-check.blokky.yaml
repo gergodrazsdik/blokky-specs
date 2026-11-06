@@ -1,0 +1,19 @@
+# Is a tool installed?
+# `{ command: NAME, exists: true }` is true if NAME resolves like an `exec`
+# program; nothing is started. Use it to require a tool or to pick between
+# tools. Builds the image in the current directory with Podman or Docker.
+# Run: blokky run examples/basics/command-check.blokky.yaml
+blokky: 1.0
+do:
+  - assert:
+      any:
+        - { command: podman, exists: true }
+        - { command: docker, exists: true }
+    message: "Install Podman or Docker first"
+    code: NO_CONTAINER_ENGINE
+  - name: build with whichever engine is installed
+    if: { command: podman, exists: true }
+    then:
+      - exec: [podman, build, -t, example/web, .]
+    else:
+      - exec: [docker, build, -t, example/web, .]
