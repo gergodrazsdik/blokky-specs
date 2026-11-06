@@ -144,9 +144,9 @@ An implementation can stop a whole run from outside the plan, for example when a
 
 ([ADR 0009](../adr/0009-status-propagation.md))
 
-- **EM-43.** A node is `timed_out` only if its own limit fired, and `cancelled` only if it was stopped from outside. A parent never inherits these statuses from a child: a parent whose child timed out or was cancelled is `failed` (or `cancelled`/`timed_out` for its own reasons), with the child's error as a cause.
+- **EM-43.** A node is `timed_out` only if its own limit fired, and `cancelled` only if it was stopped from outside. A parent never inherits these statuses from a child: a parent whose child failed, timed out or was cancelled is `failed` (or `cancelled`/`timed_out` for its own reasons).
 - **EM-44.** A `do`, `all` or `any` whose children were **all skipped** is `succeeded`, and its `finally` runs.
-- **EM-45.** `do` succeeds if no child failed (ignored failures don't count). `all` likewise. `any` succeeds if one child succeeded, or if no child failed (all skipped); it fails if no child succeeded and at least one failed.
+- **EM-45.** `do` succeeds if no child failed (ignored failures don't count). `all` likewise. `any` succeeds if one child succeeded, or if no child failed (all skipped); it fails if no child succeeded and at least one failed. A child of `any` skipped by its `when` doesn't take part: an ordered `any` moves on to the next child.
 - **EM-46.** A child that failed with `ignore_errors: true` is **not a success**: it doesn't fail its parent, but it doesn't win an `any` either; `any` goes on to the next alternative, and if none succeeds, the ignored failures are among its causes.
 - **EM-47.** A condition error in `when` fails the node, and `ignore_errors` on that node applies to it. Since `when` is the first layer, no lock, tempdir or `finally` is involved.
 - **EM-48.** `if` takes the status of the branch it ran; with a false condition and no `else`, it succeeds.
@@ -159,7 +159,8 @@ An implementation can stop a whole run from outside the plan, for example when a
 ### 8.4 Error precedence
 
 - **EM-51.** If a node's body fails and its `finally` also fails, the body error is primary and the `finally` error is attached. A failing `finally` fails an otherwise successful node.
-- **EM-52.** When several children fail (`do` with `fail_fast: false`, `all`), the first failure in plan order is the primary error; the others are attached as causes. An `any` whose children all failed fails with `BK_ANY_ALL_FAILED` and every child error as a cause, in plan order.
+- **EM-66.** **A failed group carries its child's error.** When a `do`, `all`, `if`, `for` iteration or other group fails because a child failed, the group's error is that child's error itself (same code, `detail` and `node`), not a wrapper. So `retry:` conditions and `result: error` see the real cause, at any nesting depth ([ADR 0016](../adr/0016-fixes-from-examples.md)).
+- **EM-52.** When several children fail (`do` with `fail_fast: false`, `all`), the first failure in plan order is the group's error; the others are attached to it as causes. An `any` whose children all failed fails with `BK_ANY_ALL_FAILED` and every child error as a cause, in plan order.
 - **EM-53.** Repetition errors (`BK_RETRIES_EXHAUSTED`, `BK_LOOP_MAX_REACHED`, `BK_TIMEOUT_TOTAL`) nest the last attempt's error.
 
 ## 9. Worked example: a cancellation timeline
@@ -187,7 +188,7 @@ With the defaults (grace 5s, reap timeout 5s, `finally_timeout` 5m):
 | 23s | `fail_fast` cancels the unit tests: SIGTERM to that tree (EM-29, EM-30). |
 | 28s | The grace period ends; the unit tests are still running: SIGKILL. |
 | 28s | The process is reaped at once (the reap timeout would allow up to 33s). The unit tests are `cancelled` (EM-32). |
-| 28s | The `all` completes as `failed`, its error the integration tests' `BK_TIMEOUT_TOTAL` (EM-43, EM-49). |
+| 28s | The `all` completes as `failed`, its error the integration tests' `BK_TIMEOUT_TOTAL` (EM-49, EM-66). |
 | 28s | The root's `finally` runs `docker compose down` under `finally_timeout` (EM-7). |
 | 31s | `finally` succeeds. The root is `failed` (its own timeout didn't fire), and so is the run (EM-50). |
 
