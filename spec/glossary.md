@@ -22,7 +22,7 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 ## Nodes
 
 - **Node.** One element of the plan tree. Every node has exactly one **kind** and any number of **modifiers**. See [reference.md](reference.md).
-- **Kind.** What a node does: `exec`, `script`, `do`, `all`, `any`, `if`, `sleep`, `log`, `fail`, `assert`, `race`.
+- **Kind.** What a node does: `exec`, `script`, `do`, `all`, `any`, `race`, `if`, `sleep`, `log`, `fail`, `assert`, `set`.
 - **Leaf.** A node that runs a process: an `exec` or `script` node. Probes and services also run processes but are not leaves.
 - **`exec` leaf.** Runs a program directly, without a shell, from an argv array (canonical) or a string split with POSIX shell-like rules and no expansion. See [shells.md](shells.md).
 - **`script` leaf.** Writes shell text to a script file owned by the run and runs it with the chosen shell. It compiles to an `exec` of that shell.
@@ -31,7 +31,7 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 - **Modifier order.** The normative nesting of modifiers, outermost to innermost: `when` → `timeout` → `lock` → `tempdir` → `cwd` → `env` → `container`/`become` → `services` → `finally` → repetition → `attempt_timeout` → kind.
 - **Companion field.** A field that belongs to one kind or modifier, such as `then`/`else` for `if`, `shell` for `script`, or `concurrency` and `fail_fast` for `all`.
 - **Body field.** A field that holds a list of nodes: `do`, `then`, `else`, `finally`, `all`, `any`, `race`. Body fields take lists only.
-- **Path id.** The stable identifier of a node, built from its position in the tree (`/do/2/all/0`). Run results and errors use it; `name` values need not be unique.
+- **Path id.** The stable identifier of a node, built from its position in the tree: the root is `/`, and a node in a body field adds `/<field>/<index>` (`/do/2/all/0`, `/then/1`, `/finally/0`). See [reference.md §1](reference.md#1-node-anatomy). Run results and errors use it; `name` values need not be unique.
 - **`name`.** A display label for a node, interpolated per attempt or iteration. It never affects execution.
 - **Repetition.** One of the mutually exclusive modifiers `retry`, `while`, `until` and `for`. A node has at most one.
 - **Attempt.** One execution of a node's body under `retry`.
@@ -70,7 +70,7 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 ## Conditions
 
 - **Condition.** The construct used by `if`, `when`, `assert`, `while`, `until`, `retry` and `ready`: one subject key plus one operator key, or a composite, or a bare probe. See [conditions.md](conditions.md).
-- **Subject.** What a condition looks at: `var`, `env`, `path`, `host`, `result`, `probe`; `port`, `output` (services only).
+- **Subject.** What a condition looks at: `var`, `env`, `path`, `command`, `host`, `result`, `probe`; `port`, `output` (services only).
 - **Operator.** How the subject is tested: `equals`, `in`, `contains`, `matches`, `empty`, `defined`, `exists`, `is_file`, `is_dir`, `open`, `gt`/`ge`/`lt`/`le`, and their negations where defined.
 - **Composite.** `all`, `any` or `not` over nested conditions.
 - **Probe.** A condition subject that runs a short `exec` or `script` and is true or false by its exit code. The only subject that spawns a process. Default `probe_timeout` 30s, stdout limit 64 KiB.

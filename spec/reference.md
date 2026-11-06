@@ -35,6 +35,8 @@ A node is a YAML mapping with:
     - exec: [make]
 ```
 
+**Path ids.** Every node has a path id derived from its position: the root is `/`; a node in a body field is its parent's id plus `/<field>/<index>` (0-based), for example `/do/2`, `/do/2/all/0`, `/do/3/then/1`, `/finally/0`. Nodes inside loop bodies keep their plan path id; the run result tells iterations apart by their index ([results.md](results.md)).
+
 Modifiers apply in a fixed order, outermost first: `when` → `timeout` → `lock` → `tempdir` → `cwd` → `env` → `container`/`become` → `services` → `finally` → repetition → `attempt_timeout` → kind ([execution-model.md](execution-model.md)).
 
 ## 2. Node kinds
@@ -100,7 +102,7 @@ Runs its children in parallel; succeeds when all succeed.
 
 Succeeds as soon as one child succeeds; fails only when all fail.
 
-- **Companion `concurrency`** (integer ≥ 1, default **1**, capped as for `all`). With 1, `any` is an ordered fallback: try the first child, and only if it fails, the next. With N > 1, up to N alternatives run at once, started in declaration order.
+- **Companion `concurrency`** (integer ≥ 1, default **1**, capped as for `all`). With 1, `any` is an ordered fallback: try the first child, and only if it fails (or is skipped by its `when`), the next. With N > 1, up to N alternatives run at once, started in declaration order.
 - When a child succeeds, running children are cancelled and unstarted ones never start.
 - Only the winning child's captures are bound; different children MAY capture the same name (never an input's name).
 - **All children fail:** the node fails with `BK_ANY_ALL_FAILED`; every child's error is attached as a cause, in plan order ([ADR 0003](../adr/0003-execution-defaults.md)).
@@ -115,13 +117,18 @@ Starts all children at once, in declaration order; the **first child to complete
   race:
     - exec: [dotnet, test]
     - name: OOM watchdog
-      until: { probe: { exec: [grep, -q, OutOfMemory, test.log] } }
-      every: 5s
-      timeout: 30m
       do:
+        - name: wait for OOM in the log
+          exec: [grep, -q, OutOfMemory, test.log]
+          ok_exit: [1, 2]                  # no match yet, or no log yet
+          until: { result: exit, equals: '0' }
+          every: 5s
+          timeout: 30m
         - fail: "test run hit OOM"
           code: OOM
 ```
+
+(`until` checks its condition after each *successful* iteration, so the polling leaf must succeed while there is no match; `ok_exit` does that.)
 
 - A child skipped by its `when` doesn't take part. A race whose children were all skipped succeeds.
 - The deciding child's outcome is the race's: a success (or a failure hidden by `ignore_errors`) makes it succeed; a failure makes it fail with that child's error.
@@ -275,7 +282,7 @@ There is no implicit `timeout` on groups or the root; `defaults.leaf_timeout` se
 
 ### 4.6 `cwd`
 
-The working directory for the node and everything inside it: a literal path or `{ var: X }`. A relative path resolves against the parent's cwd (at the root: the invocation cwd), so paths are built by nesting. A cwd that doesn't exist or isn't a directory when the node starts fails the node.
+The working directory for the node and everything inside it: a literal path or `{ var: X }`. A relative path resolves against the parent's cwd (at the root: the invocation cwd), so paths are built by nesting. A cwd that doesn't exist or isn't a directory when the node starts fails the node (`BK_CWD_INVALID`). Under `container`, an absolute `cwd` that isn't under a mount is a path inside the container and is checked there, not on the host (CP-14).
 
 ### 4.7 `env` and `export`
 
@@ -441,6 +448,7 @@ All `for` options live inside the `for:` mapping:
 
 **Options:**
 
+- A source with no items (`each` can't be empty; `count: 0`; an `items` array or `lines` value with no entries) runs zero iterations and succeeds; only `glob` fails on zero matches unless `allow_empty: true`.
 - `as` (variable name): **required** for every source except `matrix`, where it is forbidden. It binds the item; `<AS>_INDEX` binds the **0-based** index. For `matrix`, the index is `MATRIX_INDEX` and the result's item is an object.
 - `concurrency` (integer ≥ 1, default 1, capped by `max_concurrency`): above 1 the loop is a fan-out; iterations start in item order.
 - `fail_fast` (boolean, default `true`): as for `all`.
@@ -465,7 +473,7 @@ All `for` options live inside the `for:` mapping:
 
 **Iterations** never publish captures to the enclosing scope (only through `collect`). A for-loop's iteration count and items are in the run result. Item values and inputs used as `exec` arguments should be preceded by `--` where the program supports it.
 
-**`collect`**: `collect: { CAPTURE: LISTVAR }` on a `for` node binds `LISTVAR`, after the loop, to a compact JSON array of each iteration's `CAPTURE` value, in item order, with `null` for failed or skipped iterations (`["12 passed",null,"8 passed"]`). The list can feed another `for: { items }`, a `json:` condition or `outputs`.
+**`collect`**: `collect: { CAPTURE: LISTVAR }` on a `for` node binds `LISTVAR`, after the loop, to a compact JSON array of each iteration's `CAPTURE` value (bound in that iteration by the `for` node's own `capture`, when the node is a leaf, or by a node in its body), in item order, with `null` for iterations that failed, were skipped or didn't bind it (`["12 passed",null,"8 passed"]`). The list can feed another `for: { items }`, a `json:` condition or `outputs`.
 
 ## 6. Plan-level keys
 
@@ -494,36 +502,36 @@ Which modifiers and companion groups each kind accepts. ✓ = valid; — = plan 
 
 ## 8. Rules the schema doesn't express
 
-Implementations MUST enforce these as plan errors (unless noted) in addition to the schema:
+Implementations MUST enforce these as plan errors (unless noted) in addition to the schema. Rules carry IDs (`RF-n`) for conformance cases and for `detail.rule`.
 
-1. Exactly one kind per node.
-2. At most one repetition modifier per node.
-3. The validity matrix (§7) and the per-repetition sibling table (§5.2).
-4. `attempt_timeout` only with a repetition modifier.
-5. `while` and `until` have `max` or `timeout` (or both).
-6. Modifiers outside repetition (`when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`, `container`, `become`, `services`) don't reference variables the node itself introduces (`as`, `tempdir.as`, its own captures): "move it into the body".
-7. Shadowing: no variable name is bound twice in nested scopes; inputs collide with every other binding.
-8. Two `all` children don't capture the same name.
-9. Inputs and variables never reach literal fields; argv[0] of an `exec` array is a literal.
-10. `env` doesn't set a forbidden key; `export` doesn't name a reserved environment name; no name is in both `env` and `export` on one node.
-11. An absolute `cwd` is not combined with `tempdir` on one node.
-12. Captures (`capture`, `capture_file`, `secret`) only on `exec` and `script` nodes.
-13. The `result:` subject only in `until` and `retry` conditions; `result: stdout|stderr|exit` only when the node's kind is `exec` or `script`.
-14. `not:` isn't wrapped around a simple condition that has a `not_*` form.
-15. An `outputs` entry isn't bound only inside a loop body (unless gathered with `collect`).
-16. Captures under `finally` aren't referenced outside that `finally` list.
-17. No `lock` inside a `lock`.
-18. `as` is present for scalar `for` sources and absent for `matrix`.
-19. A secret marker is only on references, never on literals.
-20. An input's `default` satisfies its constraint; at most one of `in`/`matches`.
-21. Empty lists only in fields that allow them (`mounts`).
-22. A regex compiles under `RegexOptions.NonBacktracking`.
-23. `${X}` names a variable in scope (a warning when it might be undefined; a run-time error when it is).
-24. Service names are present and unique within a node; `depends_on` names exist and form no cycle.
-25. `fields` only with `items`; `keep_blank` only with `lines`; `allow_empty` only with `glob`; `max_items` only with `items` and `lines`.
-26. A name isn't bound twice: not by two sequential siblings, not by `set` for a bound name, not by `vars` for an input or another `vars` entry.
-27. Templates (`${…}` in executed values) appear only in `set` and `vars` values; `vars` values use only inputs, earlier `vars` and `from_env`.
-28. `timeout`, `finally`, `finally_timeout` and `ignore_errors` are not used on `sleep`, `log`, `fail` or `set`.
+- **RF-1.** Exactly one kind per node.
+- **RF-2.** At most one repetition modifier per node.
+- **RF-3.** The validity matrix (§7) and the per-repetition sibling table (§5.2).
+- **RF-4.** `attempt_timeout` only with a repetition modifier.
+- **RF-5.** `while` and `until` have `max` or `timeout` (or both).
+- **RF-6.** Modifiers outside repetition (`when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`, `container`, `become`, `services`) don't reference variables the node itself introduces (`as`, `tempdir.as`, its own captures): "move it into the body".
+- **RF-7.** Shadowing: no variable name is bound twice in nested scopes; inputs collide with every other binding.
+- **RF-8.** Two `all` children don't capture the same name.
+- **RF-9.** Inputs and variables never reach literal fields; argv[0] of an `exec` array is a literal.
+- **RF-10.** `env` doesn't set a forbidden key; `export` doesn't name a reserved environment name; no name is in both `env` and `export` on one node.
+- **RF-11.** An absolute `cwd` is not combined with `tempdir` on one node.
+- **RF-12.** Captures (`capture`, `capture_file`, `secret`) only on `exec` and `script` nodes.
+- **RF-13.** The `result:` subject only in `until` and `retry` conditions; `result: stdout|stderr|exit` only when the node's kind is `exec` or `script`.
+- **RF-14.** `not:` isn't wrapped around a simple condition that has a `not_*` form.
+- **RF-15.** An `outputs` entry isn't bound only inside a loop body (unless gathered with `collect`).
+- **RF-16.** Captures under `finally` aren't referenced outside that `finally` list.
+- **RF-17.** No `lock` inside a `lock`.
+- **RF-18.** `as` is present for scalar `for` sources and absent for `matrix`.
+- **RF-19.** A secret marker is only on references, never on literals.
+- **RF-20.** An input's `default` satisfies its constraint; at most one of `in`/`matches`.
+- **RF-21.** Empty lists only in fields that allow them (`mounts`).
+- **RF-22.** A regex compiles under `RegexOptions.NonBacktracking`.
+- **RF-23.** `${X}` names a variable in scope (a warning when it might be undefined; a run-time error when it is).
+- **RF-24.** Service names are present and unique within a node; `depends_on` names exist and form no cycle.
+- **RF-25.** `fields` only with `items`; `keep_blank` only with `lines`; `allow_empty` only with `glob`; `max_items` only with `items` and `lines`.
+- **RF-26.** A name isn't bound twice: not by two sequential siblings, not by `set` for a bound name, not by `vars` for an input or another `vars` entry.
+- **RF-27.** Templates (`${…}` in executed values) appear only in `set` and `vars` values; `vars` values use only inputs, earlier `vars` and `from_env`.
+- **RF-28.** `timeout`, `finally`, `finally_timeout` and `ignore_errors` are not used on `sleep`, `log`, `fail` or `set`.
 
 ## 9. Security considerations
 

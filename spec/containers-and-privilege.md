@@ -57,7 +57,7 @@ Decisions: [ADR 0005](../adr/0005-containers-become-locks.md), [ADR 0012](../adr
 ### 2.4 Inside the container
 
 - **CP-15.** `exec` argv[0] resolves **inside** the container (the engine's lookup), not on the host. `script` leaves need their shell in the image; the script file is read from the read-only scripts mount.
-- **CP-16.** A container process's environment is the image's environment, plus the scoped `env` and `export` mappings of the node and its ancestors, plus the `env_pass` names (taken from the environment the run started with), plus the `BLOKKY_*` variables. The host environment is not passed otherwise.
+- **CP-16.** A container process's environment is the image's environment, plus the scoped `env` and `export` mappings of the node and its ancestors, plus the `env_pass` names (taken from the environment the run started with; a name that isn't set there is not passed, without an error), plus the `BLOKKY_*` variables. The host environment is not passed otherwise.
 - **CP-17.** **User.** Without `user`, processes run as the image's default user, as with `docker run`. On a rootful engine, running as root with a read-write mount creates root-owned files on the host; implementations SHOULD warn about it.
 - **CP-18.** Probes on a container node run inside the container (they are processes). `when` is evaluated in the parent's scope, outside the container.
 

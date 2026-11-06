@@ -23,6 +23,7 @@ ADRs are **grouped**: a baseline ADR, then one ADR per batch of answered open qu
 | [0013](0013-scope-and-versioning.md) | Language-only scope and 1.0 draft versioning | accepted | — (direction revision; supersedes parts of 0001, 0002) |
 | [0014](0014-remaining-features.md) | Remaining language features (batch 7) | accepted | Q18; `race`, `lock`, `services`, `for` sources, `collect`, `zsh`/`fish` |
 | [0015](0015-set-and-vars.md) | Setting variables: `set` and `vars` | accepted | — (maintainer's request after draft.1) |
+| [0016](0016-fixes-from-examples.md) | Fixes found while writing the example suite | accepted | — (raised in T-0031) |
 
 ## Format
 

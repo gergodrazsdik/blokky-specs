@@ -1,0 +1,105 @@
+# Lint the files changed on a branch
+# Lints every file changed since a base revision, four at a time, with the linter for its type:
+# Python (ruff, or uvx ruff when ruff isn't installed), shell (shellcheck), YAML (yamllint),
+# JSON (jq) and Markdown (markdownlint-cli2, advisory only). Also reports TODO markers.
+# Needs: Linux or macOS, git, and the linters for the file types that changed. Read-only.
+# Run: blokky run examples/scenarios/changed-files-lint.blokky.yaml --input BASE=origin/main
+blokky: 1.0
+name: lint files changed since ${BASE}
+inputs:
+  BASE:
+    description: Revision to compare HEAD with
+    default: origin/main
+    matches: '^[A-Za-z0-9._/][A-Za-z0-9._/~^-]*$'
+vars:
+  RANGE: ${BASE}...HEAD
+outputs: [CHANGED]
+defaults:
+  leaf_timeout: 2m
+do:
+  - name: list files changed in ${RANGE}
+    exec: [git, diff, --name-only, --diff-filter=ACMR, { var: RANGE }, --]
+    capture: CHANGED
+
+  - if: { var: CHANGED, empty: true }
+    then:
+      - log: "No files changed since ${BASE}; nothing to lint"
+    else:
+      - name: choose how to run ruff
+        any:
+          - name: ruff on PATH
+            do:
+              - assert:
+                  probe:
+                    script: |
+                      command -v ruff
+                    shell: sh
+              - set: { PY_LINT: ruff }
+          - name: ruff through uvx
+            do:
+              - assert:
+                  probe:
+                    script: |
+                      command -v uvx
+                    shell: sh
+              - set: { PY_LINT: uvx }
+          - name: no Python linter
+            set: { PY_LINT: none }
+
+      - name: lint and summarize
+        fail_fast: false    # the summary runs even when a file fails
+        do:
+          - name: lint ${FILE}
+            for:
+              lines: { var: CHANGED }
+              as: FILE
+              max_items: 500
+              concurrency: 4
+              fail_fast: false
+            collect: { TODOS: TODO_COUNTS }
+            do:
+              - name: lint ${FILE}
+                when: { path: { var: FILE }, is_file: true }    # submodules show up as directories
+                fail_fast: false
+                do:
+                  - name: ruff ${FILE}
+                    when:
+                      all:
+                        - { var: FILE, matches: '\.py$' }
+                        - { var: PY_LINT, equals: ruff }
+                    exec: [ruff, check, --, { var: FILE }]
+                  - name: uvx ruff ${FILE}
+                    when:
+                      all:
+                        - { var: FILE, matches: '\.py$' }
+                        - { var: PY_LINT, equals: uvx }
+                    exec: [uvx, ruff, check, --, { var: FILE }]
+                  - when:
+                      all:
+                        - { var: FILE, matches: '\.py$' }
+                        - { var: PY_LINT, equals: none }
+                    log: "Neither ruff nor uvx is installed; ${FILE} isn't linted"
+                    level: warn
+                  - name: shellcheck ${FILE}
+                    when: { var: FILE, matches: '\.(sh|bash)$' }
+                    exec: [shellcheck, --, { var: FILE }]
+                  - name: yamllint ${FILE}
+                    when: { var: FILE, matches: '\.ya?ml$' }
+                    exec: [yamllint, --strict, --, { var: FILE }]
+                  - name: jq ${FILE}
+                    when: { var: FILE, matches: '\.json$' }
+                    exec: [jq, empty, { var: FILE }]
+                  - name: markdownlint ${FILE} (advisory)
+                    when: { var: FILE, matches: '\.(md|markdown)$', ignore_case: true }
+                    exec: [markdownlint-cli2, { var: FILE }]
+                    ignore_errors: true
+                  - name: count TODO markers in ${FILE}
+                    exec: [grep, -c, -e, TODO, --, { var: FILE }]
+                    ok_exit: [1]    # grep exits 1 when nothing matches; the count is then 0
+                    capture: TODOS
+                  - when: { var: TODOS, gt: 0 }
+                    log: "${FILE} has ${TODOS} TODO markers"
+                    level: warn
+
+          - when: { var: TODO_COUNTS, defined: true }
+            log: "TODO markers per changed file: ${TODO_COUNTS}"
