@@ -1,0 +1,119 @@
+# Cross-compiled release with checksums
+# Builds ./cmd/<APP> for Linux, macOS and Windows on amd64 and arm64 into a temp dir, writes
+# SHA256SUMS and publishes everything as GitHub release v<VERSION> on the current commit.
+# Needs: Linux with go, git, gh and sha256sum; the commit pushed to origin; GITHUB_TOKEN in the
+# environment with permission to create releases. Publishes a release and creates its tag; if
+# publishing doesn't finish, the draft release is deleted again.
+# Run: blokky run examples/scenarios/release-matrix.blokky.yaml --input APP=mytool --input VERSION=1.4.0
+blokky: 1.0
+name: release ${APP} ${TAG}
+inputs:
+  APP:
+    description: Command to build, from ./cmd/<APP>
+    matches: '^[a-z0-9][a-z0-9_-]*$'
+  VERSION:
+    description: Version to release, without the leading v (semantic versioning)
+    matches: '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$'
+vars:
+  TAG: v${VERSION}
+  PKG: ./cmd/${APP}
+  LDFLAGS: -s -w -X main.version=${VERSION}
+outputs: [TAG, RELEASE_URL]
+defaults:
+  leaf_timeout: 10m
+do:
+  - name: check that GITHUB_TOKEN is set
+    assert: { env: GITHUB_TOKEN, defined: true }
+    message: "Set GITHUB_TOKEN to a token that can create releases"
+    code: NO_TOKEN
+
+  - exec: git rev-parse --show-toplevel
+    capture: REPO
+  - exec: git rev-parse HEAD
+    capture: COMMIT
+
+  - name: check that ${TAG} isn't on origin yet
+    assert:
+      probe:
+        exec: [git, ls-remote, --exit-code, --tags, origin, { var: TAG }]
+        true_exit: [2]     # ls-remote exits 2 when nothing matches
+        false_exit: [0]
+    message: "Tag ${TAG} already exists on origin"
+    code: TAG_EXISTS
+
+  - name: build, checksum and publish ${TAG}
+    tempdir: { as: DIST, prefix: release }
+    env:
+      GH_TOKEN: { from_env: GITHUB_TOKEN, secret: true }
+    timeout: 1h
+    finally:
+      - name: delete the draft release if publishing didn't finish
+        when:
+          all:
+            - { var: DRAFT_URL, defined: true }
+            - { var: RELEASE_URL, not_defined: true }
+        cwd: { var: REPO }
+        exec: [gh, release, delete, { var: TAG }, --yes]
+    finally_timeout: 2m
+    do:
+      - name: build ${OS}/${ARCH}
+        for:
+          matrix:
+            OS: [linux, darwin, windows]
+            ARCH: [amd64, arm64]
+          concurrency: 3
+        do:
+          - name: build ${APP} for ${OS}/${ARCH}
+            when:              # a matrix has no exclude; skip a combination with when
+              not:
+                all:
+                  - { var: OS, equals: windows }
+                  - { var: ARCH, equals: arm64 }
+            do:
+              - if: { var: OS, equals: windows }
+                then:
+                  - set: { ARTIFACT: '${APP}-${VERSION}-${OS}-${ARCH}.exe' }
+                else:
+                  - set: { ARTIFACT: '${APP}-${VERSION}-${OS}-${ARCH}' }
+              - set: { OUT: '${DIST}/${ARTIFACT}' }
+              - name: go build ${ARTIFACT}
+                cwd: { var: REPO }
+                env:
+                  GOOS: { var: OS }
+                  GOARCH: { var: ARCH }
+                  CGO_ENABLED: '0'
+                exec: [go, build, -trimpath, -ldflags, { var: LDFLAGS }, -o, { var: OUT }, { var: PKG }]
+
+      - name: write SHA256SUMS
+        script: |
+          sha256sum -- "$APP"-* > SHA256SUMS
+          cat SHA256SUMS
+        shell: bash
+        export: [APP]
+
+      - name: create the draft release ${TAG}
+        cwd: { var: REPO }
+        exec: [gh, release, create, { var: TAG }, --draft, --target, { var: COMMIT }, --title, { var: TAG }, --generate-notes]
+        capture: DRAFT_URL
+
+      - name: upload ${FILE}
+        for: { glob: '*', as: FILE, concurrency: 4 }
+        do:
+          - set: { ASSET: '${DIST}/${FILE}' }
+          - name: gh release upload ${FILE}
+            cwd: { var: REPO }
+            retry:
+              any:
+                - { result: error, equals: BK_TIMEOUT_ATTEMPT }
+                - { result: stderr, matches: '(?i)(timeout|connection reset|HTTP 5[0-9][0-9])' }
+            max: 4
+            every: 5s
+            backoff: { factor: 2, max: 1m }
+            jitter: 0.3
+            attempt_timeout: 5m
+            exec: [gh, release, upload, { var: TAG }, --clobber, --, { var: ASSET }]
+
+      - name: publish ${TAG}
+        cwd: { var: REPO }
+        exec: [gh, release, edit, { var: TAG }, --draft=false]
+        capture: RELEASE_URL

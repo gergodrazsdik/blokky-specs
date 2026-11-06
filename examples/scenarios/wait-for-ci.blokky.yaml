@@ -1,0 +1,59 @@
+# Wait for CI on a branch
+# Finds the GitHub Actions run for the head commit of a branch (waiting up to 5 minutes for
+# one to appear), watches it to the end and fails unless it concluded with success.
+# Fails early if the run is still queued after 15 minutes. Read-only.
+# Needs: gh, logged in (gh auth login or GH_TOKEN), run inside a clone of the repository.
+# Run: blokky run examples/scenarios/wait-for-ci.blokky.yaml --input BRANCH=main
+blokky: 1.0
+name: wait for CI on ${BRANCH}
+inputs:
+  BRANCH:
+    description: Branch whose CI run to wait for
+    matches: '^[A-Za-z0-9._/][A-Za-z0-9._/-]*$'
+vars:
+  COMMIT_API: repos/{owner}/{repo}/commits/${BRANCH}
+outputs: [RUN_ID, RUN_URL, CONCLUSION]
+defaults:
+  leaf_timeout: 1m
+do:
+  - name: resolve the head commit of ${BRANCH}
+    exec: [gh, api, { var: COMMIT_API }, --jq, .sha]
+    capture: SHA
+
+  - name: wait for a CI run on ${SHA}
+    until: { result: stdout, matches: '^\d+$' }
+    every: 10s
+    attempt_timeout: 30s
+    timeout: 5m
+    exec: [gh, run, list, --commit, { var: SHA }, --limit, '1', --json, databaseId, --jq, '.[0].databaseId // empty']
+    capture: RUN_ID
+
+  - log: "Watching run ${RUN_ID} on ${BRANCH}"
+
+  - name: watch run ${RUN_ID}
+    all:
+      - name: watch until the run completes
+        exec: [gh, run, watch, { var: RUN_ID }, --exit-status, --interval, '15']
+        timeout: 2h
+        max_log_bytes: 1MiB
+        ignore_errors: true    # the conclusion check below decides; this keeps the outputs
+      - name: fail if the run is still queued after 15m
+        until: { result: stdout, not_in: [queued, requested, waiting, pending] }
+        every: 20s
+        attempt_timeout: 30s
+        timeout: 15m
+        exec: [gh, run, view, { var: RUN_ID }, --json, status, --jq, .status]
+
+  - name: read the result of run ${RUN_ID}
+    exec: [gh, run, view, { var: RUN_ID }, --json, 'conclusion,url,jobs']
+    capture: { CONCLUSION: .conclusion, RUN_URL: .url, JOBS: .jobs }
+
+  - log: "${JOB_NAME}: ${JOB_CONCLUSION}"
+    for:
+      items: { var: JOBS }
+      as: JOB
+      fields: { JOB_NAME: .name, JOB_CONCLUSION: .conclusion }
+
+  - assert: { var: CONCLUSION, equals: success }
+    message: "CI run ${RUN_ID} on ${BRANCH} concluded '${CONCLUSION}': ${RUN_URL}"
+    code: CI_NOT_GREEN

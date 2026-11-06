@@ -1,0 +1,90 @@
+# Deploy with a health check and rollback
+# Switches the systemd unit web-<ENVIRONMENT>.service on this host to a new image, polls its
+# health endpoint (JSON with "status": "ok") and rolls back to the previous image if it fails.
+# Destructive: restarts the service. Needs: Linux with systemd, podman and curl; the unit reads
+# WEB_IMAGE from /etc/web/<ENVIRONMENT>.env (set up once by hand); passwordless sudo for the two
+# steps marked "as root" (become). Production deploys need an image pinned by digest.
+# Run: blokky run examples/scenarios/deploy-health-check.blokky.yaml --input ENVIRONMENT=staging --input IMAGE=ghcr.io/example/web:1.4.0
+blokky: 1.0
+name: deploy ${IMAGE} to ${ENVIRONMENT}
+inputs:
+  ENVIRONMENT:
+    default: staging
+    in: [staging, production]
+  IMAGE:
+    description: Image to deploy, by tag or by digest
+    matches: '^[a-z0-9][a-z0-9._/:@-]*$'
+vars:
+  UNIT: web-${ENVIRONMENT}.service
+  ENV_FILE: /etc/web/${ENVIRONMENT}.env
+  NEW_ENV: WEB_IMAGE=${IMAGE}
+outputs: [PREVIOUS_IMAGE, HEALTH]
+defaults:
+  leaf_timeout: 2m
+lock: { name: deploy-web, wait: 10m }    # one deploy at a time (per OS user)
+timeout: 20m
+do:
+  - name: production guard
+    when: { var: ENVIRONMENT, equals: production }
+    assert: { var: IMAGE, matches: '@sha256:[0-9a-f]{64}$' }
+    message: "Production deploys need an image pinned by digest, got ${IMAGE}"
+    code: IMAGE_NOT_PINNED
+
+  - if: { var: ENVIRONMENT, equals: production }
+    then:
+      - set: { HEALTH_URL: 'http://127.0.0.1:8080/healthz' }
+    else:
+      - set: { HEALTH_URL: 'http://127.0.0.1:8081/healthz' }
+
+  - name: read the image ${UNIT} runs now
+    exec: [sed, -n, 's/^WEB_IMAGE=//p', { var: ENV_FILE }]
+    capture: PREVIOUS_IMAGE
+  - assert: { var: PREVIOUS_IMAGE, not_empty: true }
+    message: "No WEB_IMAGE line in ${ENV_FILE}"
+    code: NO_PREVIOUS_IMAGE
+  - set:
+      ROLLBACK_ENV: WEB_IMAGE=${PREVIOUS_IMAGE}
+
+  - name: wait while ${UNIT} is still changing state
+    while:
+      probe:
+        exec: [systemctl, show, --property=ActiveState, --value, --, { var: UNIT }]
+      in: [activating, deactivating, reloading]
+    max: 30
+    every: 2s
+    do:
+      - log: "${UNIT} is busy; waiting"
+        level: debug
+
+  - name: switch ${UNIT} to ${IMAGE} (as root)
+    become: root
+    do:
+      - exec: [podman, pull, --, { var: IMAGE }]
+      - name: write ${ENV_FILE}
+        exec: [tee, --, { var: ENV_FILE }]
+        stdin: { var: NEW_ENV }
+      - exec: [systemctl, restart, --, { var: UNIT }]
+
+  - name: poll ${HEALTH_URL}
+    until: { result: stdout, json: .status, equals: ok }
+    on_body_failure: continue    # connection refused while the service restarts
+    max: 24
+    every: 5s
+    attempt_timeout: 10s
+    ignore_errors: true          # a failed check leaves HEALTH unbound; the if below rolls back
+    exec: [curl, -fsS, { var: HEALTH_URL }]
+    capture: HEALTH
+
+  - if: { var: HEALTH, defined: true }
+    then:
+      - log: "${UNIT} is healthy on ${IMAGE}"
+    else:
+      - name: roll back ${UNIT} to ${PREVIOUS_IMAGE} (as root)
+        become: root
+        do:
+          - name: write ${ENV_FILE}
+            exec: [tee, --, { var: ENV_FILE }]
+            stdin: { var: ROLLBACK_ENV }
+          - exec: [systemctl, restart, --, { var: UNIT }]
+      - fail: "${IMAGE} failed its health check on ${ENVIRONMENT}; rolled back to ${PREVIOUS_IMAGE}"
+        code: HEALTH_CHECK_FAILED
