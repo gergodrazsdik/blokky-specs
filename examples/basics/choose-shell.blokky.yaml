@@ -3,7 +3,6 @@
 # node overrides it. Without either, Blokky picks bash (else sh) on Unix and
 # pwsh (else powershell) on Windows. This plan needs bash, sh and pwsh.
 # Run: blokky run examples/basics/choose-shell.blokky.yaml
----
 blokky: 1.0
 defaults:
   shell: bash

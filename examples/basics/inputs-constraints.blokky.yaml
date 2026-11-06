@@ -2,7 +2,6 @@
 # An input without `default` is required; `in` and `matches` check values
 # before anything runs. Starts the repository's deploy.yml workflow on GitHub.
 # Run: blokky run examples/basics/inputs-constraints.blokky.yaml --input BRANCH=main --input ENVIRONMENT=staging
----
 blokky: 1.0
 inputs:
   BRANCH:
@@ -17,5 +16,5 @@ name: deploy ${BRANCH} to ${ENVIRONMENT}
 do:
   - set:
       ENV_FIELD: environment=${ENVIRONMENT}
-  - exec: [gh, workflow, run, deploy.yml, --ref, {var: BRANCH}, -f, {var: ENV_FIELD}]
+  - exec: [gh, workflow, run, deploy.yml, --ref, { var: BRANCH }, -f, { var: ENV_FIELD }]
   - log: "Deploy requested. Reason: ${REASON}"

@@ -3,16 +3,15 @@
 # variables from each element. Shows the CI checks of every open pull request.
 # Needs the GitHub CLI, run inside a GitHub clone.
 # Run: blokky run examples/basics/for-items-fields.blokky.yaml
----
 blokky: 1.0
 do:
   - exec: [gh, pr, list, --json, 'number,headRefName']
     capture: PRS
   - name: "checks of #${NUM} (${BRANCH})"
     for:
-      items: {var: PRS}
+      items: { var: PRS }
       as: PR
-      fields: {NUM: .number, BRANCH: .headRefName}
+      fields: { NUM: .number, BRANCH: .headRefName }
       concurrency: 4
       fail_fast: false
-    exec: [gh, pr, checks, {var: NUM}]
+    exec: [gh, pr, checks, { var: NUM }]

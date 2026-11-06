@@ -3,7 +3,6 @@
 # anything runs, may use inputs and earlier `vars`, and callers can't override
 # them. Run in a directory with a Dockerfile.
 # Run: blokky run examples/basics/vars-constants.blokky.yaml --input VERSION=1.4.0
----
 blokky: 1.0
 inputs:
   VERSION:
@@ -14,5 +13,5 @@ vars:
   IMAGE: ${REPOSITORY}:${VERSION}
   LATEST: ${REPOSITORY}:latest
 do:
-  - exec: [docker, build, -t, {var: IMAGE}, -t, {var: LATEST}, .]
+  - exec: [docker, build, -t, { var: IMAGE }, -t, { var: LATEST }, .]
   - log: "Built ${IMAGE}"

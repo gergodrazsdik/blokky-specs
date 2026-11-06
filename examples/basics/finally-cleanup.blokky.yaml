@@ -3,7 +3,6 @@
 # timed out or was cancelled. Starts a throwaway PostgreSQL container on port
 # 5433 and always removes it. Needs Docker; run in a .NET repository.
 # Run: blokky run examples/basics/finally-cleanup.blokky.yaml
----
 blokky: 1.0
 name: integration tests against a throwaway database
 timeout: 15m

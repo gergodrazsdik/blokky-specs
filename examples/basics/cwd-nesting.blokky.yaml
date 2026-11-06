@@ -3,7 +3,6 @@
 # nesting instead of joining strings. Run in a .NET repository laid out as
 # src/<Project> and tests/.
 # Run: blokky run examples/basics/cwd-nesting.blokky.yaml --input PROJECT=Api
----
 blokky: 1.0
 inputs:
   PROJECT:
@@ -11,7 +10,7 @@ inputs:
 cwd: src
 do:
   - name: build src/${PROJECT}
-    cwd: {var: PROJECT}
+    cwd: { var: PROJECT }
     exec: [dotnet, build, -c, Release]
   - name: test from tests/
     cwd: ../tests

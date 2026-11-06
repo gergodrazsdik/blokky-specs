@@ -3,7 +3,6 @@
 # `script` runs shell text: use it only for pipes, redirection or shell logic.
 # Run inside a git repository.
 # Run: blokky run examples/basics/exec-vs-script.blokky.yaml
----
 blokky: 1.0
 do:
   - name: simple static command, string form

@@ -3,7 +3,6 @@
 # `concurrency` limits how many run at once; `fail_fast: false` lets the
 # others finish after one fails. Run in a Node.js project.
 # Run: blokky run examples/basics/all-parallel.blokky.yaml
----
 blokky: 1.0
 name: checks
 all:

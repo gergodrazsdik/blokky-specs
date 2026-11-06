@@ -3,7 +3,6 @@
 # cwd is mounted read-write at the same path. Containers are not a sandbox.
 # Needs Docker or Podman; on a rootful engine, files written may be owned by root.
 # Run: blokky run examples/basics/container-build.blokky.yaml
----
 blokky: 1.0
 name: build and test in the .NET SDK image
 container:

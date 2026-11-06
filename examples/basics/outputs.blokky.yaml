@@ -3,7 +3,6 @@
 # caller (often an agent) gets structured values instead of parsing logs.
 # A `capture_file` output is the file's path. Run inside a git repository.
 # Run: blokky run examples/basics/outputs.blokky.yaml
----
 blokky: 1.0
 outputs: [VERSION, COMMIT, RECENT_LOG]
 do:

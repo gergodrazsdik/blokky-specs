@@ -3,7 +3,6 @@
 # Blokky expands the pattern itself, no shell involved. Zero matches fail the
 # node unless `allow_empty: true`.
 # Run: blokky run examples/basics/for-glob.blokky.yaml
----
 blokky: 1.0
 name: shellcheck ${SCRIPT}
 for:
@@ -11,4 +10,4 @@ for:
   as: SCRIPT
   allow_empty: true
   concurrency: 4
-exec: [shellcheck, --, {var: SCRIPT}]
+exec: [shellcheck, --, { var: SCRIPT }]

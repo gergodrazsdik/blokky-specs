@@ -3,7 +3,6 @@
 # or `doas -n`; Blokky never prompts for a password. Unix only, and an
 # implementation may require you to opt in. Installs into /usr/local.
 # Run: blokky run examples/basics/become-root.blokky.yaml
----
 blokky: 1.0
 do:
   - exec: [make]

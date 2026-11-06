@@ -3,7 +3,6 @@
 # with `true_exit`/`false_exit`, by your own codes; with an operator, on its
 # trimmed stdout. Probes should not change anything. Run in a Node.js git clone.
 # Run: blokky run examples/basics/probe-conditions.blokky.yaml
----
 blokky: 1.0
 do:
   - assert:

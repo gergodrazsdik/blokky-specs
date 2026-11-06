@@ -3,7 +3,6 @@
 # `fail_fast: false` the remaining children still run, and every failure is
 # reported at the end. Run in a .NET repository.
 # Run: blokky run examples/basics/do-sequence.blokky.yaml
----
 blokky: 1.0
 do:
   - exec: dotnet restore

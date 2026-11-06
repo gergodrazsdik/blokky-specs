@@ -3,7 +3,6 @@
 # field. A path that doesn't resolve fails the node. Needs the GitHub CLI,
 # run inside a GitHub clone.
 # Run: blokky run examples/basics/capture-json-fields.blokky.yaml
----
 blokky: 1.0
 do:
   - exec: [gh, repo, view, --json, 'nameWithOwner,defaultBranchRef,stargazerCount']

@@ -3,16 +3,15 @@
 # after the `if`, so a value can be chosen per case without a shell.
 # Changes the cluster: scales the `web` deployment in the current kubectl context.
 # Run: blokky run examples/basics/set-in-branches.blokky.yaml --input ENVIRONMENT=staging
----
 blokky: 1.0
 inputs:
   ENVIRONMENT:
     default: staging
     in: [staging, production]
 do:
-  - if: {var: ENVIRONMENT, equals: production}
+  - if: { var: ENVIRONMENT, equals: production }
     then:
-      - set: {NAMESPACE: prod, REPLICAS: '3'}
+      - set: { NAMESPACE: prod, REPLICAS: '3' }
     else:
-      - set: {NAMESPACE: staging, REPLICAS: '1'}
-  - exec: [kubectl, scale, deployment/web, -n, {var: NAMESPACE}, --replicas, {var: REPLICAS}]
+      - set: { NAMESPACE: staging, REPLICAS: '1' }
+  - exec: [kubectl, scale, deployment/web, -n, { var: NAMESPACE }, --replicas, { var: REPLICAS }]

@@ -2,13 +2,12 @@
 # `when` skips a node (status `skipped`) if its condition is false. Use it for
 # optional steps; use `if` when there is an else. Run in a .NET repository.
 # Run: blokky run examples/basics/when-guard.blokky.yaml
----
 blokky: 1.0
 do:
   - exec: [dotnet, build, -c, Release]
   - name: test only if there is a tests directory
-    when: {path: tests, is_dir: true}
+    when: { path: tests, is_dir: true }
     exec: [dotnet, test, tests, --no-build, -c, Release]
   - name: publish only in CI
-    when: {env: CI, equals: 'true'}
+    when: { env: CI, equals: 'true' }
     exec: [dotnet, publish, --no-build, -c, Release, -o, out]

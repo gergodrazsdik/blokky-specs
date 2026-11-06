@@ -3,16 +3,15 @@
 # already empty runs zero iterations. Here: wait while pods are still shutting
 # down, listing them each time. Read-only; uses the current kubectl context.
 # Run: blokky run examples/basics/while-draining.blokky.yaml --input NAMESPACE=preview-42
----
 blokky: 1.0
 inputs:
   NAMESPACE:
     description: Namespace whose pods are being shut down
 name: wait for the pods in ${NAMESPACE} to go away
-exec: [kubectl, get, pods, -n, {var: NAMESPACE}, --no-headers]
+exec: [kubectl, get, pods, -n, { var: NAMESPACE }, --no-headers]
 while:
   probe:
-    exec: [kubectl, get, pods, -n, {var: NAMESPACE}, -o, name]
+    exec: [kubectl, get, pods, -n, { var: NAMESPACE }, -o, name]
   not_empty: true
 every: 5s
 timeout: 5m

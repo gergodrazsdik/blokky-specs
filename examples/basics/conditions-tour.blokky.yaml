@@ -3,26 +3,25 @@
 # `json:`) with one operator, or combines conditions with `all`, `any` and
 # `not`. Needs the GitHub CLI, run inside a GitHub clone.
 # Run: blokky run examples/basics/conditions-tour.blokky.yaml
----
 blokky: 1.0
 do:
-  - when: {path: .git, not_exists: true}
+  - when: { path: .git, not_exists: true }
     fail: "Run this from the root of a git clone"
   - when:
       all:                                   # stops at the first false
-        - {env: GITHUB_REF_NAME, defined: true}
-        - {env: GITHUB_REF_NAME, matches: '^release/'}
+        - { env: GITHUB_REF_NAME, defined: true }
+        - { env: GITHUB_REF_NAME, matches: '^release/' }
     log: "Release branch build in CI"
   - exec: [gh, repo, view, --json, 'visibility,isArchived']
     capture: REPO
   - when:
       any:
-        - {var: REPO, json: .isArchived, equals: 'true'}
-        - {var: REPO, json: .visibility, equals: private, ignore_case: true}
+        - { var: REPO, json: .isArchived, equals: 'true' }
+        - { var: REPO, json: .visibility, equals: private, ignore_case: true }
     log: "This repository is archived or private"
   - when:
       all:
-        - {var: REPO, json: .visibility, equals: PUBLIC}
-        - {not: {path: LICENSE, is_file: true}}
+        - { var: REPO, json: .visibility, equals: PUBLIC }
+        - { not: { path: LICENSE, is_file: true } }
     log: "Public repository without a LICENSE file"
     level: warn

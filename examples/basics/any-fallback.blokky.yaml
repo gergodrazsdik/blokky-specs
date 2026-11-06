@@ -3,7 +3,6 @@
 # it fails only if every child fails. Here: download from the first mirror
 # that answers within 30 seconds.
 # Run: blokky run examples/basics/any-fallback.blokky.yaml
----
 blokky: 1.0
 name: fetch the Go release list
 any:

@@ -3,18 +3,17 @@
 # polls a command's output. Loops need `max` or `timeout`. Waits for the
 # latest CI run of a branch. Needs the GitHub CLI, run inside a GitHub clone.
 # Run: blokky run examples/basics/until-polling.blokky.yaml --input BRANCH=main
----
 blokky: 1.0
 inputs:
   BRANCH:
     description: Branch whose latest CI run to wait for
     matches: '^[A-Za-z0-9._/][A-Za-z0-9._/-]*$'
 do:
-  - exec: [gh, run, list, --branch, {var: BRANCH}, -L, '1', --json, databaseId, -q, '.[0].databaseId']
+  - exec: [gh, run, list, --branch, { var: BRANCH }, -L, '1', --json, databaseId, -q, '.[0].databaseId']
     capture: RUN_ID
   - name: wait for run ${RUN_ID}
-    exec: [gh, run, view, {var: RUN_ID}, --json, status, -q, .status]
-    until: {result: stdout, equals: completed}
+    exec: [gh, run, view, { var: RUN_ID }, --json, status, -q, .status]
+    until: { result: stdout, equals: completed }
     every: 15s
     timeout: 30m
-  - exec: [gh, run, view, {var: RUN_ID}, --exit-status]
+  - exec: [gh, run, view, { var: RUN_ID }, --exit-status]
