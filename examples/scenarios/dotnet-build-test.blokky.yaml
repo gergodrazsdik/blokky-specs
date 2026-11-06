@@ -1,0 +1,83 @@
+# Build and test a .NET solution
+# Restores once while holding a lock on the shared NuGet cache, builds every project under src/
+# four at a time, runs every test project under tests/ and fails at the end with a per-project
+# summary, then checks the packages for known vulnerabilities. Changes only bin/ and obj/.
+# Needs: the .NET SDK and jq; run from the directory with the solution file. Projects under src/
+# that reference each other can collide in parallel builds; lower the concurrency to 1 then.
+# Run: blokky run examples/scenarios/dotnet-build-test.blokky.yaml --input CONFIGURATION=Release
+blokky: 1.0
+name: build and test (${CONFIGURATION})
+inputs:
+  CONFIGURATION:
+    default: Release
+    in: [Debug, Release]
+outputs: [TEST_RESULTS, VULNERABILITY_REPORT]
+defaults:
+  leaf_timeout: 20m
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: 'true'
+finally:
+  - name: stop the build servers kept alive by the builds
+    exec: dotnet build-server shutdown
+do:
+  - name: restore (one restore per user at a time on the shared NuGet cache)
+    lock: { name: nuget-cache, wait: 10m }
+    retry: true
+    max: 3
+    every: 10s
+    exec: dotnet restore
+
+  - name: build ${PROJECT}
+    for: { glob: 'src/**/*.csproj', as: PROJECT, concurrency: 4 }
+    exec: [dotnet, build, { var: PROJECT }, -c, { var: CONFIGURATION }, --no-restore]
+    keep_descendants: true    # reuse the compiler server across builds; the finally stops it
+
+  - name: test ${TEST_PROJECT}
+    for:
+      glob: 'tests/**/*Tests.csproj'
+      as: TEST_PROJECT
+      allow_empty: true
+      fail_fast: false
+    collect: { SUMMARY: TEST_RESULTS }
+    do:
+      - name: dotnet test ${TEST_PROJECT}
+        script: |
+          log=$(mktemp)
+          dotnet test "$TEST_PROJECT" -c "$CONFIGURATION" --no-restore >"$log" 2>&1
+          status=$?
+          cat "$log" >&2
+          summary=$(grep -E '(Passed|Failed)!' "$log" | tail -n 1)
+          rm -f "$log"
+          [ -n "$summary" ] || summary="no test summary (exit $status)"
+          echo "$TEST_PROJECT: $summary"
+          exit "$status"
+        shell: bash
+        export: [TEST_PROJECT, CONFIGURATION]
+        ok_exit: [1]    # test failures still give a summary; the assert below fails the run
+        capture: SUMMARY
+
+  - log: "Test results: ${TEST_RESULTS}"
+
+  - name: every test project passed
+    assert:
+      all:
+        - { var: TEST_RESULTS, not_contains: 'Failed!' }
+        - { var: TEST_RESULTS, not_contains: no test summary }
+    message: "Some test projects failed: ${TEST_RESULTS}"
+    code: TESTS_FAILED
+
+  - name: list vulnerable packages
+    exec: [dotnet, list, package, --vulnerable, --include-transitive, --format, json]
+    capture_file: VULNERABILITY_REPORT
+
+  - name: no vulnerable packages
+    assert:
+      probe:
+        exec:
+          - jq
+          - -e
+          - '[.projects[].frameworks[]? | (.topLevelPackages[]?, .transitivePackages[]?)] | length == 0'
+          - { var: VULNERABILITY_REPORT }
+    message: "Packages with known vulnerabilities; see ${VULNERABILITY_REPORT}"
+    code: VULNERABLE_PACKAGES

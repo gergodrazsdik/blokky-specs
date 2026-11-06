@@ -210,6 +210,7 @@
         "var": { "$ref": "#/$defs/varName" },
         "env": { "$ref": "#/$defs/envName" },
         "path": { "$ref": "#/$defs/pathValue" },
+        "command": { "type": "string", "minLength": 1 },
         "host": { "enum": ["os", "arch"] },
         "result": { "enum": ["stdout", "stderr", "exit", "error"] },
         "probe": { "$ref": "#/$defs/probe" },
