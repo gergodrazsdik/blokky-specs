@@ -44,13 +44,16 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 
 ## Variables, inputs and secrets
 
-- **Plan variable.** A named value bound by the plan: an input, a capture, a loop variable (`as`, `<AS>_INDEX`) or a tempdir path (`tempdir.as`). Names match `^[A-Z][A-Z0-9_]*$`; the `BLOKKY_` prefix is reserved. See [variables.md](variables.md).
+- **Plan variable.** A named value bound by the plan: an input, a plan constant (`vars`), a `set` variable, a capture, a loop variable (`as`, `<AS>_INDEX`, `fields`) or a tempdir path (`tempdir.as`). Every variable is bound once. Names match `^[A-Z][A-Z0-9_]*$`; the `BLOKKY_` prefix is reserved. See [variables.md](variables.md).
 - **Environment variable.** A process environment entry. Plan variables and environment variables are separate namespaces.
 - **Explicit mapping.** The only ways a plan variable reaches a command: `env:` (`env: { RUN: { var: RUN_ID } }`), `export: [NAME]`, or a whole `{ var: X }` element of an `exec` array.
 - **Reference.** A whole-value form that stands for a value: `{ var: X }` (a plan variable) or `{ from_env: NAME }` (an environment variable). There is no string concatenation.
 - **Literal field.** A field that accepts only a literal value, never a reference or an input: `timeout`, `every`, `max`, `count`, `concurrency`, `each`, `glob`, `shell`, `ok_exit`, `defaults.*`, `tempdir.prefix`, the `inputs.*` keys, and others listed in the per-field table in [syntax.md](syntax.md).
-- **Display string.** A string shown to humans and never executed: `name` and the messages of `log`, `fail` and `assert`. Only display strings support `${X}` interpolation.
-- **Interpolation.** `${X}` in a display string, replaced by the value of plan variable `X`. Executed text never interpolates.
+- **Display string.** A string shown to humans and never executed: `name` and the messages of `log`, `fail` and `assert`. Display strings support `${X}` interpolation.
+- **Template.** A `set` or `vars` value containing `${X}` placeholders: the one way a plan builds a string from variables. Templates only join strings; there are no functions.
+- **`set`.** A node kind that binds variables from literals, references or templates, scoped like a capture.
+- **`vars`.** The root key for plan constants: variables bound before anything runs, from literals, inputs, earlier `vars` and `from_env`; the caller can't override them.
+- **Interpolation.** `${X}` in a display string or template, replaced by the value of plan variable `X`. Executed text (`exec` strings, `script` text, probes) never interpolates.
 - **Plan input.** A string parameter declared under the root `inputs:` key, constrained by at most one of `in:` or `matches:`, required unless it has a `default:`. Values come only from `--input NAME=VALUE` or the MCP `inputs` object. Inputs are always defined and never secret. See [variables.md](variables.md).
 - **Plan scope.** The scope that holds the inputs and encloses the root node, bound before anything runs.
 - **Scope.** The region of the plan where a variable is visible. Captures are visible to later siblings and their descendants; loop-body captures stay inside the loop; captures under `finally` are finally-local.

@@ -22,6 +22,7 @@ ADRs are **grouped**: a baseline ADR, then one ADR per batch of answered open qu
 | [0012](0012-container-details.md) | Container mount path on Windows and default user (draft round 6) | accepted | — (left open by 0005, raised in T-0021) |
 | [0013](0013-scope-and-versioning.md) | Language-only scope and 1.0 draft versioning | accepted | — (direction revision; supersedes parts of 0001, 0002) |
 | [0014](0014-remaining-features.md) | Remaining language features (batch 7) | accepted | Q18; `race`, `lock`, `services`, `for` sources, `collect`, `zsh`/`fish` |
+| [0015](0015-set-and-vars.md) | Setting variables: `set` and `vars` | accepted | — (maintainer's request after draft.1) |
 
 ## Format
 
