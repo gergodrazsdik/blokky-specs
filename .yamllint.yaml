@@ -10,3 +10,16 @@ rules:
     check-keys: false  # GitHub Actions uses an `on:` key
   comments:
     min-spaces-from-content: 1  # pinact writes `@<sha> # vX` with one space
+  # Plans use the spec's canonical style: one space inside flow mappings
+  # (`{ var: X }`), none or one inside flow sequences, and no `---`.
+  braces:
+    min-spaces-inside: 1
+    max-spaces-inside: 1
+    min-spaces-inside-empty: 0
+    max-spaces-inside-empty: 0
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+    min-spaces-inside-empty: 0
+    max-spaces-inside-empty: 0
+  document-start: disable
