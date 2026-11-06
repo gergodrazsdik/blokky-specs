@@ -1,0 +1,20 @@
+# Building strings with set
+# `set` values may be templates: `${X}` joins variables into a new string.
+# Templates exist only in `set` and `vars`; every `exec` argument stays one
+# literal or one whole variable. Run in a tagged Go module.
+# Run: blokky run examples/basics/set-templates.blokky.yaml
+---
+blokky: 1.0
+do:
+  - exec: [git, describe, --tags, --abbrev=0]
+    capture: VERSION
+  - exec: [go, env, GOOS]
+    capture: GOOS
+  - exec: [go, env, GOARCH]
+    capture: GOARCH
+  - set:
+      BASE: app-${VERSION}-${GOOS}-${GOARCH}
+      ARCHIVE: dist/${BASE}.tar.gz      # a later entry may use an earlier one
+  - exec: [go, build, -o, dist/app, .]
+  - exec: [tar, -czf, {var: ARCHIVE}, -C, dist, app]
+  - log: "Packed ${ARCHIVE}"

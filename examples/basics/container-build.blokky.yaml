@@ -1,0 +1,14 @@
+# Building in a container
+# `container` runs the node's leaves in an ephemeral container; by default the
+# cwd is mounted read-write at the same path. Containers are not a sandbox.
+# Needs Docker or Podman; on a rootful engine, files written may be owned by root.
+# Run: blokky run examples/basics/container-build.blokky.yaml
+---
+blokky: 1.0
+name: build and test in the .NET SDK image
+container:
+  image: mcr.microsoft.com/dotnet/sdk:10.0
+timeout: 20m
+do:
+  - exec: [dotnet, build, -c, Release]
+  - exec: [dotnet, test, --no-build, -c, Release]

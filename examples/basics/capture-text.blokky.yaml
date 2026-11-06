@@ -1,0 +1,14 @@
+# Capturing output
+# `capture: NAME` binds a command's stdout, trailing newlines removed. Later
+# siblings pass it to programs with `{var: NAME}` or show it with `${NAME}`.
+# Run inside a git clone that has origin/main.
+# Run: blokky run examples/basics/capture-text.blokky.yaml
+---
+blokky: 1.0
+do:
+  - exec: [git, merge-base, HEAD, origin/main]
+    capture: BASE
+  - exec: [git, rev-parse, --short, {var: BASE}]
+    capture: SHORT
+  - log: "This branch forked from main at ${SHORT}"
+  - exec: [git, diff, --stat, {var: BASE}, HEAD]

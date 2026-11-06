@@ -1,0 +1,24 @@
+# for matrix
+# `for: { matrix }` runs every combination of the listed values, binding each
+# key as a variable. There is no exclude: skip a combination with `when`
+# inside the body. Cross-compiles a Go module (no windows/arm64 build).
+# Run: blokky run examples/basics/for-matrix.blokky.yaml
+---
+blokky: 1.0
+name: build ${GOOS}/${GOARCH}
+for:
+  matrix:
+    GOOS: [linux, darwin, windows]
+    GOARCH: [amd64, arm64]
+  concurrency: 3
+do:
+  - when:
+      not:
+        all:
+          - {var: GOOS, equals: windows}
+          - {var: GOARCH, equals: arm64}
+    do:
+      - set:
+          OUT: dist/app-${GOOS}-${GOARCH}
+      - exec: [go, build, -o, {var: OUT}, .]
+        export: [GOOS, GOARCH]

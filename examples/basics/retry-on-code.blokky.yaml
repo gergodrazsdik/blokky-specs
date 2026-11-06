@@ -1,0 +1,16 @@
+# retry only some failures
+# A `retry:` condition decides per failed attempt. `result: error` is the
+# attempt's error code, `result: exit` its exit code. Here: retry timeouts and
+# network errors, but not an HTTP error such as 404 (curl exit 22).
+# Run: blokky run examples/basics/retry-on-code.blokky.yaml
+---
+blokky: 1.0
+name: download the dotnet-install script
+exec: [curl, -fsSL, -o, dotnet-install.sh, https://dot.net/v1/dotnet-install.sh]
+attempt_timeout: 30s
+retry:
+  any:
+    - {result: error, equals: BK_TIMEOUT_ATTEMPT}
+    - {result: exit, in: ['6', '7', '56']}   # DNS, connect, receive errors
+max: 4
+every: 5s

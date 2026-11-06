@@ -1,0 +1,13 @@
+# timeout vs attempt_timeout
+# `attempt_timeout` limits each attempt; `timeout` limits the whole node,
+# all attempts and the waits between them included. A timed-out attempt is
+# retried; once `timeout` fires, nothing is. Run in a .NET repository.
+# Run: blokky run examples/basics/timeout-vs-attempt-timeout.blokky.yaml
+---
+blokky: 1.0
+name: integration tests, up to three tries
+exec: [dotnet, test, tests/Integration]
+retry: true
+max: 3
+attempt_timeout: 5m
+timeout: 12m

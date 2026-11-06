@@ -1,0 +1,26 @@
+# Probe conditions
+# A probe runs a command to decide a condition: bare, by exit code;
+# with `true_exit`/`false_exit`, by your own codes; with an operator, on its
+# trimmed stdout. Probes should not change anything. Run in a Node.js git clone.
+# Run: blokky run examples/basics/probe-conditions.blokky.yaml
+---
+blokky: 1.0
+do:
+  - assert:
+      probe:
+        exec: [git, remote, get-url, origin]
+    message: "This clone has no origin remote"
+  - name: reinstall only if the lockfile changed in the last commit
+    when:
+      probe:
+        exec: [git, diff, --quiet, HEAD~1, --, package-lock.json]
+        true_exit: [1]                       # 1 means "differs"
+        false_exit: [0]
+    exec: [npm, ci]
+  - name: warn when behind origin/main
+    when:
+      probe:
+        exec: [git, rev-list, --count, HEAD..origin/main]
+      gt: '0'
+    log: "origin/main has commits this branch doesn't"
+    level: warn

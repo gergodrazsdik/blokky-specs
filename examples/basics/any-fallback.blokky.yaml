@@ -1,0 +1,15 @@
+# any: ordered fallback
+# `any` tries its children one after another and stops at the first success;
+# it fails only if every child fails. Here: download from the first mirror
+# that answers within 30 seconds.
+# Run: blokky run examples/basics/any-fallback.blokky.yaml
+---
+blokky: 1.0
+name: fetch the Go release list
+any:
+  - name: go.dev
+    exec: [curl, -fsSL, -o, go-releases.json, 'https://go.dev/dl/?mode=json']
+    timeout: 30s
+  - name: China mirror
+    exec: [curl, -fsSL, -o, go-releases.json, 'https://golang.google.cn/dl/?mode=json']
+    timeout: 30s

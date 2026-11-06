@@ -1,0 +1,16 @@
+# if / then / else
+# `if` runs `then` when the condition holds and `else` otherwise. An else-if
+# is an `if` inside `else`. Run in a Node.js project.
+# Run: blokky run examples/basics/if-else.blokky.yaml
+---
+blokky: 1.0
+name: install dependencies with the matching package manager
+if: {path: pnpm-lock.yaml, exists: true}
+then:
+  - exec: [pnpm, install, --frozen-lockfile]
+else:
+  - if: {path: package-lock.json, exists: true}
+    then:
+      - exec: [npm, ci]
+    else:
+      - exec: [npm, install]

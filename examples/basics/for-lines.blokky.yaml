@@ -1,0 +1,15 @@
+# for lines
+# `for: { lines }` runs the body once per line of a variable; blank lines are
+# dropped. Deletes local branches already merged into main (git branch -d
+# refuses unmerged ones). Run inside a git repository.
+# Run: blokky run examples/basics/for-lines.blokky.yaml
+---
+blokky: 1.0
+do:
+  - exec: [git, branch, --merged, main, '--format=%(refname:short)']
+    capture: MERGED
+  - name: delete ${BRANCH}
+    for: {lines: {var: MERGED}, as: BRANCH}
+    do:
+      - when: {var: BRANCH, not_equals: main}
+        exec: [git, branch, -d, {var: BRANCH}]

@@ -1,0 +1,15 @@
+# fail with a code
+# `fail` stops with a message and a user error code that callers and `retry`
+# conditions can match on. Run inside a git repository.
+# Run: blokky run examples/basics/fail-with-code.blokky.yaml
+---
+blokky: 1.0
+name: check that HEAD is a release
+if:
+  probe:
+    exec: [git, describe, --tags, --exact-match, HEAD]
+then:
+  - log: "HEAD is tagged, continuing with the release"
+else:
+  - fail: "HEAD has no tag; tag it first (git tag -s v1.2.3)"
+    code: NO_RELEASE_TAG

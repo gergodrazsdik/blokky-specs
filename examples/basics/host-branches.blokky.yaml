@@ -1,0 +1,17 @@
+# Host branches
+# A `host:` condition is decided before the run starts: the branch that can't
+# run on this machine is pruned, so one plan can carry a bash script for Unix
+# and a pwsh script for Windows.
+# Run: blokky run examples/basics/host-branches.blokky.yaml
+---
+blokky: 1.0
+name: show free disk space
+if: {host: os, equals: windows}
+then:
+  - script: |
+      Get-PSDrive -PSProvider FileSystem | Format-Table Name, Used, Free
+    shell: pwsh
+else:
+  - script: |
+      df -h . | tail -n 1
+    shell: bash

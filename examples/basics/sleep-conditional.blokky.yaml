@@ -1,0 +1,13 @@
+# Conditional sleep
+# `sleep` waits for a duration and takes only `name` and `when`. To wait only
+# in some cases, put `when` on the `sleep`. Needs the GitHub CLI, logged in.
+# Run: blokky run examples/basics/sleep-conditional.blokky.yaml
+---
+blokky: 1.0
+do:
+  - exec: [gh, api, rate_limit, --jq, .resources.core.remaining]
+    capture: REMAINING
+  - name: back off when the API quota is nearly used up
+    when: {var: REMAINING, lt: '10'}
+    sleep: 1m
+  - exec: [gh, api, user, --jq, .login]

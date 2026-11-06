@@ -1,0 +1,15 @@
+# Returning outputs
+# `outputs:` lists variables whose final values the run result returns, so a
+# caller (often an agent) gets structured values instead of parsing logs.
+# A `capture_file` output is the file's path. Run inside a git repository.
+# Run: blokky run examples/basics/outputs.blokky.yaml
+---
+blokky: 1.0
+outputs: [VERSION, COMMIT, RECENT_LOG]
+do:
+  - exec: [git, describe, --tags, --always]
+    capture: VERSION
+  - exec: [git, rev-parse, HEAD]
+    capture: COMMIT
+  - exec: [git, log, --oneline, '-20']
+    capture_file: RECENT_LOG

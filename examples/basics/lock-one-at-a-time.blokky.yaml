@@ -1,0 +1,11 @@
+# One at a time with lock
+# `lock` holds a named lock for the node's duration, so runs using the same
+# name (any plan, same OS user) take turns. `wait` bounds the waiting.
+# Deploys: upgrades the `web` Helm release in the current kubectl context.
+# Run: blokky run examples/basics/lock-one-at-a-time.blokky.yaml
+---
+blokky: 1.0
+name: deploy staging, one run at a time
+lock: {name: deploy-staging, wait: 10m}
+timeout: 30m
+exec: [helm, upgrade, --install, web, ./chart, --namespace, staging, --wait]

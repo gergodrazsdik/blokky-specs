@@ -1,0 +1,16 @@
+# Gathering loop results with collect
+# Iterations never publish their captures. `collect` gathers one capture from
+# every iteration into a JSON array (null for failed or skipped ones) that is
+# visible after the loop. Needs npm and network access.
+# Run: blokky run examples/basics/for-collect.blokky.yaml
+---
+blokky: 1.0
+outputs: [LATEST]
+do:
+  - name: latest ${PKG}
+    for: {each: [react, typescript, vite], as: PKG, concurrency: 3}
+    collect: {VERSION: LATEST}
+    do:
+      - exec: [npm, view, {var: PKG}, version]
+        capture: VERSION
+  - log: "Latest versions: ${LATEST}"

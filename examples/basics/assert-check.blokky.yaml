@@ -1,0 +1,17 @@
+# assert: check a precondition
+# `assert` fails with your `message` and `code` unless its condition holds.
+# Run inside a git repository with Node.js installed.
+# Run: blokky run examples/basics/assert-check.blokky.yaml
+---
+blokky: 1.0
+do:
+  - exec: [git, status, --porcelain]
+    capture: CHANGES
+  - assert: {var: CHANGES, empty: true}
+    message: "The working tree has uncommitted changes; commit or stash them first"
+    code: DIRTY_TREE
+  - exec: [node, --version]
+    capture: NODE_VERSION
+  - assert: {var: NODE_VERSION, matches: '^v(2[2-9]|[3-9][0-9])\.'}
+    message: "Node.js 22 or later is required, found ${NODE_VERSION}"
+    code: NODE_TOO_OLD
