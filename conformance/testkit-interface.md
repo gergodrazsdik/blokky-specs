@@ -78,15 +78,15 @@ Cases MUST NOT expect 123–125 as a command's result; a runner MAY report a lea
 
 ```yaml
 # a ready line after a delay, then keep running (services `ready: { output }`)
-exec: [blokky-testkit, print, --sleep, 2s, --out, 'Now listening', --hang]
+- exec: [blokky-testkit, print, --sleep, 2s, --out, 'Now listening', --hang]
 # interleaved streams with stderr: merge (EM-19)
-exec: [blokky-testkit, print, --out, a, --err, b, --out, c]
+- exec: [blokky-testkit, print, --out, a, --err, b, --out, c]
 # a NUL byte in stdout (BK_CAPTURE_NUL)
-exec: [blokky-testkit, print, --out-hex, '610062']
+- exec: [blokky-testkit, print, --out-hex, '610062']
 # 2 MiB of stdout (BK_CAPTURE_TOO_LARGE)
-exec: [blokky-testkit, print, --out-fill, 2MiB]
+- exec: [blokky-testkit, print, --out-fill, 2MiB]
 # a service that becomes ready, then crashes (EM-64)
-exec: [blokky-testkit, print, --out, ready, --sleep, 3s, --exit, '7']
+- exec: [blokky-testkit, print, --out, ready, --sleep, 3s, --exit, '7']
 ```
 
 ### 2.3 `cat`

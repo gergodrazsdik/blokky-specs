@@ -37,7 +37,7 @@ conformance/
 
 - **CF-6.** Every case is **one YAML file** under `cases/<area>/`, where `<area>` is the spec file (without `.md`) that holds the case's primary rule, or `combinations` for the cases of §6. Subdirectories below an area are allowed (`reference/for/`).
 - **CF-7.** File names are lowercase kebab-case ending in `.yaml` (`timeout-grace-after-limit.yaml`). The case **id** is the file's path below `cases/` without the extension (`execution-model/timeout-grace-after-limit`). Ids are stable: a case that is removed leaves its id unused; a case that changes meaning gets a new id.
-- **CF-8.** Case files are YAML 1.2 and pass the repository's `yamllint --strict` (so flow mappings outside the plan are written without inner spaces: `{code: BK_EXIT}`). Unlike plans, case files use YAML's ordinary typing: `3` is an integer, `true` a boolean. A plan embedded in a case is a string (§3.3) and keeps the plan's own rules.
+- **CF-8.** Case files are YAML 1.2 and pass the repository's `yamllint --strict`, which asks for the spec's flow style everywhere: one space inside flow mappings (`{ code: BK_EXIT }`, `{ var: X }`). Unlike plans, case files use YAML's ordinary typing: `3` is an integer, `true` a boolean. A plan embedded in a case is a string (§3.3) and keeps the plan's own rules.
 
 ## 3. Case format
 
@@ -47,7 +47,7 @@ conformance/
 |---|---|---|
 | `title` | yes | One line: what the case shows. |
 | `rules` | yes | Rule IDs the case tests (`[EM-26, EM-27]`); at least one, or `spec` instead (§7). |
-| `spec` | no | References to normative text without rule IDs: `<file>.md§<section>`, optionally `#<item>` (`reference.md§8#5`). |
+| `spec` | no | References to normative text without rule IDs: `<file>.md§<section>` (`syntax.md§3.1`). |
 | `features` | yes | The features the plan uses (§3.2). |
 | `requires` | no | Environment requirements (§3.2). |
 | `clock` | no | The clock modes the case is valid in (§5); default `[real, scaled]`. |
@@ -70,7 +70,7 @@ conformance/
 **Features** let an implementation that supports only part of the language run the cases it can.
 
 - **CF-11.** `features` lists every language feature the plan uses, with the ids of the table below. A runner MAY derive the list from the plan to check it; the suite's own checks SHOULD.
-- **CF-12.** The adapter declares which feature ids its implementation supports. A case whose `features` include one that isn't supported is **skipped** with the reason `not supported: <feature>` (§8.4), and the runner SHOULD run the **not-supported check** instead: the implementation MUST reject the plan in validation with `BK_PLAN_NOT_SUPPORTED`, and no process may start (EM-1). The check passing keeps the case a skip; anything else is a fail.
+- **CF-12.** The adapter declares which feature ids its implementation supports. The vocabulary below is a proposal; pinning it, and using it for `BK_PLAN_NOT_SUPPORTED`'s `detail.feature`, is pending (tracker F-0010). A case whose `features` include one that isn't supported is **skipped** with the reason `not supported: <feature>` (§8.4), and the runner SHOULD run the **not-supported check** instead: the implementation MUST reject the plan in validation with `BK_PLAN_NOT_SUPPORTED`, and no process may start (EM-1). The check passing keeps the case a skip; anything else is a fail.
 
 | Group | Feature ids |
 |---|---|
@@ -79,7 +79,7 @@ conformance/
 | Leaf options | `stdin`, `ok-exit`, `stderr-merge`, `encoding`, `max-log-bytes`, `keep-descendants`, `capture`, `capture-fields`, `capture-file`, `secret` |
 | Modifiers | `when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`, `export`, `container`, `become`, `services`, `finally`, `ignore-errors`, `attempt-timeout` |
 | Repetition | `retry`, `retry-condition`, `backoff`, `jitter`, `while`, `until`, `for-each`, `for-count`, `for-glob`, `for-items`, `for-lines`, `for-matrix`, `for-concurrency`, `collect` |
-| Conditions | `cond-var`, `cond-env`, `cond-path`, `cond-host`, `cond-result`, `cond-probe`, `cond-json`, `cond-numeric`, `cond-composite` |
+| Conditions | `cond-var`, `cond-env`, `cond-path`, `cond-command`, `cond-host`, `cond-result`, `cond-probe`, `cond-json`, `cond-numeric`, `cond-composite` |
 | Values | `from-env`, `secret-ref`, `interpolation` |
 | Plan-level | `inputs`, `vars`, `outputs`, `defaults` |
 | Runner | `external-stop` (§3.4 `actions`) |
@@ -109,9 +109,9 @@ New ids are added with the language features they name; an id is never reused fo
 
 - **CF-18.** `inputs` is an ordered list of `NAME=VALUE` strings, split at the first `=`, passed to the implementation in order with the transport the adapter uses (for blokky-cli: `--input`). A string without `=` is passed unsplit, for `BK_INPUT_SYNTAX` cases. Transport-specific checks (for example the MCP JSON types of VA-15) are out of scope for the suite.
 - **CF-19.** `env` values are added to the base environment (§8.2), replacing a variable of the same name. A value of `null` removes the variable from the base environment.
-- **CF-20.** `files` maps a path relative to the work directory to its content. A string value is the content as UTF-8 (no newline added). A mapping value has `text` or `base64`, plus optional `executable: true` (mode 0755 on Unix; ignored on Windows); `{dir: true}` creates a directory. Parent directories are created as needed. Paths use `/` on every platform.
-- **CF-21.** `programs` maps an alias name to the testkit arguments it stands for: `programs: {git: [print, --out, 'git version 2.0']}` puts an executable named `git` on `PATH` that behaves like `blokky-testkit print --out 'git version 2.0'` followed by its own arguments ([testkit-interface.md](testkit-interface.md), TK-6).
-- **CF-22.** `actions` is a list of `{after: <duration>, stop: true}` entries: at the given time after the run starts, the runner stops the run from outside (EM-55 to EM-57) with the means the adapter provides. Cases with `actions` list the `external-stop` feature. The stop cause is implementation-defined, so cases assert on `status: stopped` and the nodes, not on `stop_cause`.
+- **CF-20.** `files` maps a path relative to the work directory to its content. A string value is the content as UTF-8 (no newline added). A mapping value has `text` or `base64`, plus optional `executable: true` (mode 0755 on Unix; ignored on Windows); `{ dir: true }` creates a directory. Parent directories are created as needed. Paths use `/` on every platform.
+- **CF-21.** `programs` maps an alias name to the testkit arguments it stands for: `programs: { git: [print, --out, 'git version 2.0'] }` puts an executable named `git` on `PATH` that behaves like `blokky-testkit print --out 'git version 2.0'` followed by its own arguments ([testkit-interface.md](testkit-interface.md), TK-6).
+- **CF-22.** `actions` is a list of `{ after: <duration>, stop: true }` entries: at the given time after the run starts, the runner stops the run from outside (EM-55 to EM-57) with the means the adapter provides. Cases with `actions` list the `external-stop` feature. The stop cause is implementation-defined, so cases assert on `status: stopped` and the nodes, not on `stop_cause`.
 
 ### 3.5 Expectations
 
@@ -126,7 +126,7 @@ New ids are added with the language features they name; an id is never reused fo
 | `exhaustive` | `true`: no errors other than the listed ones may be reported. Default `false`. |
 
 - **CF-23.** For a validation outcome the run MUST end in validation (EM-1): no run result, and no process started, which the runner checks with the testkit's invocation log (TK-5). Each listed error MUST be matched by a distinct reported error, in any order (EM-2 reports them together, in no fixed order).
-- **CF-24.** Cases give `line` only where the spec says which position an error points at, and `column` only where the token is unambiguous. `detail.rule` is asserted for every `BK_PLAN_INVALID`.
+- **CF-24.** A plan error's `line` and `column` point at the offending key, or at its value when the value is what is wrong ([syntax.md §1](../spec/syntax.md#1-conventions)). Cases give `line` for every plan error whose offending key or value is unambiguous, and `column` where the token is too. `detail.rule` is asserted for every `BK_PLAN_INVALID`.
 
 **Run outcome:**
 
@@ -134,11 +134,11 @@ New ids are added with the language features they name; an id is never reused fo
 |---|---|
 | `status` | The run status: `succeeded`, `failed` or `stopped` (required for a run outcome). |
 | `error` | The run's primary error (§3.6), or `null` for none. |
-| `outputs` | Expected outputs by name: a string, `null` (unbound) or `{$secret: true}`. |
+| `outputs` | Expected outputs by name: a string, `null` (unbound) or `{ $secret: true }`. |
 | `nodes` | Expected node results, keyed by path id (§3.6). |
 | `invocations` | Expected testkit invocations from the invocation log (TK-5). |
-| `files` | Expected files in the work directory after the run: `{exists: false}`, or `text`/`base64`/`contains`. |
-| `duration` | The run's duration (§5), usually `{$min: …, $max: …}`. |
+| `files` | Expected files in the work directory after the run: `{ exists: false }`, or `text`/`base64`/`contains`. |
+| `duration` | The run's duration (§5), usually `{ $min: …, $max: … }`. |
 
 - **CF-25.** A case's `expect` holds a validation outcome or a run outcome, never both. A plan that validates and then fails at run time is a run outcome.
 
@@ -159,33 +159,33 @@ The result document is the run result of results.md, written with these keys. Va
 | node: messages | `messages` | `[{ text, level }]`, `text` rendered and masked. |
 | node: probes | `probes` | `[{ invocation, exit_code, result }]`. |
 | node: bindings | `bindings` | A list of names. |
-| leaf fields | `program`, `invocation`, `exit_code`, `signal`, `killed_by`, `descendants_held_output`, `survivors`, `user`, `container` | `invocation` is the masked argv; `signal` is a name (`SIGKILL`); `user` is `{name, elevation}`. |
+| leaf fields | `program`, `invocation`, `exit_code`, `signal`, `killed_by`, `descendants_held_output`, `survivors`, `user`, `container` | `invocation` is the masked argv; `signal` is a name (`SIGKILL`); `user` is `{ name, elevation }`. |
 | error: code, node, detail, causes, context | `code`, `node`, `detail`, `causes`, `context` | `message` is never matched (CF-3). |
 | durations (results.md §6) | `duration` | On the run and on every node. |
 
-- **CF-26.** Nodes are addressed by **path id** ([glossary](../spec/glossary.md)): the root is `/`, and the node at index *i* (from 0) of body field *F* of node *P* is *P*`/`*F*`/`*i* (`/do/2/all/0`, `/finally/0`, `/do/1/else/0`). `expect.nodes` is a flat mapping from path id to the node's expected fields; children are asserted under their own ids, not nested.
-- **CF-27.** Nodes inside a repeated body run once per iteration and have no per-iteration path id in results.md; cases assert on them through the repeating node's `repetition.entries`, captures, `collect` and the invocation log.
+- **CF-26.** Nodes are addressed by **path id** ([reference.md §1](../spec/reference.md#1-node-anatomy)): the root is `/`, and a node in a body field is its parent's id plus `/<field>/<index>`, 0-based (`/do/2/all/0`, `/do/3/then/1`, `/finally/0`). `expect.nodes` is a flat mapping from path id to the node's expected fields; children are asserted under their own ids, not nested.
+- **CF-27.** Nodes inside a loop body keep their plan path id; iterations are told apart by their index (reference.md §1). Until results.md gives per-iteration results for body nodes, cases assert on them through the repeating node's `repetition.entries` (by `index`), captures, `collect` and the invocation log.
 
 ### 3.7 Matching
 
 - **CF-28.** **Mappings match as subsets:** only the keys a case lists are checked; the result may hold more (RS-4). This applies to `expect.nodes`, node fields, `detail`, `context` and `outputs`.
 - **CF-29.** **Lists match exactly and in order**, element by element, unless wrapped in a matcher (`$unordered`, `$contains`). `causes` lists are ordered by the spec (results.md §5), so they are matched in order.
 - **CF-30.** **Scalars match by value.** An integer and its decimal string are equal (`3` matches `'3'`), so exit codes can be written either way. Durations are compared as durations (§5). Strings are compared exactly, after the adapter has decoded them; no trimming or case folding.
-- **CF-31.** `null` matches only a field that is present with no value; `{$absent: true}` matches a field or node that isn't there.
+- **CF-31.** `null` matches only a field that is present with no value; `{ $absent: true }` matches a field or node that isn't there.
 
 Matchers are single-key mappings whose key starts with `$`:
 
 | Matcher | Matches |
 |---|---|
-| `{$absent: true}` | A field, output or path id that isn't present. |
-| `{$present: true}` | Any value, as long as the field is present. |
-| `{$regex: 'pattern'}` | A string containing a match (unanchored). Patterns use only syntax that .NET, ECMAScript and RE2 share: no lookaround, no backreferences. |
-| `{$one_of: [a, b]}` | Any of the listed values (each matched by these rules). |
-| `{$min: X, $max: Y}` | A number or duration in the closed range; either bound may be left out. The only matcher with two keys. |
-| `{$unordered: [...]}` | A list of the same length whose elements match the listed ones one-to-one, in any order. |
-| `{$contains: [...]}` | A list in which each listed element matches a distinct element, in any order; other elements are allowed. |
-| `{$count: N}` | A list of length N (N may be a `$min`/`$max` matcher). |
-| `{$secret: true}` | An output marked secret, without a value (VA-47). |
+| `{ $absent: true }` | A field, output or path id that isn't present. |
+| `{ $present: true }` | Any value, as long as the field is present. |
+| `{ $regex: 'pattern' }` | A string containing a match (unanchored). Patterns use only syntax that .NET, ECMAScript and RE2 share: no lookaround, no backreferences. |
+| `{ $one_of: [a, b] }` | Any of the listed values (each matched by these rules). |
+| `{ $min: X, $max: Y }` | A number or duration in the closed range; either bound may be left out. The only matcher with two keys. |
+| `{ $unordered: [...] }` | A list of the same length whose elements match the listed ones one-to-one, in any order. |
+| `{ $contains: [...] }` | A list in which each listed element matches a distinct element, in any order; other elements are allowed. |
+| `{ $count: N }` | A list of length N (N may be a `$min`/`$max` matcher). |
+| `{ $secret: true }` | An output marked secret, without a value (VA-47). |
 
 - **CF-32.** A runner reports the first mismatch as a path into the expectation (`nodes./all/0.error.code: expected BK_TIMEOUT_TOTAL, got BK_CANCELLED`).
 
@@ -195,7 +195,7 @@ A run case: a stubborn leaf ignores the graceful stop, so it is killed only afte
 
 ```yaml
 title: The grace period follows a fired timeout, and the node is timed_out
-rules: [EM-26, EM-27, EM-43, EM-50]
+rules: [EM-26, EM-27, EM-43, EM-50, EM-66]
 features: [all, exec, timeout]
 plan: |
   blokky: 1.0
@@ -207,38 +207,40 @@ plan: |
     - exec: [blokky-testkit, exit, '0']
 expect:
   status: failed
+  error: { code: BK_TIMEOUT_TOTAL, node: /all/0 }   # the group carries its child's error (EM-66)
   nodes:
     /:
       kind: all
       status: failed
+      error: { code: BK_TIMEOUT_TOTAL, node: /all/0 }
     /all/0:
       status: timed_out
       killed_by: timeout
-      error: {code: BK_TIMEOUT_TOTAL, node: /all/0}
-      duration: {$min: 7s, $max: 12s}   # 2s timeout + 5s grace
+      error: { code: BK_TIMEOUT_TOTAL, node: /all/0 }
+      duration: { $min: 7s, $max: 12s }   # 2s timeout + 5s grace
     /all/1:
       status: succeeded
       exit_code: 0
   invocations:
     $unordered:
-      - {argv: [sleep, 1m, --ignore-term]}
-      - {argv: [exit, '0']}
+      - { argv: [sleep, 1m, --ignore-term] }
+      - { argv: [exit, '0'] }
 platforms:
   unix:
     expect:
       nodes:
-        /all/0: {signal: SIGKILL}
+        /all/0: { signal: SIGKILL }
   windows:
     expect:
       nodes:
-        /all/0: {signal: {$absent: true}}
+        /all/0: { signal: { $absent: true } }
 ```
 
 A validation case: an `until` loop with neither `max` nor `timeout`.
 
 ```yaml
 title: An unbounded until loop is a plan error
-spec: ['reference.md§8#5']
+rules: [RF-5]
 features: [until, exec, capture, cond-var]
 plan: |
   blokky: 1.0
@@ -248,7 +250,7 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_INVALID
-      detail: {rule: bounded-loop}
+      detail: { rule: bounded-loop }
       line: 2
   invocations: []
 ```
@@ -268,16 +270,16 @@ plan: |
 inputs: [BRANCHH=main]
 expect:
   input_errors:
-    - {code: BK_INPUT_MISSING}
+    - { code: BK_INPUT_MISSING }
     - code: BK_INPUT_UNKNOWN
-      detail: {suggestion: BRANCH}
+      detail: { suggestion: BRANCH }
   exhaustive: true
 ```
 
 ## 4. Per-platform overrides
 
 - **CF-33.** `platforms` maps a platform key to an override. Keys are `unix` (Linux and macOS), `linux`, `macos` and `windows`. An override has `skip` (a reason string: the case is skipped there with `platform: <reason>`), or any of `env`, `files`, `programs`, `requires` and `expect`.
-- **CF-34.** Overrides are merged into the case in order of increasing precedence: the case, then `unix`, then the OS key. Mappings merge key by key, recursively; lists and scalars replace; the value `{$delete: true}` removes a key. `plan` and `inputs` can't be overridden: a plan that must differ per OS uses `host:` branches (CO-7), which are part of what is tested.
+- **CF-34.** Overrides are merged into the case in order of increasing precedence: the case, then `unix`, then the OS key. Mappings merge key by key, recursively; lists and scalars replace; the value `{ $delete: true }` removes a key. `plan` and `inputs` can't be overridden: a plan that must differ per OS uses `host:` branches (CO-7), which are part of what is tested.
 - **CF-35.** Typical differences that use overrides rather than separate cases: the graceful stop (SIGTERM vs CTRL_BREAK, EM-26) and the `signal` field (Unix only); exit codes of killed processes; shell availability (`shells.md` §5); path separators in `program` and `invocation` (match those with `$regex`); case-insensitive environment names on Windows (VA-6).
 - **CF-36.** A case that tests a rule for one OS only (for example SH-9, Windows command lines) uses `requires.os`, not a `skip` on the others.
 
@@ -321,13 +323,15 @@ Most modifiers can be combined on one node, and their order is fixed (EM-4). Tes
   - `tempdir` with `cwd` and with repetition (once per node);
   - `services` with `finally` and with a failing service (EM-63 to EM-65);
   - `fail_fast` on `do`, `all` and `for`, and `any`/`race` with captures (EM-49, EM-59, VA-30);
+  - `any` and `race` with children skipped by `when`: they don't take part, and an ordered `any` moves on (EM-45, EM-58);
+  - a failed group at several nesting depths carrying its child's error unchanged, seen by `retry:` conditions and `result: error` (EM-66);
   - `lock` nested in `lock` (plan error) and `lock` with `timeout` (EM-60).
 - **CF-48.** Triples and larger combinations get a case only when a rule names them or a pairwise case found a bug.
 
 ## 7. Rule citations and coverage
 
-- **CF-49.** `rules` lists the IDs of the rules a case **tests**, not every rule it touches: a case that runs an `exec` doesn't cite SH-1 unless it checks argv. IDs use the spec's prefixes: `EM`, `RS`, `ER`, `VA`, `CO`, `SH`, `CP`.
-- **CF-50.** Normative text without rule IDs (syntax.md, the numbered rules of reference.md §8) is cited in `spec` (`syntax.md§3.1`, `reference.md§8#17`). Plan-error cases also assert `detail.rule` (CF-24).
+- **CF-49.** `rules` lists the IDs of the rules a case **tests**, not every rule it touches: a case that runs an `exec` doesn't cite SH-1 unless it checks argv. IDs use the spec's prefixes: `EM`, `RS`, `ER`, `VA`, `CO`, `SH`, `CP`, `RF` (the static rules of reference.md §8).
+- **CF-50.** Normative text without rule IDs (currently syntax.md; rule IDs for it are pending, tracker F-0010) is cited in `spec` (`syntax.md§3.1`, `syntax.md§6.5`). Plan-error cases also assert `detail.rule` (CF-24).
 - **CF-51.** **Coverage** is the share of rule IDs in `spec/*.md` that at least one case cites. Every rule ID SHOULD be cited by at least one case before `1.0.0`; execution-model.md §10 requires it for every `EM-n`. A rule that can't be tested through the run result (for example a recommendation to implementations) is listed below with the reason, and counts as covered.
 - **CF-52.** A coverage report lists, per spec file, the uncovered rule IDs and, per rule, the cases that cite it. It is computed from the case files alone.
 
