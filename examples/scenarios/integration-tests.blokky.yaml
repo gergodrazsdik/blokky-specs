@@ -1,0 +1,85 @@
+# Integration tests against a database and the API
+# Starts PostgreSQL and Mailpit containers and the API (dotnet run) as services, seeds the
+# database, then runs tests/Integration in the .NET SDK container against the API at API_URL.
+# Needs: Docker or Podman, the .NET SDK, openssl, free ports 5433, 5080, 1025 and 8025. Holds the
+# lock integration-ports, so two runs of this user don't fight over them. With rootful Docker the
+# test container writes root-owned files into bin/ and obj/. Podman provides host.containers.internal,
+# Docker Desktop host.docker.internal; plain Docker Engine on Linux provides neither by default.
+# Run: blokky run examples/scenarios/integration-tests.blokky.yaml --input HOST_ALIAS=host.docker.internal
+blokky: 1.0
+name: integration tests
+inputs:
+  HOST_ALIAS:
+    description: Host name the test container uses to reach the services on this machine
+    default: host.containers.internal
+    in: [host.containers.internal, host.docker.internal]
+vars:
+  API_URL: http://${HOST_ALIAS}:5080
+defaults:
+  leaf_timeout: 10m
+lock: { name: integration-ports, wait: 15m }
+timeout: 45m
+do:
+  - name: generate a throwaway database password
+    exec: [openssl, rand, -hex, '16']
+    capture: DB_PASSWORD
+    secret: true
+  - set:
+      DB_CONNECTION: Host=localhost;Port=5433;Username=postgres;Password=${DB_PASSWORD}
+
+  - name: remove containers left over by a crashed run
+    exec: [docker, rm, --force, blokky-it-db, blokky-it-mail]
+    ok_exit: [1]    # Podman exits 1 when a container doesn't exist
+
+  - name: test against the database and the API
+    services:
+      - name: db
+        exec: [docker, run, --rm, --name, blokky-it-db, -p, '5433:5432', -e, POSTGRES_PASSWORD, postgres:17]
+        env:
+          POSTGRES_PASSWORD: { var: DB_PASSWORD }
+        ready:
+          all:
+            - { port: 5433, open: true }
+            - probe:
+                exec: [docker, exec, blokky-it-db, pg_isready, -U, postgres, -h, 127.0.0.1]
+        ready_timeout: 1m
+      - name: api
+        depends_on: [db]
+        exec: [dotnet, run, --project, src/Api, --no-launch-profile]
+        env:
+          ASPNETCORE_URLS: http://0.0.0.0:5080
+          ConnectionStrings__Default: { var: DB_CONNECTION }
+        ready: { output: stdout, contains: 'Now listening on' }
+        ready_timeout: 2m
+      - name: mail
+        exec: [docker, run, --rm, --name, blokky-it-mail, -p, '1025:1025', -p, '8025:8025', axllent/mailpit]
+        ready: { port: 1025, open: true }
+        on_exit: ignore    # only the email tests need it, and they report their own failures
+    finally:
+      - name: last database log lines
+        exec: [docker, logs, --tail, '50', blokky-it-db]
+        stderr: merge
+        ignore_errors: true
+    do:
+      - name: seed the database
+        when: { path: tests/Integration/seed.sql, is_file: true }
+        exec: [docker, exec, -i, blokky-it-db, psql, -U, postgres, -v, ON_ERROR_STOP=1]
+        stdin: { file: tests/Integration/seed.sql }
+
+      - name: tests in the .NET SDK container
+        container:
+          image: mcr.microsoft.com/dotnet/sdk:10.0
+          mounts:
+            - { host: ., path: /src }
+        cwd: /src
+        env:
+          API_URL: { var: API_URL }
+        do:
+          - name: all integration tests
+            timeout: 20m
+            stderr: merge
+            exec: [dotnet, test, tests/Integration]
+          - name: tests marked flaky, pass ${PASS}
+            for: { count: 3, as: PASS }
+            timeout: 15m
+            exec: [dotnet, test, tests/Integration, --no-build, --filter, 'Category=Flaky']

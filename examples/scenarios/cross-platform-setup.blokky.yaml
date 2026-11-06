@@ -1,0 +1,125 @@
+# Developer setup on Linux, macOS and Windows
+# Prepares a fresh clone of a Node.js project: checks the tools (bash on Linux, zsh on macOS,
+# PowerShell on Windows), makes sure Docker is running (starting Docker Desktop on macOS), picks
+# the fastest reachable npm registry, runs npm ci and enables the git hooks in .githooks/.
+# Needs: git, Node.js 20 or later with npm, Docker, curl; on Windows also WSL 2 for Docker Desktop.
+# Changes only the clone: node_modules/, git config core.hooksPath and the hooks' file modes.
+# Run: blokky run examples/scenarios/cross-platform-setup.blokky.yaml
+blokky: 1.0
+name: set up the development environment
+outputs: [NODE_MAJOR, REGISTRY]
+defaults:
+  leaf_timeout: 5m
+do:
+  - name: check the tools (Linux)
+    when: { host: os, equals: linux }
+    script: |
+      missing=0
+      for tool in git node npm docker curl; do
+        if ! command -v "$tool" >/dev/null 2>&1; then
+          echo "missing: $tool" >&2
+          missing=1
+        fi
+      done
+      exit "$missing"
+    shell: bash
+  - name: check the tools (macOS)
+    when: { host: os, equals: macos }
+    script: |
+      missing=0
+      for tool in git node npm docker curl; do
+        if ! whence -p "$tool" >/dev/null; then
+          print -u2 "missing: $tool"
+          missing=1
+        fi
+      done
+      exit $missing
+    shell: zsh
+  - name: check the tools (Windows)
+    when: { host: os, equals: windows }
+    script: |
+      $missing = @('git', 'node', 'npm', 'docker', 'curl') |
+        Where-Object { -not (Get-Command $_ -ErrorAction SilentlyContinue) }
+      if ($missing) { Write-Error "missing: $($missing -join ', ')" }
+    shell: pwsh
+  - name: check WSL 2 (Docker Desktop needs it)
+    when: { host: os, equals: windows }
+    exec: [wsl, --status]
+    encoding: utf-16le    # wsl.exe writes UTF-16LE
+
+  - name: read the Node.js major version
+    exec: [node, -p, 'process.versions.node.split(".")[0]']
+    capture: NODE_MAJOR
+  - assert: { var: NODE_MAJOR, ge: 20 }
+    message: "Node.js ${NODE_MAJOR} is too old; install Node.js 20 or later"
+    code: NODE_TOO_OLD
+
+  - name: make sure the Docker engine is running
+    when:
+      not:
+        probe:
+          exec: [docker, info]
+          timeout: 10s
+          timeout_result: false
+    if: { host: os, equals: macos }
+    then:
+      - exec: open -a Docker
+      - name: wait for Docker Desktop
+        race:     # a timeout with a clearer message than BK_TIMEOUT_TOTAL
+          - name: poll docker info
+            retry: true
+            max: 100
+            every: 3s
+            attempt_timeout: 15s
+            exec: [docker, info, --format, '{{.ServerVersion}}']
+          - name: give up after 3 minutes
+            do:
+              - sleep: 3m
+              - fail: "Docker Desktop didn't start within 3 minutes; open it to see why"
+                code: DOCKER_NOT_STARTED
+    else:
+      - fail: "The Docker engine isn't running; start it (Linux: the docker service, Windows: Docker Desktop) and run again"
+        code: DOCKER_NOT_RUNNING
+
+  - name: pick the fastest npm registry
+    any:
+      - name: registry.npmjs.org
+        do:
+          - exec: [curl, -fsS, --head, --max-time, '10', 'https://registry.npmjs.org/npm']
+          - set: { REGISTRY: 'https://registry.npmjs.org/' }
+      - name: registry.yarnpkg.com
+        do:
+          - exec: [curl, -fsS, --head, --max-time, '10', 'https://registry.yarnpkg.com/npm']
+          - set: { REGISTRY: 'https://registry.yarnpkg.com/' }
+      - name: registry.npmmirror.com
+        do:
+          - exec: [curl, -fsS, --head, --max-time, '10', 'https://registry.npmmirror.com/npm']
+          - set: { REGISTRY: 'https://registry.npmmirror.com/' }
+    concurrency: 3    # all at once; the first to answer wins
+
+  - name: npm ci from ${REGISTRY}
+    env:
+      npm_config_registry: { var: REGISTRY }
+    timeout: 15m
+    if: { host: os, equals: windows }
+    then:
+      - name: npm ci (PowerShell, because npm is a .cmd shim on Windows)
+        script: |
+          npm ci --no-audit --no-fund
+          exit $LASTEXITCODE
+        shell: pwsh
+    else:
+      - exec: npm ci --no-audit --no-fund
+
+  - name: enable the git hooks
+    when: { path: .githooks, is_dir: true }
+    do:
+      - exec: git config core.hooksPath .githooks
+      - name: make the hooks executable
+        when: { host: os, in: [linux, macos] }
+        for: { each: [pre-commit, commit-msg, pre-push], as: HOOK }
+        cwd: .githooks
+        do:
+          - name: chmod +x ${HOOK}
+            when: { path: { var: HOOK }, is_file: true }
+            exec: [chmod, +x, --, { var: HOOK }]

@@ -16,6 +16,7 @@ local.just
 lefthook-local.yml
 CLAUDE.local.md
 .claude/settings.local.json
+.claude/worktrees/
 
 # Secrets never belong in the repo
 .env
