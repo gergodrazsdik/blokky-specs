@@ -47,9 +47,9 @@ A value is a literal, a whole-value reference (`{ var: X }`, `{ from_env: NAME }
 
 A root-only key `vars: { NAME: value, … }`, bound in the plan scope after the inputs and before anything runs, in order. Values follow the `set` rules but may only use inputs, earlier `vars` and `from_env`; never a value produced by running something. Root modifiers (`name`, `cwd`, `when`, `env`) may use them. The caller can't override them.
 
-### Modifiers on `set`, `log` and `fail`
+### Modifiers on `set`, `log`, `fail` and `sleep`
 
-Asked while reviewing this change: `timeout`, `finally` and `ignore_errors` were valid on every kind, but on `set`, `log` and `fail` they mean nothing. These nodes start no process and take no time, so a timer never fires; there is nothing to clean up after them; and ignoring a `fail` is a no-op, while ignoring a failed `set` silently leaves variables unbound. The maintainer decided to remove them: on `set`, `log` and `fail` only `name` and `when` are valid (plus `for` on `log`); the others are plan errors. Whether other kinds (for example `sleep`) carry modifiers that mean little is left to the review.
+Asked while reviewing this change: `timeout`, `finally` and `ignore_errors` were valid on every kind, but on `set`, `log` and `fail` they mean nothing. These nodes start no process and take no time, so a timer never fires; there is nothing to clean up after them; and ignoring a `fail` is a no-op, while ignoring a failed `set` silently leaves variables unbound. The maintainer decided to remove them: on `set`, `log` and `fail` only `name` and `when` are valid (plus `for` on `log`); the others are plan errors. A follow-up question applied the same to `sleep`: a `timeout` on it is just a shorter `sleep`, it can only end early by cancellation (which `ignore_errors` never hides), and there is nothing to clean up after a wait, so `sleep` also takes only `name` and `when`.
 
 ### Consequences
 

@@ -143,7 +143,7 @@ Starts all children at once, in declaration order; the **first child to complete
 
 ### 2.8 `sleep`
 
-`sleep: 30s` waits for the duration (`0s` allowed). The wait ends immediately on cancellation. No process is started.
+`sleep: 30s` waits for the duration (`0s` allowed). The wait ends immediately on cancellation. No process is started. Only `name` and `when` are valid on it (§7); for a conditional delay, put `when` on the `sleep`.
 
 ### 2.9 `log`
 
@@ -219,7 +219,7 @@ Leaf options are node-level siblings of `exec` or `script`; on any other kind th
 |---|---|---|
 | `name` | all | Display label. |
 | `when` | all | Run only if a condition holds, else `skipped`. |
-| `timeout` | all but `log`, `fail`, `set` | Total wall-clock limit. |
+| `timeout` | all but `sleep`, `log`, `fail`, `set` | Total wall-clock limit. |
 | `lock` | see §7 | Hold a named advisory lock. |
 | `tempdir` | see §7 | Create a runtime-owned temp dir and make it the cwd. |
 | `cwd` | see §7 | Working directory. |
@@ -228,8 +228,8 @@ Leaf options are node-level siblings of `exec` or `script`; on any other kind th
 | `container` | see §7 | Run leaves in an ephemeral container. |
 | `become` | see §7 | Run leaves as another user. |
 | `services` | see §7 | Background processes around the node. |
-| `finally` | all but `log`, `fail`, `set` | Cleanup nodes, run once per node. |
-| `ignore_errors` | all but `log`, `fail`, `set` | The node's failure doesn't fail its parent. |
+| `finally` | all but `sleep`, `log`, `fail`, `set` | Cleanup nodes, run once per node. |
+| `ignore_errors` | all but `sleep`, `log`, `fail`, `set` | The node's failure doesn't fail its parent. |
 | `retry`, `while`, `until`, `for` | see §7 | Repetition (§5). |
 | `attempt_timeout` | with repetition | Per-attempt or per-iteration limit. |
 
@@ -473,7 +473,7 @@ All `for` options live inside the `for:` mapping:
 
 ## 7. Validity matrix
 
-Which modifiers and companion groups each kind accepts. ✓ = valid; — = plan error. `name` and `when` are valid on every kind. `timeout`, `finally` (with `finally_timeout`) and `ignore_errors` are valid on every kind except `log`, `fail` and `set`, where they would mean nothing: those nodes start no process, take no time and have nothing to clean up, and ignoring a `fail` is a no-op ([ADR 0015](../adr/0015-set-and-vars.md)). Neither group is repeated below.
+Which modifiers and companion groups each kind accepts. ✓ = valid; — = plan error. `name` and `when` are valid on every kind. `timeout`, `finally` (with `finally_timeout`) and `ignore_errors` are valid on every kind except `sleep`, `log`, `fail` and `set`, where they would mean nothing: those nodes start no process, have nothing to clean up and can't fail in a way worth ignoring (a `sleep` ends early only by cancellation, which `ignore_errors` never hides; ignoring a `fail` is a no-op) ([ADR 0015](../adr/0015-set-and-vars.md)). Neither group is repeated below.
 
 | Kind | Scope (`cwd`, `env`, `export`, `tempdir`, `lock`, `container`, `become`, `services`) | `retry`, `while`, `until` | `for` | `attempt_timeout` | Leaf options (§3) | `concurrency` | `fail_fast` |
 |---|---|---|---|---|---|---|---|
@@ -523,7 +523,7 @@ Implementations MUST enforce these as plan errors (unless noted) in addition to 
 25. `fields` only with `items`; `keep_blank` only with `lines`; `allow_empty` only with `glob`; `max_items` only with `items` and `lines`.
 26. A name isn't bound twice: not by two sequential siblings, not by `set` for a bound name, not by `vars` for an input or another `vars` entry.
 27. Templates (`${…}` in executed values) appear only in `set` and `vars` values; `vars` values use only inputs, earlier `vars` and `from_env`.
-28. `timeout`, `finally`, `finally_timeout` and `ignore_errors` are not used on `log`, `fail` or `set`.
+28. `timeout`, `finally`, `finally_timeout` and `ignore_errors` are not used on `sleep`, `log`, `fail` or `set`.
 
 ## 9. Security considerations
 
