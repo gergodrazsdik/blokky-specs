@@ -1,7 +1,8 @@
 # for glob
 # `for: { glob }` runs the node once per matching path, in sorted order;
 # Blokky expands the pattern itself, no shell involved. Zero matches fail the
-# node unless `allow_empty: true`.
+# node unless `allow_empty: true`. `max_items` caps the matches (default 1000)
+# and fails before the first iteration if there are more.
 # Run: blokky run examples/basics/for-glob.blokky.yaml
 blokky: 1.0
 name: shellcheck ${SCRIPT}
@@ -9,5 +10,6 @@ for:
   glob: 'scripts/**/*.sh'
   as: SCRIPT
   allow_empty: true
+  max_items: 200
   concurrency: 4
 exec: [shellcheck, --, { var: SCRIPT }]

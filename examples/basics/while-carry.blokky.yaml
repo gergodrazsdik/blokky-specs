@@ -1,0 +1,28 @@
+# Walking history with while, carry and index
+# `carry` and `index` work on `while` as on `until`. The condition is checked
+# before each iteration and sees the carried value: here the commit to look at,
+# HEAD first, then the previous iteration's parent. Lists the commit subjects
+# since the last tag on the first-parent line, at most 200. Read-only. Run
+# inside a git repository that has a tag.
+# Run: blokky run examples/basics/while-carry.blokky.yaml
+blokky: 1.0
+name: commits since the last tag
+outputs: [SUBJECTS]
+while:
+  probe:
+    exec: [git, describe, --tags, --exact-match, { var: REV }]
+    true_exit: [128]    # no tag on this commit: keep walking
+    false_exit: [0]     # tagged: stop
+carry:
+  REV: { from: PARENT, initial: HEAD }
+index: { as: DEPTH, start: 1 }
+collect: { SUBJECT: SUBJECTS }
+max: 200
+every: 0s
+do:
+  - exec: [git, log, -1, '--format=%s', { var: REV }]
+    capture: SUBJECT
+  - log: "${DEPTH}: ${SUBJECT}"
+  - set: { PARENT_SPEC: '${REV}^' }
+  - exec: [git, rev-parse, --verify, { var: PARENT_SPEC }]
+    capture: PARENT
