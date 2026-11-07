@@ -61,7 +61,7 @@ All input errors are found and reported together, before anything runs (EM-1).
 | Code | Cause |
 |---|---|
 | `BK_INPUT_SYNTAX` | A malformed `--input` (no `=`, a bad name). |
-| `BK_INPUT_UNKNOWN` | A name the plan doesn't declare; the message suggests close names case-insensitively (`branch` → `BRANCH`). |
+| `BK_INPUT_UNKNOWN` | A name the plan doesn't declare; `detail.suggestion` gives the closest declared name by SY-30's rule (`branch` → `BRANCH`, `BRANCHH` → `BRANCH`). |
 | `BK_INPUT_DUPLICATE` | The same name given twice. |
 | `BK_INPUT_MISSING` | A required input without a value; the message prints the exact command to run. |
 | `BK_INPUT_EMPTY` | An empty value for a required input. |

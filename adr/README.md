@@ -27,6 +27,7 @@ ADRs are **grouped**: a baseline ADR, then one ADR per batch of answered open qu
 | [0017](0017-review-features.md) | Review decisions on features | accepted | — (council review of draft.3: D-1 to D-6, S-5, S-10) |
 | [0018](0018-review-semantics.md) | Review decisions on semantics | accepted | — (council review of draft.3: S-1 to S-14) |
 | [0019](0019-review-corrections.md) | Review corrections | accepted | — (council review of draft.3: C-1 to C-8) |
+| [0020](0020-conformance-gaps.md) | Gaps found by the first conformance cases | accepted | — (F-0015) |
 
 ## Format
 

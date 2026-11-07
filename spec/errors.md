@@ -25,7 +25,7 @@ How an implementation reports errors (JSON formats, exit codes) and the errors i
 | Code | Meaning |
 |---|---|
 | `BK_INPUT_SYNTAX` | A malformed `--input` (no `=`, a bad name) or MCP `inputs` object (non-string value, duplicate key). |
-| `BK_INPUT_UNKNOWN` | An input the plan doesn't declare. `detail.suggestion` gives a close name. |
+| `BK_INPUT_UNKNOWN` | An input the plan doesn't declare. `detail.suggestion` gives the closest declared name, when one is close enough ([syntax.md](syntax.md) SY-30). |
 | `BK_INPUT_DUPLICATE` | The same input given twice. |
 | `BK_INPUT_MISSING` | A required input without a value. `detail.command` is the exact command to run. |
 | `BK_INPUT_EMPTY` | An empty value for a required input. |
@@ -43,7 +43,7 @@ Plan errors carry a line and column. `BK_PLAN_INVALID` covers every rule of [ref
 | `BK_PLAN_TOO_LARGE` | Over 4 MiB, or nested deeper than 128 levels. |
 | `BK_PLAN_YAML` | Not valid YAML, or a rejected YAML feature (anchor, alias, merge key, tag, directive, second document, complex key). |
 | `BK_PLAN_DUPLICATE_KEY` | A key repeated in a mapping. |
-| `BK_PLAN_UNKNOWN_KEY` | A key that isn't valid at its position. `detail.suggestion` from did-you-mean or the synonym table. |
+| `BK_PLAN_UNKNOWN_KEY` | A key that isn't valid at its position. `detail.suggestion` from the synonym table or did-you-mean (SY-30). |
 | `BK_PLAN_NOT_SUPPORTED` | A feature the implementation doesn't support yet. `detail.feature` is a feature id from the conformance vocabulary ([conformance/README.md §3.2](../conformance/README.md#32-features-and-requirements)). |
 | `BK_PLAN_VERSION` | `blokky:` missing, malformed or naming an unsupported version. `detail.supported` lists the supported versions. |
 | `BK_PLAN_VALUE` | A value that doesn't match its field's type or grammar (a boolean that isn't `true`/`false`, a bad duration, a bare number, an empty value or list, a regex that doesn't compile). |

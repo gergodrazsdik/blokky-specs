@@ -1,5 +1,5 @@
 title: A missing required input and an unknown input are reported together
-rules: [EM-1, EM-2, SY-44]
+rules: [EM-1, EM-2, SY-30, SY-44]
 spec: [variables.md§4.3]
 features: [inputs, log, interpolation]
 plan: |
@@ -12,6 +12,7 @@ inputs: [BRANCHH=main]
 expect:
   input_errors:
     - { code: BK_INPUT_MISSING }
-    - { code: BK_INPUT_UNKNOWN }
+    - code: BK_INPUT_UNKNOWN
+      detail: { suggestion: BRANCH }   # edit distance 1 (SY-30)
   exhaustive: true
 notes: The third example of conformance/README.md §3.8.
