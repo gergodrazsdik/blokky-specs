@@ -59,10 +59,18 @@ The `powershell` invocation passes `-ExecutionPolicy Bypass` so a plan's script 
 - **SH-15.** `sh` gets no options: common `/bin/sh` implementations (dash) reject `--noprofile`/`--norc`, and a non-interactive `sh` reads no startup file once `ENV` is cleared.
 - **SH-16.** In bash, `pipefail` is set with the `-o pipefail` option, so the script text is unchanged and line numbers match the plan. A failing command in the middle of a bash or sh script doesn't stop it; the script's exit status is the leaf's.
 - **SH-33.** `zsh` is Unix-only and used only when named (`shell:` or `defaults.shell`); detection never picks it. `zsh --no-rcs` still reads `/etc/zshenv`, which zsh can't skip ([ADR 0014](../adr/0014-remaining-features.md)). `fish` isn't supported ([ADR 0017](../adr/0017-review-features.md)).
-- **SH-17.** **PowerShell prologue.** Blokky inserts `$ErrorActionPreference = 'Stop';` (followed by a space) at the start of the first line of the script that isn't blank, a comment, or a `using` statement. The prologue shares that line, so line numbers in error messages stay exact ([ADR 0011](../adr/0011-pwsh-prologue.md)). A `param(` block, or an attribute (`[CmdletBinding()]`, `[Diagnostics.CodeAnalysis…]`) before one, at that position is a plan error (plan scripts receive no arguments) when the shell is named `pwsh` or `powershell` by `shell:` or `defaults.shell`; the check doesn't apply to a shell found by detection or configuration. With the prologue, a cmdlet error ends the script with exit code 1 instead of being written to stderr while the script exits 0.
-- **SH-18.** `$PSNativeCommandUseErrorActionPreference` is not set: a failing native program doesn't stop a PowerShell script, matching "no `-e`" in bash.
+- **SH-17.** **PowerShell prologue.** Blokky inserts `$ErrorActionPreference = 'Stop';` (followed by a space) at the start of the first line of the script that isn't blank, a comment, or a `using` statement. The prologue shares that line, so line numbers in error messages stay exact ([ADR 0011](../adr/0011-pwsh-prologue.md)). With the prologue, a cmdlet error ends the script with exit code 1 instead of being written to stderr while the script exits 0. Finding that line ([ADR 0027](../adr/0027-spike-findings.md)):
+  - Keywords (`using`, `param`, the block names below) are matched case-insensitively, as PowerShell does.
+  - Comments are `#` line comments (`#requires` included) and `<# … #>` block comments. When the line closes a block comment and has code after the `#>`, the prologue goes right after the `#>`, not at the start of the line, where it would be part of the comment.
+  - The prologue goes after the line's indentation.
+  - A script with no such line (only blank lines, comments and `using` statements) gets no prologue.
+
+  When the shell is named `pwsh` or `powershell` by `shell:` or `defaults.shell`, these at that position are a plan error (`BK_PLAN_INVALID`, SH-17), because plan scripts receive no arguments and no pipeline input; the check doesn't apply to a shell found by detection or configuration:
+  - a `param` block, also when whitespace, line breaks or comments come between `param` and its `(`, and when attributes (`[CmdletBinding()]`, `[Diagnostics.CodeAnalysis…]`) come before it, over one or several lines, with comments between them;
+  - a top-level named block: `begin`, `process`, `end`, `clean` or `dynamicparam` followed by its `{`.
+- **SH-18.** `$PSNativeCommandUseErrorActionPreference` is not set: a failing native program doesn't stop a PowerShell script, matching "no `-e`" in bash. A script can opt in with `$PSNativeCommandUseErrorActionPreference = $true` (pwsh 7.4 and later); with the prologue, a failing native program then ends the script with exit code 1.
 - **SH-19.** The exact invocation, including the prologue, is determined statically, so implementations can show it before a run.
-- **SH-20.** The exit code of `pwsh -File` and `powershell -File` for a script that ends without `exit` after a failing native command is *provisional — verify in spike*; until then, plans that need a defined exit code end with an explicit `exit`.
+- **SH-20.** **`pwsh` exit codes.** `pwsh` 7.4 or later is required; Blokky doesn't check the version. `pwsh -File` exits with 0 when the script ends without `exit`, whatever `$LASTEXITCODE` is; with 1 after an uncaught terminating error (`throw`, a parse error, a failed `#requires`, or a cmdlet error the prologue makes terminating); and with N mod 256 after `exit N` on Unix. Unlike bash, a script whose last command is a failing native program therefore exits 0: a plan that wants that program's status ends with `exit $LASTEXITCODE` ([ADR 0027](../adr/0027-spike-findings.md)). Windows `powershell` 5.1, and `exit N` beyond 0–255 on Windows, are *provisional — verify in spike*; until then, plans that need a defined exit code from `powershell` end with an explicit `exit`.
 
 ### 2.3 Choosing the shell
 
@@ -72,15 +80,15 @@ The `powershell` invocation passes `-ExecutionPolicy Bypass` so a plan's script 
 
 ## 3. A leaf's environment
 
-- **SH-24.** A leaf's environment is built as in [variables.md §7](variables.md#7-environment): the environment the run started with, the scoped `env`/`export` mappings and the `BLOKKY_*` variables; then `BASH_ENV` and `ENV` are removed, so no shell reads a startup file through them.
+- **SH-24.** A leaf's environment is built as in [variables.md §7](variables.md#7-environment): the environment the run started with, the output defaults `NO_COLOR` and `TERM`, the scoped `env`/`export` mappings and the `BLOKKY_*` variables (VA-44); then `BASH_ENV` and `ENV` are removed, so no shell reads a startup file through them.
 
 ## 4. Executable resolution
 
-- **SH-25.** Resolution uses **Blokky's own** `PATH`, never a node's `env`, and never the current directory or Blokky's own directory.
-- **SH-26.** An argv[0] that contains a path separator (`./tools/gen`, `C:\tools\gen.exe`) is a path, resolved against the node's cwd if relative; it is not looked up on `PATH`.
+- **SH-25.** Resolution uses **Blokky's own** `PATH`, never a node's `env`, and never the current directory or Blokky's own directory. Empty and relative `PATH` entries are skipped, since both would name the current directory. A candidate is the entry and the name joined with the platform's separator, as written, without canonicalising.
+- **SH-26.** An argv[0] that contains a path separator (`./tools/gen`, `C:\tools\gen.exe`) is a path, resolved against the node's cwd if relative; it is not looked up on `PATH`. A relative path is joined to the cwd as written: `..` segments are left for the OS to resolve, not collapsed lexically, so `link/../tool` follows `link` as the OS does. `program` records the joined path.
 - **SH-27.** On Windows, a bare name (no path separator) without an extension is tried with `.com` and `.exe` only, in that order; the `PATHEXT` variable is ignored. A path (SH-26) is used as written. `.bat` and `.cmd` are never run directly (SH-10).
 - **SH-28.** Shell binaries resolve the same way, unless the implementation is configured with an absolute path for that shell (for blokky-cli: the user-only key `shells.<name>.path`). On Windows, `bash` and `sh` resolve **only** through such configuration (Git Bash or MSYS), never through `PATH`, which could find `C:\Windows\System32\bash.exe`, the WSL launcher ([ADR 0003](../adr/0003-execution-defaults.md)).
-- **SH-29.** The launcher receives the resolved absolute path, so platform search orders don't apply (*provisional — verify in spike*). Resolution doesn't follow symbolic links: the resolved path is the path found on `PATH` (or against the cwd), and the process starts under that path, so a symlinked tool keeps its name. The resolved path is part of the run result (`program`).
+- **SH-29.** The launcher receives the resolved absolute path, so platform search orders don't apply. The process's argv[0] is the name as found in the plan: argv[0] as written for `exec`, the resolved shell path for `script` (as the result's `invocation` shows). A file the OS can't execute (on Unix, for example a script without a shebang line) fails with `BK_SPAWN_FAILED` `bad_format`; Blokky never retries it through `/bin/sh` or another shell ([errors.md §5.1](errors.md#51-processes)). Resolution doesn't follow symbolic links: the resolved path is the path found on `PATH` (or against the cwd), and the process starts under that path, so a symlinked tool keeps its name. The resolved path is part of the run result (`program`).
 
 ## 5. Shell × OS matrix
 
@@ -88,7 +96,7 @@ The `powershell` invocation passes `-ExecutionPolicy Bypass` so a plan's script 
 |---|---|---|---|
 | `bash` | ✓ | ✓ | only via `shells.bash.path` (Git Bash, MSYS) |
 | `sh` | ✓ | ✓ | only via `shells.sh.path` |
-| `pwsh` | ✓ | ✓ | ✓ |
+| `pwsh` (7.4 or later, SH-20) | ✓ | ✓ | ✓ |
 | `powershell` | — | — | ✓ |
 | `zsh` | ✓ | ✓ | — |
 | `cmd` | not supported | | |

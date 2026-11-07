@@ -22,7 +22,7 @@ This document defines the **run result**: the abstract outcome of a run that eve
 | stop cause | For `stopped`: why the run was stopped from outside (implementation-defined values, for example `budget`, `interrupt`). |
 | error | The run's primary error (§5): the root node's error; for `stopped`, also the root's error: its `BK_CANCELLED`, whose `detail.reason` names the cause, when the stop interrupted unfinished work, or the body's error when the body had already failed, for example when the stop came during `finally` (EM-51, EM-57). None on success. |
 | outputs | Each `outputs` name with its final value, no value (`null`) if unbound, or marked secret ([variables.md §8](variables.md#8-outputs)). |
-| warnings | Warnings the implementation raised at validation or run time (for example a short secret that couldn't be masked). |
+| warnings | Warnings the implementation raised at validation or run time (for example a short secret that couldn't be masked, or a partial removal of a run-owned file or directory, with the path a mount point kept, EM-69). |
 | nodes | The root node's result (§3). |
 
 ## 3. Nodes

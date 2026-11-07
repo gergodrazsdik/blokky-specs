@@ -34,6 +34,7 @@ ADRs are **grouped**: a baseline ADR, then one ADR per batch of answered open qu
 | [0024](0024-wave-d-gaps.md) | Gaps found by the wave D conformance cases | accepted | — (F-0020) |
 | [0025](0025-open-points.md) | Open points after the conformance waves | accepted | — (F-0017, F-0021) |
 | [0026](0026-runtime-edge-cases.md) | Runtime edge cases after the wave E cases | accepted | — (F-0022, F-0023) |
+| [0027](0027-spike-findings.md) | Findings from the MVP spikes | accepted | — (T-0030) |
 
 ## Format
 

@@ -69,7 +69,7 @@ Entering a node means applying each layer in this order; leaving it unwinds them
 
 - **EM-14.** A leaf's program is resolved before launch: `exec` argv[0], or the shell binary for `script`, against `PATH` from the environment the run started with, never the cwd ([shells.md §4](shells.md#4-executable-resolution)). A container leaf's program resolves inside the container instead (CP-15).
 - **EM-15.** Every leaf, service and probe, with everything it starts, MUST be stoppable as one process tree. Leaves have no controlling terminal on Unix; on Windows they have no visible console and receive no user input. (How: implementation-defined; for blokky-cli: own session and process group on Unix, own Job Object on Windows.) Every Windows leaf, service and probe MUST have a console the graceful stop can reach: its own hidden console, or its own process group on a shared hidden console, so that CTRL_BREAK can be delivered (EM-26; [ADR 0020](../adr/0020-conformance-gaps.md), [ADR 0024](../adr/0024-wave-d-gaps.md)).
-- **EM-16.** A leaf's environment is the environment the run started with, plus the `env` and `export` mappings of every enclosing scope, innermost last; `BASH_ENV` and `ENV` are then cleared ([variables.md §7](variables.md#7-environment)).
+- **EM-16.** A leaf's environment is built as in VA-39: the environment the run started with, the `env` and `export` mappings of every enclosing scope, innermost last, and the variables Blokky sets (VA-44); `BASH_ENV` and `ENV` are then cleared ([variables.md §7](variables.md#7-environment)).
 - **EM-17.** A leaf's stdin is empty unless the plan sets `stdin`. A run never forwards its own stdin to leaves and never prompts.
 
 ### 4.2 Output
@@ -79,7 +79,7 @@ Entering a node means applying each layer in this order; leaving it unwinds them
 
 ### 4.3 Run-owned files
 
-- **EM-69.** Files and directories a run creates for itself (script files, capture files, tempdirs, env files) are created new, under a per-user root that only the run's user can write: never at an existing path and never through an existing symbolic link. Removing them, at node end (`tempdir.remove`) or later, never follows symbolic links or junctions, never crosses a file system boundary and never removes anything outside the file's own tree. The scripts directory a container sees holds only the run's script files.
+- **EM-69.** Files and directories a run creates for itself (script files, capture files, tempdirs, env files) are created new, under a per-user root that only the run's user can write: never at an existing path and never through an existing symbolic link. Removing them, at node end (`tempdir.remove`) or later, never follows symbolic links or junctions, never crosses a file system boundary and never removes anything outside the file's own tree. A removal stopped by a mount point keeps the mount point and its ancestors; it doesn't fail the node, and the run result's `warnings` report it as partial, with the kept path ([results.md §2](results.md#2-the-run), [ADR 0027](../adr/0027-spike-findings.md)). The scripts directory a container sees holds only the run's script files.
 
 ### 4.4 Completion
 
@@ -88,16 +88,14 @@ Entering a node means applying each layer in this order; leaving it unwinds them
 - **EM-68.** **Order at completion.** When a leaf's direct child exits, these steps happen in this order ([ADR 0018](../adr/0018-review-semantics.md)):
   1. the leaf's duration ends;
   2. output is drained until EOF or the drain bound (EM-20);
-  3. the remaining process tree is stopped (EM-21), unless `keep_descendants` says otherwise;
+  3. the remaining process tree is stopped (EM-21), unless `keep_descendants` says otherwise: the step ends when no live process of the leaf's OS grouping (EM-22) is left;
   4. captures and the leaf's status are fixed (EM-24), and only then does the next node start.
 
-  Captures therefore include output written during the drain, and the next sibling never overlaps a dying descendant. The time spent in steps 2 and 3 is recorded separately from the leaf's duration. *Provisional — verify in spike.*
+  Captures therefore include output written during the drain, and the next sibling never overlaps a dying descendant. The time spent in steps 2 and 3 is recorded separately from the leaf's duration ([ADR 0027](../adr/0027-spike-findings.md)).
 - **EM-22.** **Descendants at run end.** Except for leaves with `keep_descendants: detach` (which the run never stops and lists in the run result), descendants are stopped by the end of the run, also when it is stopped from outside (§7), with a strength that depends on how they relate to the leaf ([ADR 0018](../adr/0018-review-semantics.md)):
   - the implementation MUST stop every process in the leaf's own OS grouping (its process group or session on Unix, its job on Windows);
   - it SHOULD do the same when the implementation itself is killed, and documents per OS how far it achieves this (for blokky-cli: the run-control contract);
   - processes that leave the grouping on purpose (double-fork daemons, `setsid`, Windows breakaway) are stopped on a best-effort basis.
-
-  *Provisional — verify in spike #1.*
 - **EM-23.** The leaf succeeds if its exit code is 0 or listed in `ok_exit`. A leaf killed by a signal (Unix) fails. The run result gives the exit code (an unsigned 32-bit value on Windows), the signal, and, if the run stopped the leaf, why (`killed_by`).
 - **EM-24.** Captures are evaluated after completion and bound only if the leaf succeeded ([variables.md](variables.md)).
 

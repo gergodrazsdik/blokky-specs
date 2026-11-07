@@ -31,7 +31,7 @@ The quoted delimiter stops the caller's shell from expanding `$X` and backticks 
 
 - **SY-5.** A plan MUST be UTF-8, with or without a byte-order mark (BOM). A UTF-8 BOM is ignored.
 - **SY-6.** A UTF-16 or UTF-32 BOM is a plan error, the only one reported for that text, whose message names the likely cause (PowerShell `Out-File` or `>` redirection) and the fix (`-Encoding utf8`, or the file form).
-- **SY-7.** Invalid UTF-8 is one plan error, at the first invalid byte, that gives its byte offset (`detail.offset`), line and column.
+- **SY-7.** Invalid UTF-8 is one plan error, at the first invalid byte, that gives its byte offset (`detail.offset`, counted from the first byte of the raw text, a BOM included), line and column.
 - **SY-8.** Text that looks mangled by a lossy pipe (for example Windows PowerShell 5.1 replacing non-ASCII characters with `?`) SHOULD get a warning.
 
 ### 2.3 Size and depth caps
@@ -48,7 +48,7 @@ The quoted delimiter stops the caller's shell from expanding `$X` and backticks 
 **SY-10.** Before parsing, one pass over the decoded text, **comments and keys included**, checks every character. Errors from this pass end processing: the text isn't parsed as YAML, so no `BK_PLAN_YAML` follows them.
 
 - **SY-11.** **Allowed control characters:** TAB (U+0009), LF (U+000A), and CR (U+000D) only when directly followed by LF.
-- **SY-12.** **Rejected:** every other C0 control character, DEL (U+007F) and C1 controls (U+0080–U+009F); bidirectional controls (U+061C, U+200E, U+200F, U+202A–U+202E, U+2066–U+2069); zero-width characters (U+200B–U+200D, U+2060) and U+FEFF anywhere except as a leading BOM.
+- **SY-12.** **Rejected:** every other C0 control character, DEL (U+007F) and C1 controls (U+0080–U+009F); bidirectional controls (U+061C, U+200E, U+200F, U+202A–U+202E, U+2066–U+2069); zero-width characters (U+200B–U+200D, U+2060); LINE SEPARATOR (U+2028) and PARAGRAPH SEPARATOR (U+2029), which some editors and YAML 1.1 parsers treat as line breaks and YAML 1.2 doesn't ([ADR 0027](../adr/0027-spike-findings.md)); and U+FEFF anywhere except as a leading BOM.
 
 **SY-13.** Each rejected character is a plan error with its position and Unicode name. Hidden characters like these are how "Trojan Source" attacks make reviewed text differ from what runs, and comments are not exempt.
 
@@ -63,10 +63,10 @@ Each of these is a plan error:
 - **SY-14.** anchors (`&a`), aliases (`*a`) and merge keys (`<<`);
 - **SY-15.** explicit tags (`!!str`, `!custom`) and directives (`%YAML`, `%TAG`);
 - **SY-16.** more than one document. A single leading `---` is allowed; a second `---` or a `...` followed by more content is an error;
-- **SY-17.** complex keys (the `?` indicator) and keys that aren't plain or quoted strings;
+- **SY-17.** complex keys (the `?` indicator) and keys that aren't plain or quoted strings, including an empty key (`: a`, which YAML reads as a null key);
 - **SY-18.** **duplicate keys** in any mapping;
 - **SY-19.** **unknown keys** (§3.4);
-- **SY-20.** a key with no value (`timeout:` followed by nothing): an empty value is never "unset". Write `''` where an empty string is allowed;
+- **SY-20.** a key with no value (`timeout:` followed by nothing), and a sequence item with no value (a `-` followed by nothing, located at the `-`): an empty value is never "unset". Write `''` where an empty string is allowed;
 - **SY-21.** an empty list (`[]`), except in fields whose entry in the per-field table (§7) says an empty list is meaningful. Today only `mounts`;
 - **SY-22.** an empty mapping (`{}`).
 
@@ -247,17 +247,19 @@ How values are supplied, the value rules and the input error codes are in [varia
 
 | Construct | Meaning |
 |---|---|
-| a character | itself; `\` escapes any of `.^$*+?()[]{}\|\/` and `-`, and an escape of any other character (`\q`) is outside the subset |
+| a character | itself; `\` escapes any of `.^$*+?()[]{}\|\/` and `-`, and an escape of any other character (`\q`) is outside the subset. Outside a class, a `]` or `}` that closes nothing is itself; a `{` that doesn't start a repetition (`x{`, `a{,3}`) is outside the subset |
 | `.` | any character except LF |
-| `[abc]`, `[a-z]`, `[^…]` | a character class; ranges by code point |
+| `[abc]`, `[a-z]`, `[^…]` | a character class; ranges by code point. A `-` is itself first (after any `^`) or last, and forms a range elsewhere; a `-` that can't form a range there is outside the subset. Inside a class, `\` escapes the characters listed above, and `\d`, `\w`, `\s`, `\D`, `\W`, `\S`, `\t`, `\n`, `\r`, `\f`, `\v`, `\xHH` and `\u{H…}` are allowed; `\b` and any other escape are outside the subset, and so are an empty class (`[]`, `[^]`) and an unescaped `[` |
 | `\d`, `\w`, `\s` (and `\D`, `\W`, `\S`) | ASCII only: `[0-9]`, `[A-Za-z0-9_]`, space, TAB, LF, CR, FF, VT |
-| `\t`, `\n`, `\r`, `\xHH`, `\u{H…}` | TAB, LF, CR, a code point |
-| `*`, `+`, `?`, `{n}`, `{n,}`, `{n,m}` | greedy repetition; with a trailing `?`, lazy |
+| `\t`, `\n`, `\r`, `\f`, `\v`, `\xHH`, `\u{H…}` | TAB, LF, CR, FF, VT, a code point |
+| `*`, `+`, `?`, `{n}`, `{n,}`, `{n,m}` | greedy repetition; with a trailing `?`, lazy. Counts are decimal, at most 1000, with `n` ≤ `m` (SY-104). A repetition needs something to repeat: one on nothing, on `^`, `$`, `\b` or `\B`, or on another repetition (`a**`, `a{2}{3}`) is outside the subset |
 | `(…)`, `(?:…)` | a group (captures have no meaning in Blokky) |
 | `a\|b` | alternation |
 | `^`, `$` | the start and end of the whole value; `$` never matches before a final newline |
 | `\b`, `\B` | an ASCII word boundary, or not one |
-| `(?i)` at the very start | case-insensitive matching, as for `ignore_case` ([conditions.md](conditions.md), CO-12) |
+| `(?i)` at the very start | case-insensitive matching, as for `ignore_case` ([conditions.md](conditions.md), CO-12): a literal matches every character with the same simple uppercase mapping, and a class is case-folded before it is negated, so `(?i)[^a]` doesn't match `A`. `(?i)` doesn't change `\d`, `\w`, `\s` or their negations, which stay ASCII |
+
+**SY-104.** **Pattern size.** So that a pattern within the subset compiles in every engine, its size is bounded ([ADR 0027](../adr/0027-spike-findings.md)): every repetition count is at most 1000 (above), and the pattern has at most **10 000 nodes** once counted repetitions are expanded. Expanding writes `x{n}` as `n` copies of `x`, `x{n,m}` as `m` copies and `x{n,}` as `n + 1` copies; nested counts multiply. Every literal character, `.`, class (whatever its contents), class escape (`\d` …), anchor (`^`, `$`) and boundary (`\b`, `\B`) counts as one node per copy; groups, alternation, `*`, `+`, `?` and `(?i)` count as none. `(?:a{100}){100}` has 10 000 nodes and is within the bound; `(?:ab{100}){100}` (10 100) and `a{1001}` are not. A pattern over the bound is outside the subset (RF-22).
 
 **SY-62.** Everything else is outside the subset: lookahead and lookbehind, backreferences, atomic groups, possessive quantifiers, named groups, Unicode classes (`\p{…}`), other inline options (`(?m)`, `(?s)`) and anchors such as `\A`, `\z`.
 
@@ -478,6 +480,7 @@ Examples: `alpine`, `alpine:3.20`, `docker.io/library/busybox@sha256:a7dbc319b14
 | Backslash escapes in double quotes | `matches: "^\d+$"` | `\d` is an invalid YAML escape. | Plan error with the fix-it `matches: '^\d+$'`. |
 | Flow mappings with `,` `[` `]` `{` `}` | `{ probe: { exec: a,b } }` | The probe breaks apart. | Plan error that suggests a block mapping. |
 | `script:` not a block scalar | `script: npm test && npm run lint` | Works, but fragile. | Warning. |
+| A plain `~` or `null` (in any case) in a string field | `default: ~` | A string (`~`), as every scalar is (SY-23), but YAML editors read it as null and report a type error. | Warning with the fix-it to quote it (`default: '~'`). |
 
 **SY-90.** Plans and examples SHOULD use: plain scalars only for simple `exec` strings; `script:` text always as a `|` or `|-` block scalar; regexes always single-quoted; block mappings for non-trivial probes.
 
@@ -519,4 +522,4 @@ Examples: `alpine`, `alpine:3.20`, `docker.io/library/busybox@sha256:a7dbc319b14
 - **SY-92.** A plan names the spec version it targets in `blokky:` (§4.2).
 - **SY-93.** Unknown keys are errors (§3.4), so an older implementation fails clearly on a plan that uses newer keys.
 - **SY-94.** An implementation that doesn't support a feature yet rejects every plan that uses it with `BK_PLAN_NOT_SUPPORTED` before anything runs ([errors.md](errors.md)).
-- **SY-95.** The plan schema (`schema/blokky.schema.json`) is normative for structure; its `$id` is versioned per spec release. Rules the schema can't express are listed in [reference.md](reference.md).
+- **SY-95.** The plan schema (`schema/blokky.schema.json`) is normative for structure; its `$id` is versioned per spec release. Rules the schema can't express are listed in [reference.md](reference.md). Editors that validate a plan against the schema type unquoted scalars first (YAML's core schema), so scalar fields also accept JSON numbers and booleans, and an editor can't see how a number or boolean was spelled: `010`, `0x10`, `1e3`, `3.0` and `True` reach the schema as typed values. Only Blokky's own validator applies SY-23 to SY-26 and the grammars of §6 to the text as written; the editor is a convenience, not the validator ([ADR 0027](../adr/0027-spike-findings.md)).
