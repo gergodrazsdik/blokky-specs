@@ -1,5 +1,5 @@
 title: An undefined variable in a vars template is a plan error
-rules: [VA-58, VA-61, RF-27]
+rules: [VA-58, RF-23]
 features: [vars, log, interpolation]
 plan: |
   blokky: 1.0
@@ -9,6 +9,6 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_INVALID
-      detail: { rule: RF-27 }
+      detail: { rule: RF-23 }
       line: 3
       column: 6

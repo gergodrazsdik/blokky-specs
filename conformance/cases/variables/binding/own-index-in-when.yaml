@@ -1,0 +1,16 @@
+title: A node's when can't reference the index the node itself introduces
+rules: [VA-37, RF-6]
+features: [retry, index, when, cond-var, exec]
+plan: |
+  blokky: 1.0
+  retry: true
+  max: 2
+  index: ATTEMPT
+  when: { var: ATTEMPT, equals: '0' }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-6 }
+      line: 5
+      column: 14

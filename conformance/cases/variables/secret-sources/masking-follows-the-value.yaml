@@ -1,0 +1,17 @@
+title: A non-secret output whose value contains a secret value shows it masked
+rules: [VA-47, VA-51]
+features: [do, set, from-env, secret-ref, exec, capture, outputs]
+plan: |
+  blokky: 1.0
+  outputs: [OUT]
+  do:
+    - set: { TOKEN: { from_env: CONF_TOKEN, secret: true } }
+    - exec: [blokky-testkit, print, --newline, none, --out, 'pre-', --out, { var: TOKEN }]
+      capture: OUT
+env:
+  CONF_TOKEN: s3cr3t-value
+expect:
+  status: succeeded
+  outputs:
+    OUT: pre-***
+notes: OUT is a plain capture, not secret; its value contains the 12-character secret (VA-51).

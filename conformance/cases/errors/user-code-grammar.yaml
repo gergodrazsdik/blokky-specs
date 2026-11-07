@@ -8,6 +8,7 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE
+      detail: { rule: { $one_of: [ER-1, SY-52] } }   # no RF rule; the spec names neither
       line: 3
       column: 7
   exhaustive: true

@@ -13,3 +13,4 @@ expect:
   input_errors:
     - code: BK_INPUT_UNKNOWN
       detail: { suggestion: BRANCH }   # edit distance 0 after uppercase mapping
+  exhaustive: true                     # branch is well-formed (variables.md §4.3)

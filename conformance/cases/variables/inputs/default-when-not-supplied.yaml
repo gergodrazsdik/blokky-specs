@@ -14,6 +14,5 @@ expect:
   status: succeeded
   outputs:
     ENVIRONMENT: staging
-notes: >-
-  The run result's inputs (value and source) can't be asserted yet: the
-  run-outcome keys of conformance/README.md §3.5 have no `inputs`.
+  inputs:
+    ENVIRONMENT: { value: staging, source: default }

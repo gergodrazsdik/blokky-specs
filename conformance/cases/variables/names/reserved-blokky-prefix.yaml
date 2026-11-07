@@ -1,0 +1,14 @@
+title: A plan can't bind a name with the reserved BLOKKY_ prefix
+rules: [VA-4, VA-44]
+features: [exec, capture]
+plan: |
+  blokky: 1.0
+  exec: [blokky-testkit, print, --out, x]
+  capture: BLOKKY_RESULT
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE   # a reserved prefix (errors.md §4)
+      detail: { rule: { $one_of: [VA-4, SY-52] } }
+      line: 3
+      column: 10
+  exhaustive: true
