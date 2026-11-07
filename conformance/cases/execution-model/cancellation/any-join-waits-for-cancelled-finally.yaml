@@ -1,0 +1,33 @@
+title: An any completes only after a cancelled alternative's finally has ended
+rules: [EM-32]
+spec: [reference.md§2.5]
+features: [do, any, exec, finally]
+plan: |
+  blokky: 1.0
+  do:
+    - concurrency: 2
+      any:
+        - exec: [blokky-testkit, sleep, 1m, --exit, '3']
+          finally:
+            - exec: [blokky-testkit, print, --sleep, 2s, --out, cleaning]
+            - exec: [blokky-testkit, write-file, cleaned.txt, --text, done]
+        - exec: [blokky-testkit, print, --sleep, 3s, --out, won]
+    - exec: [blokky-testkit, read-file, cleaned.txt]
+expect:
+  status: succeeded
+  nodes:
+    /do/0:
+      status: succeeded
+      duration: { $min: 5s, $max: 20s }   # 3s until the winner, then 2s of finally
+    /do/0/any/0:
+      status: cancelled
+      error: { code: BK_CANCELLED, node: /do/0/any/0 }
+      finally_status: succeeded
+    /do/0/any/1: { status: succeeded }
+    /do/1:
+      status: succeeded
+      exit_code: 0
+notes: >-
+  Only the second alternative can succeed, so the winner is determined. The
+  first is cancelled; the node after the any reads the file its finally
+  writes after a 2s pause.

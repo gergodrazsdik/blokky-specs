@@ -1,0 +1,45 @@
+title: An external stop cancels every running node, starts nothing new, and the run is stopped
+rules: [EM-50, EM-55, EM-57]
+features: [do, all, exec, external-stop]
+clock: [real]   # the leaves must be running when the stop comes
+plan: |
+  blokky: 1.0
+  do:
+    - all:
+        - exec: [blokky-testkit, sleep, 1m]
+        - exec: [blokky-testkit, sleep, 50s]
+    - exec: [blokky-testkit, write-file, marker.txt, --text, reached]
+actions:
+  - { after: 3s, stop: true }
+expect:
+  status: stopped
+  error: { code: BK_CANCELLED, node: /, detail: { reason: { $present: true } } }
+  nodes:
+    /:
+      status: cancelled
+      error: { code: BK_CANCELLED, detail: { reason: { $present: true } } }
+    /do/0:
+      status: cancelled
+      error: { code: BK_CANCELLED, detail: { reason: { $present: true } } }
+    /do/0/all/0:
+      status: cancelled
+      killed_by: { $present: true }
+      error: { code: BK_CANCELLED, node: /do/0/all/0, detail: { reason: { $present: true } } }
+    /do/0/all/1:
+      status: cancelled
+      killed_by: { $present: true }
+      error: { code: BK_CANCELLED, node: /do/0/all/1, detail: { reason: { $present: true } } }
+    /do/1:
+      status: skipped
+      skip_reason: not_reached
+  invocations:
+    $unordered:
+      - { argv: [sleep, 1m] }
+      - { argv: [sleep, 50s] }
+  files:
+    marker.txt: { exists: false }
+  duration: { $max: 20s }
+notes: >-
+  The cause's name in detail.reason, killed_by and stop_cause is
+  implementation-defined (CF-22), so only its presence is asserted. The run's
+  error is the root's BK_CANCELLED (EM-57).

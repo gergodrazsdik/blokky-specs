@@ -1,0 +1,26 @@
+title: An external stop after the body failed still ends the run as stopped
+rules: [EM-50, EM-57]
+features: [do, exec, finally, external-stop]
+clock: [real]   # the finally must be running when the stop comes
+plan: |
+  blokky: 1.0
+  finally:
+    - exec: [blokky-testkit, sleep, 1m]
+  do:
+    - exec: [blokky-testkit, exit, '3']
+actions:
+  - { after: 3s, stop: true }
+expect:
+  status: stopped
+  nodes:
+    /do/0:
+      status: failed
+      exit_code: 3
+  duration: { $max: 20s }
+notes: >-
+  The root's body has already failed when the stop comes during its finally.
+  The run error is not asserted: whether a stop during finally replaces the
+  failed body's error is open (EM-51 vs EM-57, tracker F-0021).
+  The run status is stopped, not failed: EM-50 derives it from the external
+  stop. The finally node's status isn't asserted: EM-56 lets the
+  implementation shorten its finally_timeout and grace period to zero.

@@ -1,0 +1,20 @@
+title: Killing the implementation also stops descendants kept with keep_descendants true
+rules: [EM-22]
+features: [do, exec, keep-descendants, kill]
+clock: [real]   # spawn must have written pids.txt before the kill
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, spawn, --release-output, --pids, pids.txt, --, sleep, 1m]
+      keep_descendants: true
+    - exec: [blokky-testkit, sleep, 1m]
+actions:
+  - { after: 3s, kill: true }
+after_run:
+  - { argv: [alive, pids.txt], exit_code: 0 }
+expect:
+  no_result: true
+notes: >-
+  The first leaf has completed and kept its descendant until run end; the
+  implementation is killed during the second leaf. EM-22 is a SHOULD for a
+  killed implementation; the case expects the kept descendant gone.

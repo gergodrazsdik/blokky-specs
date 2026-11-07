@@ -1,0 +1,28 @@
+title: ignore_errors on a cancelled leaf doesn't hide an ancestor's attempt_timeout
+rules: [EM-36]
+spec: [reference.md§4.11, reference.md§4.12]
+features: [do, exec, for-count, attempt-timeout, ignore-errors]
+plan: |
+  blokky: 1.0
+  for: { count: 1, as: I }
+  attempt_timeout: 3s
+  do:
+    - ignore_errors: true
+      exec: [blokky-testkit, sleep, 1m]
+    - exec: [blokky-testkit, write-file, marker.txt, --text, reached]
+expect:
+  status: failed
+  nodes:
+    /:
+      repetition:
+        count: 1
+        entries:
+          - { index: 0, error: { code: BK_TIMEOUT_ATTEMPT } }
+  invocations:
+    - { argv: [sleep, 1m] }
+  files:
+    marker.txt: { exists: false }
+notes: >-
+  The iteration's attempt_timeout cancels the ignored leaf; if ignore_errors
+  hid that, the body would go on to write the marker. Body nodes are
+  asserted through the repetition entry and the files (CF-27).

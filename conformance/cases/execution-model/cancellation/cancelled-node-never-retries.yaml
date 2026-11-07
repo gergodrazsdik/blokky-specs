@@ -1,0 +1,28 @@
+title: A cancelled node with retry never starts another attempt
+rules: [EM-33]
+spec: [results.md§3]
+features: [all, exec, retry]
+plan: |
+  blokky: 1.0
+  all:
+    - retry: true
+      max: 3
+      every: 0s
+      exec: [blokky-testkit, sleep, 1m, --exit, '3']
+    - exec: [blokky-testkit, print, --sleep, 3s, --exit, '4']
+expect:
+  status: failed
+  error: { code: BK_EXIT, node: /all/1, detail: { exit_code: 4 } }
+  nodes:
+    /all/0:
+      status: cancelled
+      error: { code: BK_CANCELLED, node: /all/0 }
+      repetition: { count: 1, ended_by: cancelled }
+  invocations:
+    $unordered:
+      - { argv: [sleep, 1m, --exit, '3'] }
+      - { argv: [print, --sleep, 3s, --exit, '4'] }
+notes: >-
+  The first attempt is cancelled while it sleeps. A killed attempt would be
+  retried by retry true if it simply failed (reference.md §5.5), so a second
+  sleep in the invocation log would show a retry after cancellation.

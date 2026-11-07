@@ -1,0 +1,42 @@
+title: Cancelling a group cancels its running descendants, and its unstarted children never start
+rules: [EM-29, EM-43]
+features: [all, do, exec]
+plan: |
+  blokky: 1.0
+  all:
+    - do:
+        - exec: [blokky-testkit, sleep, 1m]
+        - exec: [blokky-testkit, write-file, marker.txt, --text, reached]
+    - exec: [blokky-testkit, print, --sleep, 3s, --exit, '3']
+expect:
+  status: failed
+  error: { code: BK_EXIT, node: /all/1, detail: { exit_code: 3 } }
+  nodes:
+    /:
+      status: failed
+      error: { code: BK_EXIT, node: /all/1 }
+    /all/0:
+      status: cancelled
+      error: { code: BK_CANCELLED }
+    /all/0/do/0:
+      status: cancelled
+      killed_by: cancel
+      error: { code: BK_CANCELLED, node: /all/0/do/0 }
+    /all/0/do/1:
+      status: skipped
+      skip_reason: not_reached
+    /all/1:
+      status: failed
+      exit_code: 3
+  invocations:
+    $unordered:
+      - { argv: [sleep, 1m] }
+      - { argv: [print, --sleep, 3s, --exit, '3'] }
+  files:
+    marker.txt: { exists: false }
+  duration: { $min: 3s, $max: 20s }
+notes: >-
+  The failing sibling waits 3s, so the do is running its first child when
+  fail_fast cancels it. The do is cancelled for its own reason, not failed
+  (EM-43); its running leaf is cancelled too, and its second child never
+  starts (EM-29). The do's error node isn't asserted.

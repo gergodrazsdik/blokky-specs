@@ -1,0 +1,20 @@
+title: Killing the implementation leaves none of a running leaf's descendants alive
+rules: [EM-22]
+features: [exec, kill]
+clock: [real]   # spawn must have written pids.txt before the kill
+plan: |
+  blokky: 1.0
+  exec: [blokky-testkit, spawn, --wait, --count, '2', --release-output, --pids, pids.txt, --, sleep, 1m]
+actions:
+  - { after: 3s, kill: true }
+after_run:
+  - { argv: [alive, pids.txt], exit_code: 0 }
+expect:
+  no_result: true
+  invocations:
+    $contains:
+      - { argv: [spawn, --wait, --count, '2', --release-output, --pids, pids.txt, --, sleep, 1m] }
+notes: >-
+  The implementation is killed while the leaf's two sleeping descendants run.
+  EM-22 makes stopping them a SHOULD when the implementation itself is
+  killed; the case follows CF-64's example and expects nothing left running.

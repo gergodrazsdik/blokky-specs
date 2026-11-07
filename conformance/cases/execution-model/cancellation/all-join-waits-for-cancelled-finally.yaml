@@ -1,0 +1,33 @@
+title: An all completes only after its cancelled child's finally has ended
+rules: [EM-32]
+spec: [reference.md§2.4]
+features: [do, all, exec, finally]
+plan: |
+  blokky: 1.0
+  fail_fast: false
+  do:
+    - all:
+        - exec: [blokky-testkit, sleep, 1m]
+          finally:
+            - exec: [blokky-testkit, print, --sleep, 2s, --out, cleaning]
+            - exec: [blokky-testkit, write-file, cleaned.txt, --text, done]
+        - exec: [blokky-testkit, print, --sleep, 3s, --exit, '3']
+    - exec: [blokky-testkit, read-file, cleaned.txt]
+expect:
+  status: failed
+  error: { code: BK_EXIT, node: /do/0/all/1 }
+  nodes:
+    /do/0:
+      status: failed
+      error: { code: BK_EXIT, node: /do/0/all/1 }
+      duration: { $min: 5s, $max: 20s }   # 3s until the failure, then 2s of finally
+    /do/0/all/0:
+      status: cancelled
+      finally_status: succeeded
+    /do/1:
+      status: succeeded
+      exit_code: 0
+notes: >-
+  fail_fast false on the root do lets the node after the all run. It reads
+  the file the cancelled child's finally writes last, after a 2s pause; it
+  can only succeed if the all waited for that finally (EM-32).

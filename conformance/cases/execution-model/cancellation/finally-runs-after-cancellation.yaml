@@ -1,0 +1,25 @@
+title: The finally of a cancelled node still runs
+rules: [EM-31]
+spec: [reference.md§4.10]
+features: [all, exec, finally]
+plan: |
+  blokky: 1.0
+  all:
+    - exec: [blokky-testkit, sleep, 1m]
+      finally:
+        - exec: [blokky-testkit, write-file, cleaned.txt, --text, done]
+    - exec: [blokky-testkit, print, --sleep, 3s, --exit, '3']
+expect:
+  status: failed
+  error: { code: BK_EXIT, node: /all/1 }
+  nodes:
+    /all/0:
+      status: cancelled
+      error: { code: BK_CANCELLED, node: /all/0 }
+      finally_status: succeeded
+    /all/0/finally/0:
+      status: succeeded
+      exit_code: 0
+    /all/1: { status: failed }
+  files:
+    cleaned.txt: { text: "done\n" }

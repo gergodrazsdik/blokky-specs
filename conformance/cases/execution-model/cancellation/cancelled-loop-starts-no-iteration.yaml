@@ -1,0 +1,25 @@
+title: A cancelled for loop never starts another iteration
+rules: [EM-33]
+spec: [results.md§3]
+features: [all, exec, for-count]
+plan: |
+  blokky: 1.0
+  all:
+    - for: { count: 3, as: I }
+      exec: [blokky-testkit, sleep, 1m]
+    - exec: [blokky-testkit, print, --sleep, 3s, --exit, '4']
+expect:
+  status: failed
+  error: { code: BK_EXIT, node: /all/1 }
+  nodes:
+    /all/0:
+      status: cancelled
+      error: { code: BK_CANCELLED, node: /all/0 }
+      repetition: { count: 1, ended_by: cancelled }
+  invocations:
+    $unordered:
+      - { argv: [sleep, 1m] }
+      - { argv: [print, --sleep, 3s, --exit, '4'] }
+notes: >-
+  The loop runs one iteration at a time (concurrency 1) and is cancelled
+  during the first one, so iterations 1 and 2 never start.

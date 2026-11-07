@@ -1,0 +1,39 @@
+title: A cancelled leaf gets the graceful stop request, then is killed after the grace period
+rules: [EM-30]
+features: [all, exec]
+clock: [real]   # the stubborn sleep must have started before the cancellation
+plan: |
+  blokky: 1.0
+  all:
+    - exec: [blokky-testkit, sleep, 1m, --ignore-term, --record-signals, signals.txt]
+    - exec: [blokky-testkit, print, --sleep, 3s, --exit, '3']
+expect:
+  status: failed
+  error: { code: BK_EXIT, node: /all/1 }
+  nodes:
+    /all/0:
+      status: cancelled
+      killed_by: cancel
+      error: { code: BK_CANCELLED, node: /all/0 }
+      duration: { $min: 7500ms, $max: 20s }   # cancelled after 3s, then 5s grace
+    /all/1:
+      status: failed
+      exit_code: 3
+  duration: { $min: 8s, $max: 20s }
+platforms:
+  unix:
+    expect:
+      nodes:
+        /all/0: { signal: SIGKILL }
+      files:
+        signals.txt: { contains: SIGTERM }
+  windows:
+    expect:
+      nodes:
+        /all/0: { signal: { $absent: true } }
+      files:
+        signals.txt: { contains: CTRL_BREAK }
+notes: >-
+  The sleep ignores the graceful request, so only the forced kill after the
+  default 5s grace period (EM-26) ends it; the recorded request shows the
+  graceful stop came first. The all completes only after the kill.
