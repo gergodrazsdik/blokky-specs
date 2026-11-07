@@ -1,0 +1,16 @@
+title: A vars value can't use a value produced by running something
+rules: [VA-61, RF-27]
+features: [vars, outputs, exec, capture]
+plan: |
+  blokky: 1.0
+  vars:
+    A: { var: OUT }
+  outputs: [OUT]
+  exec: [blokky-testkit, print, --out, x]
+  capture: OUT
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-27 }
+      line: 3
+      column: 13

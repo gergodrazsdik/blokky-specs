@@ -1,0 +1,16 @@
+title: An unknown input with no declared name within edit distance 2 has no suggestion
+rules: [SY-30]
+spec: [variables.md§4.3]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH:
+      default: main
+  log: building
+inputs: [COLOUR_SCHEME=dark]
+expect:
+  input_errors:
+    - code: BK_INPUT_UNKNOWN
+      detail: { suggestion: { $absent: true } }
+  exhaustive: true

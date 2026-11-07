@@ -1,0 +1,18 @@
+title: An explicit empty value beats the default of an optional input
+rules: [VA-12, VA-45]
+features: [inputs, outputs, log]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  inputs:
+    NOTE:
+      default: none
+  outputs: [NOTE]
+  log: done
+inputs: [NOTE=]
+expect:
+  status: succeeded
+  outputs:
+    NOTE: ''
+  inputs:
+    NOTE: { value: '', source: supplied }

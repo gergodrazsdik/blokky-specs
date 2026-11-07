@@ -1,0 +1,16 @@
+title: A TAB in an input value is allowed
+rules: [VA-13]
+features: [inputs, outputs, log]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  inputs:
+    A:
+      default: ''
+  outputs: [A]
+  log: checking
+inputs: ["A=one\ttwo"]
+expect:
+  status: succeeded
+  outputs:
+    A: "one\ttwo"

@@ -1,0 +1,15 @@
+title: finally sees the body's captures, and its own bindings are visible later in the same list
+rules: [VA-35]
+features: [exec, capture, finally, set, interpolation]
+plan: |
+  blokky: 1.0
+  exec: [blokky-testkit, print, --out, a]
+  capture: A
+  finally:
+    - set: { F: '${A}-f' }
+    - exec: [blokky-testkit, print, --out, { var: F }]
+expect:
+  status: succeeded
+  invocations:
+    - { argv: [print, --out, a] }
+    - { argv: [print, --out, a-f] }

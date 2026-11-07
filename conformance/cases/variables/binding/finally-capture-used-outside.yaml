@@ -1,0 +1,17 @@
+title: A capture under finally can't be referenced outside its finally list
+rules: [VA-35, VA-38, RF-16]
+features: [do, exec, finally, capture, log, interpolation]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, exit, '0']
+      finally:
+        - exec: [blokky-testkit, print, --out, cleaned]
+          capture: F
+    - log: "finally said ${F}"
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-16 }
+      line: 7
+      column: 10

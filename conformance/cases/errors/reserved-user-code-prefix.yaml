@@ -1,0 +1,14 @@
+title: A user error code can't start with the reserved BK_ prefix
+rules: [ER-1]
+features: [fail]
+plan: |
+  blokky: 1.0
+  fail: deploy failed
+  code: BK_DEPLOY
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE   # a reserved prefix (errors.md §4)
+      detail: { rule: { $one_of: [ER-1, SY-52] } }
+      line: 3
+      column: 7
+  exhaustive: true

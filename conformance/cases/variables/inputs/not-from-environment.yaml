@@ -1,0 +1,17 @@
+title: An environment variable with an input's name doesn't supply the input
+rules: [VA-11]
+spec: [variables.md§4.3]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH:
+      description: Branch to build
+  log: building
+env:
+  BRANCH: main
+expect:
+  input_errors:
+    - code: BK_INPUT_MISSING
+      detail: { command: { $present: true } }   # errors.md §3
+  exhaustive: true

@@ -1,0 +1,15 @@
+title: A vars constant can't be overridden by the caller; its name is an unknown input
+rules: [VA-61, SY-30]
+spec: [variables.md§4.3]
+features: [vars, log]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: fast
+  log: building
+inputs: [MODE=slow]
+expect:
+  input_errors:
+    - code: BK_INPUT_UNKNOWN
+      detail: { suggestion: { $absent: true } }   # no declared input to suggest
+  exhaustive: true

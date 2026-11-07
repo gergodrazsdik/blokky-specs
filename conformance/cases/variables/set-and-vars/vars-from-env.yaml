@@ -1,0 +1,16 @@
+title: A vars value can read the environment the run started with
+rules: [VA-40, VA-61]
+features: [vars, outputs, from-env, log]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    GREETING: { from_env: CONF_GREETING }
+  outputs: [GREETING]
+  log: done
+env:
+  CONF_GREETING: hello
+expect:
+  status: succeeded
+  outputs:
+    GREETING: hello

@@ -1,0 +1,16 @@
+title: An input value is matched without trimming
+rules: [VA-16]
+spec: [variables.md§4.3]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH:
+      matches: '^[a-z]+$'
+  log: building
+inputs: ['BRANCH=main ']
+expect:
+  input_errors:
+    - code: BK_INPUT_INVALID
+      detail: { constraint: { $present: true } }
+  exhaustive: true

@@ -1,0 +1,20 @@
+title: A required input used only in a pruned host branch stays required
+rules: [VA-10]
+spec: [variables.md§4.3]
+features: [inputs, if, cond-host, log, interpolation]
+requires:
+  os: [linux, macos]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH:
+      description: Branch to build
+  if: { host: os, equals: windows }
+  then:
+    - log: "Building ${BRANCH}"
+  else:
+    - log: not on Windows
+expect:
+  input_errors:
+    - { code: BK_INPUT_MISSING }
+  exhaustive: true

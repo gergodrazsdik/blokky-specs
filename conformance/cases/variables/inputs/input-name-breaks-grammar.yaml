@@ -1,0 +1,14 @@
+title: An input name that breaks the name grammar is a syntax error, not an unknown input
+spec: [variables.md§4.3]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH:
+      default: main
+  log: building
+inputs: [my-input=x]
+expect:
+  input_errors:
+    - { code: BK_INPUT_SYNTAX }
+  exhaustive: true

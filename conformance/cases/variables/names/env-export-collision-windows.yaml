@@ -1,0 +1,17 @@
+title: On Windows, env and export names that differ only in case collide
+rules: [VA-6, VA-43, RF-10]
+features: [do, set, exec, env, export]
+requires:
+  os: [windows]
+plan: |
+  blokky: 1.0
+  do:
+    - set: { CONF_A: x }
+    - exec: [blokky-testkit, env, CONF_A]
+      env: { conf_a: y }
+      export: [CONF_A]
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-10 }
+notes: No position is asserted, because either the env key or the export entry can be the one reported.

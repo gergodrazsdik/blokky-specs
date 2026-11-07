@@ -1,0 +1,15 @@
+title: An empty value for a required input is BK_INPUT_EMPTY
+rules: [VA-8, VA-12, SY-44]
+spec: [variables.md§4.3]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH:
+      description: Branch to build
+  log: building
+inputs: [BRANCH=]
+expect:
+  input_errors:
+    - { code: BK_INPUT_EMPTY }
+  exhaustive: true

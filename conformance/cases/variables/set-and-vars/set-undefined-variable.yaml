@@ -1,0 +1,14 @@
+title: A set template naming a variable that nothing binds is a plan error
+rules: [VA-38, VA-58, RF-23]
+features: [do, set, log, interpolation]
+plan: |
+  blokky: 1.0
+  do:
+    - set: { A: '${NOPE}' }
+    - log: done
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-23 }
+      line: 3
+      column: 15

@@ -1,0 +1,19 @@
+title: An unset from_env in vars is a plan error at its entry, found in validation
+rules: [VA-40, VA-58]
+features: [vars, from-env, log]
+plan: |
+  blokky: 1.0
+  vars:
+    GREETING: { from_env: CONF_UNSET }
+  log: done
+env:
+  CONF_UNSET: null
+expect:
+  plan_errors:
+    - code: BK_FROM_ENV_UNSET
+      detail: { name: CONF_UNSET }
+      line: 3
+      column: 3
+  exhaustive: true
+notes: >-
+  "At the entry" is read as the entry's key (SY-1: the offending key).

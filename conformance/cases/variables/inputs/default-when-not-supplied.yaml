@@ -1,0 +1,18 @@
+title: An optional input that isn't supplied has its default
+rules: [VA-8, VA-45]
+features: [inputs, outputs, log]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  inputs:
+    ENVIRONMENT:
+      default: staging
+      in: [staging, production]
+  outputs: [ENVIRONMENT]
+  log: done
+expect:
+  status: succeeded
+  outputs:
+    ENVIRONMENT: staging
+  inputs:
+    ENVIRONMENT: { value: staging, source: default }

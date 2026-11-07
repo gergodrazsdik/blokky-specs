@@ -1,0 +1,14 @@
+title: A from_env name outside the environment-name grammar is a plan error
+rules: [VA-6, SY-52]
+features: [exec, env, from-env]
+plan: |
+  blokky: 1.0
+  exec: [blokky-testkit, getenv, X]
+  env: { X: { from_env: my-var } }
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: { $one_of: [VA-6, SY-52] } }   # no RF rule; the spec names neither
+      line: 3
+      column: 23
+  exhaustive: true
