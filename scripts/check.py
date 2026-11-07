@@ -205,6 +205,11 @@ DISPLAY = ("name", "log", "fail", "message", "return")
 UNDERIVED = {"shell-bash", "shell-sh", "shell-pwsh", "shell-powershell", "shell-zsh"}
 
 
+def _mapping(value: Any) -> dict:
+    """The value if it is a mapping, else an empty one (malformed plans are expected)."""
+    return value if isinstance(value, dict) else {}
+
+
 def derive_features(plan: Any) -> set[str]:
     found: set[str] = set()
     if not isinstance(plan, dict):
@@ -214,7 +219,7 @@ def derive_features(plan: Any) -> set[str]:
             found.add(key)
     if isinstance(plan.get("defaults"), dict) and "shell" in plan["defaults"]:
         found.add("shell-" + plan["defaults"]["shell"])
-    for value in (plan.get("vars") or {}).values():
+    for value in _mapping(plan.get("vars")).values():
         _values(value, found, template=True)
     _node(plan, found)
     return found
@@ -261,7 +266,7 @@ def _process(spec: dict, found: set[str]) -> None:
     argv = spec.get("exec")
     for item in argv if isinstance(argv, list) else []:
         _values(item, found)
-    for value in (spec.get("env") or {}).values():
+    for value in _mapping(spec.get("env")).values():
         _values(value, found)
     if "export" in spec:
         found.add("export")
@@ -301,7 +306,7 @@ def _node(node: Any, found: set[str]) -> None:
             found.add("for-concurrency")
     for key in DISPLAY:
         _values(node.get(key), found, template=True)
-    for value in (node.get("set") or {}).values() if isinstance(node.get("set"), dict) else []:
+    for value in _mapping(node.get("set")).values():
         _values(value, found, template=True)
     for key in ("cwd", "stdin"):
         _values(node.get(key), found)
