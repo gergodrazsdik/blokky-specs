@@ -1,0 +1,13 @@
+title: An unbounded until loop is a plan error
+rules: [RF-5]
+features: [until, exec, capture, cond-var]
+plan: |
+  blokky: 1.0
+  until: { var: STATE, equals: done }
+  exec: [blokky-testkit, print, --out, done]
+  capture: STATE
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-5 }
+notes: The second example of conformance/README.md §3.8.

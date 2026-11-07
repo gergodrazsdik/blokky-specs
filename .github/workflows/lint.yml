@@ -28,6 +28,7 @@ jobs:
       MARKDOWNLINT_CLI2_VERSION: "0.24.0"
       ACTIONLINT_VERSION: "v1.7.12"
       EDITORCONFIG_CHECKER_VERSION: "v3.11.1"
+      UV_VERSION: "0.13.1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -44,6 +45,7 @@ jobs:
           pipx install "rust-just==${JUST_VERSION}"
           pipx install "yamllint==${YAMLLINT_VERSION}"
           pipx install "typos==${TYPOS_VERSION}"
+          pipx install "uv==${UV_VERSION}"
           npm install -g "markdownlint-cli2@${MARKDOWNLINT_CLI2_VERSION}"
           go install "github.com/rhysd/actionlint/cmd/actionlint@${ACTIONLINT_VERSION}"
           go install "github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker@${EDITORCONFIG_CHECKER_VERSION}"

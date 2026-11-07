@@ -1,0 +1,45 @@
+title: carry keeps its value when the previous iteration failed before binding the capture
+rules: [VA-55, VA-62, VA-63]
+features: [outputs, do, until, index, carry, collect, exec, capture, fail, when, cond-var]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN_LIST]
+  do:
+    - until: { var: I, equals: '2' }
+      index: I
+      carry: { PREV: CUR }
+      collect: { SEEN: SEEN_LIST }
+      max: 3
+      every: 0s
+      do:
+        - exec: [blokky-testkit, print, --out, { var: PREV }]
+          capture: SEEN
+        - when: { var: I, equals: '1' }
+          fail: second iteration fails before CUR is bound
+        - exec: [blokky-testkit, print, --out, { var: I }]
+          capture: CUR
+expect:
+  status: succeeded
+  outputs:
+    SEEN_LIST: '["",null,"0"]'
+  nodes:
+    /do/0:
+      status: succeeded
+      repetition:
+        count: 3
+        ended_by: condition
+        entries:
+          - { index: 0, status: succeeded }
+          - { index: 1, status: failed, error: { code: BK_FAIL } }
+          - { index: 2, status: succeeded }
+  invocations:
+    - { argv: [print, --out, ''] }
+    - { argv: [print, --out, '0'] }
+    - { argv: [print, --out, '0'] }
+    - { argv: [print, --out, '0'] }
+    - { argv: [print, --out, '2'] }
+notes: >-
+  Iteration 0 binds CUR=0. Iteration 1 fails (on_body_failure defaults to
+  continue for until) before binding CUR, so iteration 2 still sees PREV=0,
+  not '' and not unbound. collect records null for the failed iteration (VA-55).
