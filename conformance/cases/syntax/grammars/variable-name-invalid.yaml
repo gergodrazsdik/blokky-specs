@@ -11,8 +11,10 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE
+      detail: { rule: SY-52 }
       line: 4
       column: 14
     - code: BK_PLAN_VALUE
+      detail: { rule: SY-52 }
       line: 5
       column: 30

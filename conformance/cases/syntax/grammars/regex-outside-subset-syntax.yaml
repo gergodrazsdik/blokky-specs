@@ -1,4 +1,4 @@
-title: Named groups, Unicode classes, other inline options and \A \z anchors are outside the regex subset
+title: Named groups, Unicode classes, other inline options, \A \z anchors and unlisted escapes are outside the regex subset
 rules: [SY-61, SY-62, RF-22]
 features: [vars, do, when, cond-var, exec]
 plan: |
@@ -16,12 +16,17 @@ plan: |
       exec: [blokky-testkit, exit, '0']
     - when: { var: X, matches: '\Aabc\z' }
       exec: [blokky-testkit, exit, '0']
+    - when: { var: X, matches: 'a\qb' }
+      exec: [blokky-testkit, exit, '0']
 expect:
   plan_errors:
-    - { code: BK_PLAN_INVALID, detail: { rule: RF-22 }, line: 5 }
-    - { code: BK_PLAN_INVALID, detail: { rule: RF-22 }, line: 7 }
-    - { code: BK_PLAN_INVALID, detail: { rule: RF-22 }, line: 9 }
-    - { code: BK_PLAN_INVALID, detail: { rule: RF-22 }, line: 11 }
-    - { code: BK_PLAN_INVALID, detail: { rule: RF-22 }, line: 13 }
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-22 }, line: 5, column: 30 }
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-22 }, line: 7, column: 30 }
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-22 }, line: 9, column: 30 }
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-22 }, line: 11, column: 30 }
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-22 }, line: 13, column: 30 }
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-22 }, line: 15, column: 30 }
   exhaustive: true
-notes: (?i) is in the subset only at the very start of the pattern (SY-61), so a(?i)B is outside it.
+notes: >-
+  (?i) is in the subset only at the very start of the pattern (SY-61), so
+  a(?i)B is outside it; \q escapes a character outside SY-61's list.

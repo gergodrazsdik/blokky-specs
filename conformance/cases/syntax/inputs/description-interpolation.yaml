@@ -1,5 +1,5 @@
 title: An input description must not contain an interpolation
-rules: [SY-49]
+rules: [SY-49, RF-9]
 features: [inputs, log]
 plan: |
   blokky: 1.0
@@ -13,7 +13,7 @@ inputs: [BRANCH=main]
 expect:
   plan_errors:
     - code: BK_PLAN_INVALID
-      detail: { rule: SY-49 }
+      detail: { rule: RF-9 }   # SY-49 restates it for descriptions
       line: 6
       column: 18
   exhaustive: true

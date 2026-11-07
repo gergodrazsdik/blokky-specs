@@ -12,5 +12,6 @@ env:
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE   # a mapping where the field's type is a string (errors.md §4)
+      detail: { rule: SY-47 }
       line: 4
       column: 14

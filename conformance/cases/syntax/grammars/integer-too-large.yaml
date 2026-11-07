@@ -9,6 +9,7 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE
+      detail: { rule: SY-54 }
       line: 3
       column: 6
   exhaustive: true

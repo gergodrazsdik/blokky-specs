@@ -11,4 +11,5 @@ expect:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-23 }
       line: 2
+      column: 6    # the opening quote (SY-1)
   exhaustive: true

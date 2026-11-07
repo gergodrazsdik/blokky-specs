@@ -1,6 +1,6 @@
-title: $${ produces a literal ${ in display strings and templates
+title: $${ produces a literal ${ in display strings, templates and literal fields
 rules: [SY-84]
-features: [vars, outputs, do, set, log, interpolation]
+features: [vars, outputs, do, set, log, interpolation, exec]
 plan: |
   blokky: 1.0
   vars:
@@ -9,6 +9,7 @@ plan: |
   do:
     - set: { LITERAL: '$${HOME} and ${TARGET}' }
     - log: 'cost $${TARGET} for ${TARGET}'
+    - exec: [blokky-testkit, argv, '$${TARGET}']
 expect:
   status: succeeded
   outputs:
@@ -17,6 +18,9 @@ expect:
     /do/1:
       messages:
         - { text: 'cost ${TARGET} for world' }
+  invocations:
+    - { argv: [argv, '${TARGET}'] }
 notes: >-
   $${HOME} names no plan variable; escaped, it is no reference, so the scope
-  check doesn't reject it.
+  check doesn't reject it. In the literal exec element, $${ is ${ and never
+  the "${ in a literal field" error (SY-84).

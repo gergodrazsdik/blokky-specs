@@ -14,7 +14,6 @@ expect:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-9 }
       line: 5
-notes: >-
-  Operator values are literal (SY-88, conditions table), so `${` there is a
-  plan error (SY-76). The column is left out: whether a quoted scalar's
-  position is its quote or its first character isn't fixed.
+      column: 30   # the opening quote (SY-1)
+  exhaustive: true
+notes: Operator values are literal (SY-88, conditions table), so `${` there is a plan error (SY-76).

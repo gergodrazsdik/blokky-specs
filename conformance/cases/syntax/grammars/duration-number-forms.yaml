@@ -12,7 +12,7 @@ plan: |
       exec: [blokky-testkit, exit, '0']
 expect:
   plan_errors:
-    - { code: BK_PLAN_VALUE, line: 3, column: 14 }
-    - { code: BK_PLAN_VALUE, line: 5, column: 14 }
-    - { code: BK_PLAN_VALUE, line: 7, column: 14 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-57 }, line: 3, column: 14 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-57 }, line: 5, column: 14 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-57 }, line: 7, column: 14 }
   exhaustive: true

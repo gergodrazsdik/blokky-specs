@@ -1,5 +1,5 @@
 title: Lookaround, backreferences, atomic groups and possessive quantifiers are outside the regex subset
-rules: [SY-61, SY-62, RF-22]
+rules: [SY-62, RF-22]
 features: [vars, do, when, cond-var, exec]
 plan: |
   blokky: 1.0
@@ -18,13 +18,10 @@ plan: |
       exec: [blokky-testkit, exit, '0']
 expect:
   plan_errors:
-    - { code: BK_PLAN_INVALID, detail: { rule: RF-22 }, line: 5 }
-    - { code: BK_PLAN_INVALID, detail: { rule: RF-22 }, line: 7 }
-    - { code: BK_PLAN_INVALID, detail: { rule: RF-22 }, line: 9 }
-    - { code: BK_PLAN_INVALID, detail: { rule: RF-22 }, line: 11 }
-    - { code: BK_PLAN_INVALID, detail: { rule: RF-22 }, line: 13 }
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-22 }, line: 5, column: 30 }
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-22 }, line: 7, column: 30 }
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-22 }, line: 9, column: 30 }
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-22 }, line: 11, column: 30 }
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-22 }, line: 13, column: 30 }
   exhaustive: true
-notes: >-
-  detail.rule is RF-22, the reference.md §8 rule for the subset. Columns are
-  left out: whether a quoted scalar's position is its quote or its first
-  character isn't fixed.
+notes: RF-22 is a BK_PLAN_VALUE rule (errors.md §4); columns point at the opening quote (SY-1).

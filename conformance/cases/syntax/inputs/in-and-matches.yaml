@@ -13,7 +13,7 @@ expect:
   plan_errors:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-20 }
-notes: >-
-  Position not asserted: either constraint key could be the offending one
-  (SY-1 doesn't say which). detail.rule is RF-20, the reference.md §8 rule
-  that restates SY-45 (reference.md §8: rules carry RF IDs for detail.rule).
+      line: 6      # two conflicting keys: the later one (SY-1)
+      column: 5
+  exhaustive: true
+notes: detail.rule is RF-20, the reference.md §8 rule that SY-45 restates (errors.md §4).

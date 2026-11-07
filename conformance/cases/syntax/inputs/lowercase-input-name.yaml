@@ -9,5 +9,6 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE   # a name that doesn't match its grammar (errors.md §4)
+      detail: { rule: SY-52 }
       line: 3
       column: 3

@@ -1,6 +1,6 @@
 title: ${X} in an exec string (non-canonical string form) is a plan error, because executed text is literal
-rules: [SY-76, RF-27]
-features: [vars, exec, exec-string]
+rules: [SY-76, RF-9]
+features: [vars, exec-string]
 plan: |
   blokky: 1.0
   vars:
@@ -9,10 +9,8 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_INVALID
-      detail: { rule: RF-27 }
+      detail: { rule: RF-9 }
       line: 4
+      column: 7    # an error inside a string is at the value's start (SY-1)
   exhaustive: true
-notes: >-
-  detail.rule is RF-27 (templates appear only in set and vars values). The
-  column is left out: SY-1 doesn't say whether it is the value's start or the
-  placeholder's.
+notes: RF-9 wins over RF-27 for `${…}` in a literal field (errors.md §4).

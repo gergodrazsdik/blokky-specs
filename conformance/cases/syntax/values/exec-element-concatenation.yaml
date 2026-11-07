@@ -1,5 +1,5 @@
 title: An exec element doesn't concatenate; ${X} inside an argument is a plan error
-rules: [SY-79, SY-82, RF-27]
+rules: [SY-79, SY-82, RF-9]
 features: [vars, exec]
 plan: |
   blokky: 1.0
@@ -9,6 +9,7 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_INVALID
-      detail: { rule: RF-27 }
+      detail: { rule: RF-9 }   # over RF-27 for ${…} in a literal field (errors.md §4)
       line: 4
+      column: 30   # the opening quote (SY-1)
   exhaustive: true

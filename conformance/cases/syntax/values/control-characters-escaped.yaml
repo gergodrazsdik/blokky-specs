@@ -12,8 +12,8 @@ expect:
   nodes:
     /do/1:
       messages:
-        - { text: { $regex: '^v=a[^\x1b]+\[2jb$' } }
+        - { text: 'v=a\u001B[2jb' }
 notes: >-
-  The captured value is a, ESC, [2j, b: an ANSI clear-screen sequence. How
-  the ESC is escaped isn't fixed, so the case only asserts that the raw
-  character is gone and something stands in its place.
+  The captured value is a, ESC, [2j, b: an ANSI clear-screen sequence. ESC
+  is shown as \u001B (uppercase hex, SY-98); the expected text holds a
+  literal backslash.

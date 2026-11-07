@@ -11,7 +11,7 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_UNKNOWN_KEY
-      detail: { suggestion: { $absent: true } }   # no synonym, no key within edit distance 2 (SY-30)
       line: 4
       column: 5
   exhaustive: true
+notes: No synonym and no input key within edit distance 2 (SY-30); the suggestion isn't asserted because SY-91's targeted error replaces the generic one.
