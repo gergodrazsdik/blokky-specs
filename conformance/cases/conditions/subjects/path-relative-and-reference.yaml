@@ -1,0 +1,28 @@
+title: A path subject, literal or a variable reference, is relative to the cwd of the evaluating scope
+rules: [CO-48]
+spec: [conditions.md§6]
+features: [vars, do, when, log, cwd, cond-path]
+clock: [real, scaled, virtual]
+files:
+  sub/report.txt: report
+plan: |
+  blokky: 1.0
+  vars:
+    REPORT: report.txt
+  do:
+    - when: { path: { var: REPORT }, exists: true }
+      log: in the run cwd
+    - cwd: sub
+      do:
+        - when: { path: { var: REPORT }, is_file: true }
+          log: in sub
+        - when: { path: report.txt, is_file: true }
+          log: literal in sub
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: skipped, skip_reason: condition }
+    /do/1/do/0: { status: succeeded }
+    /do/1/do/1: { status: succeeded }
+notes: A when is evaluated in its parent's scope (conditions.md §6), which inside /do/1 has cwd sub.

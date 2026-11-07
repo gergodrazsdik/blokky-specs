@@ -1,0 +1,30 @@
+title: host os agrees with the OS the testkit reports for the machine
+rules: [CO-7]
+features: [do, exec, capture-fields, when, log, cond-host, cond-var, cond-composite]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, info]
+      capture: { OS: .os }
+    - when:
+        any:
+          - all:
+              - { host: os, equals: linux }
+              - { var: OS, equals: linux }
+          - all:
+              - { host: os, equals: macos }
+              - { var: OS, equals: macos }
+          - all:
+              - { host: os, equals: windows }
+              - { var: OS, equals: windows }
+      log: agree
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/1: { status: succeeded }
+notes: >-
+  The testkit's info reports os with the host subject's names (TK-17). Inside
+  a composite with other subjects, host is evaluated at run time (CO-7). arch
+  isn't compared: it is the native architecture also under emulation, which a
+  testkit running under emulation wouldn't report.

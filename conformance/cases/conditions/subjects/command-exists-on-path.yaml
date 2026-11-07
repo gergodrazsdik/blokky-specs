@@ -1,0 +1,30 @@
+title: command exists is true for a program found on PATH, and starts nothing
+rules: [CO-45, CO-50]
+features: [do, when, log, cond-command]
+clock: [real, scaled, virtual]
+programs:
+  fmt-tool: [exit, '0']
+plan: |
+  blokky: 1.0
+  do:
+    - when: { command: blokky-testkit, exists: true }
+      log: testkit
+    - when: { command: fmt-tool, exists: true }
+      log: alias
+    - when: { command: no-such-tool-for-conformance, exists: true }
+      log: missing
+    - when: { command: no-such-tool-for-conformance, not_exists: true }
+      log: not_exists
+    - when: { command: fmt-tool, not_exists: true }
+      log: not_exists false
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1: { status: succeeded }
+    /do/2: { status: skipped, skip_reason: condition }
+    /do/3: { status: succeeded }
+    /do/4: { status: skipped, skip_reason: condition }
+  invocations: []
+notes: On Windows the names resolve as fmt-tool.exe and blokky-testkit.exe (SH-27).

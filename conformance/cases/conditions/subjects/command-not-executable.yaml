@@ -1,0 +1,37 @@
+title: command exists is false for a file the user can't execute
+rules: [CO-45]
+spec: [shells.md§4]
+features: [do, when, log, cond-command]
+clock: [real, scaled, virtual]
+requires:
+  os: [linux, macos]   # the executable bit
+files:
+  tools/run: { text: "#!/bin/sh\nexit 0\n", executable: true }
+  tools/plain: "#!/bin/sh\nexit 0\n"
+plan: |
+  blokky: 1.0
+  do:
+    - when: { command: ./tools/run, exists: true }
+      log: executable
+    - when: { command: ./tools/plain, exists: true }
+      log: not executable
+    - when: { command: ./tools/plain, not_exists: true }
+      log: not_exists
+    - when: { command: tools/run, exists: true }
+      log: relative path without a leading dot
+    - when: { command: ./tools/missing, exists: true }
+      log: missing
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1: { status: skipped, skip_reason: condition }
+    /do/2: { status: succeeded }
+    /do/3: { status: succeeded }
+    /do/4: { status: skipped, skip_reason: condition }
+  invocations: []
+notes: >-
+  A name with a separator is a path relative to the evaluating scope's cwd
+  (CO-45, SH-26). tools/plain exists but has no executable bit, so an exec of
+  it would fail with BK_SPAWN_FAILED.

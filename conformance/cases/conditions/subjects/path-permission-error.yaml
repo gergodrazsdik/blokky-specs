@@ -1,0 +1,39 @@
+title: A permission error while checking a path is a condition error, never false
+rules: [CO-18, CO-38]
+features: [do, exec, when, log, ignore-errors, finally, cond-path]
+requires:
+  os: [linux, macos]   # chmod is Unix-only (TK-23)
+files:
+  locked/inner.txt: inner
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, chmod, '000', locked]
+    - when: { path: locked/inner.txt, exists: true }
+      ignore_errors: true
+      do:
+        - log: exists
+    - when: { path: locked/inner.txt, not_exists: true }
+      ignore_errors: true
+      do:
+        - log: not_exists
+  finally:
+    - exec: [blokky-testkit, chmod, '0755', locked]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/1:
+      status: failed
+      ignored: true
+      error: { code: BK_CONDITION_ERROR, detail: { reason: path_access } }
+    /do/2:
+      status: failed
+      ignored: true
+      error: { code: BK_CONDITION_ERROR, detail: { reason: path_access } }
+    /finally/0: { status: succeeded }
+notes: >-
+  With mode 000 on locked, the entry inside can't be looked up. Neither
+  exists nor not_exists may answer. The finally restores the mode so the
+  runner can remove the work directory. A runner running as root bypasses
+  the permission bits and can't run this case.

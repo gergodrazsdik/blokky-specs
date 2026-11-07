@@ -1,0 +1,20 @@
+title: Unary operators take only the value true
+rules: [CO-8]
+features: [vars, do, when, log, cond-var, cond-path]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: fast
+  do:
+    - when: { var: MODE, empty: false }
+      log: not empty
+    - when: { path: build, is_dir: false }
+      log: no build dir
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-53 }, line: 5, column: 31 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-53 }, line: 7, column: 34 }
+  exhaustive: true
+notes: >-
+  The fix-its are not_empty: true and { not: { path: build, is_dir: true } }.
+  CO-8 says another value is reported as SY-53.

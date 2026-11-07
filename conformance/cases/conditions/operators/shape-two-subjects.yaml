@@ -1,0 +1,17 @@
+title: A condition with two subjects is a plan error at the later subject
+rules: [CO-4]
+features: [vars, when, log, cond-var, cond-env]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: fast
+  when: { var: MODE, env: MODE, equals: fast }
+  log: never
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: CO-4 }
+      line: 4
+      column: 20   # env, the later of the two conflicting keys (SY-1)
+  exhaustive: true
+notes: Two keys of one mapping relate to each other, so the code is BK_PLAN_INVALID (errors.md §4).

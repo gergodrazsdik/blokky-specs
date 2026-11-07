@@ -1,0 +1,21 @@
+title: Process output loses only its trailing CR and LF characters before a string comparison
+rules: [CO-11]
+features: [do, exec, capture, when, log, cond-var]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, print, --newline, crlf, --out, v1.2, --out, '']
+      capture: VERSION
+    - exec: [blokky-testkit, print, --out, ' v1.2']
+      capture: INDENTED
+    - when: { var: VERSION, equals: v1.2 }
+      log: trailing CRLF pairs removed
+    - when: { var: INDENTED, equals: v1.2 }
+      log: leading space kept
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/2: { status: succeeded }
+    /do/3: { status: skipped, skip_reason: condition }
+notes: The first leaf writes v1.2, CR, LF, CR, LF.

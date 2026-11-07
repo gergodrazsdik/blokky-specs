@@ -1,0 +1,19 @@
+title: result error is the empty string after an iteration that succeeded
+rules: [CO-6]
+spec: [reference.md§5.6]
+features: [exec, until, cond-result]
+plan: |
+  blokky: 1.0
+  until: { result: error, empty: true }
+  max: 3
+  every: 0s
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      repetition: { count: 1, ended_by: condition }
+  invocations:
+    - { argv: [exit, '0'] }

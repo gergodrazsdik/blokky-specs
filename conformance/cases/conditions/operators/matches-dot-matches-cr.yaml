@@ -1,0 +1,20 @@
+title: In matches, . matches a CR inside a value; only LF is excluded
+rules: [CO-13]
+spec: [syntax.md§6.7]
+features: [do, exec, capture, when, log, cond-var]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, print, --out-hex, '610d62']
+      capture: WITH_CR
+    - when: { var: WITH_CR, matches: '^a.b$' }
+      log: dot matched CR
+    - when: { var: WITH_CR, matches: '^a\rb$' }
+      log: escape matched CR
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/1: { status: succeeded }
+    /do/2: { status: succeeded }
+notes: The captured value is a, CR, b; the CR isn't trailing, so the capture keeps it (VA-20).

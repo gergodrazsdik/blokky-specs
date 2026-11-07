@@ -1,0 +1,44 @@
+title: ignore_case compares the simple uppercase mappings of characters
+rules: [CO-12]
+spec: [syntax.md§6.7]
+features: [vars, do, when, log, cond-var]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    KELVIN: 'K'
+    LONG_S: 'ſ'
+    SHARP_S: 'ß'
+    FINAL_SIGMA: 'ς'
+  do:
+    - when: { var: KELVIN, equals: k, ignore_case: true }
+      log: Kelvin sign is not k
+    - when: { var: KELVIN, equals: K, ignore_case: true }
+      log: Kelvin sign is not K
+    - when: { var: LONG_S, equals: s, ignore_case: true }
+      log: long s uppercases to S
+    - when: { var: SHARP_S, equals: SS, ignore_case: true }
+      log: no full case mapping
+    - when: { var: FINAL_SIGMA, equals: 'σ', ignore_case: true }
+      log: both sigmas uppercase to capital sigma
+    - when: { var: KELVIN, matches: '^k$', ignore_case: true }
+      log: matches uses the same mapping
+    - when: { var: LONG_S, matches: '(?i)^S$' }
+      log: inline option too
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: skipped, skip_reason: condition }
+    /do/1: { status: skipped, skip_reason: condition }
+    /do/2: { status: succeeded }
+    /do/3: { status: skipped, skip_reason: condition }
+    /do/4: { status: succeeded }
+    /do/5: { status: skipped, skip_reason: condition }
+    /do/6: { status: succeeded }
+notes: >-
+  KELVIN is U+212A KELVIN SIGN, whose simple uppercase mapping is itself, so it
+  equals neither k nor K (CO-12's own example; a lowercase fold would match k).
+  LONG_S is U+017F, whose simple uppercase mapping is S. SHARP_S is U+00DF,
+  which has no simple uppercase mapping (SS is a full mapping), so it doesn't
+  equal SS. U+03C2 and U+03C3 both map to U+03A3.

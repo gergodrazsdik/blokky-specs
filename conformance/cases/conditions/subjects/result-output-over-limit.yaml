@@ -1,0 +1,25 @@
+title: result stdout larger than max_capture_bytes makes a retry condition a condition error
+rules: [CO-6]
+features: [exec, retry-condition, cond-result]
+plan: |
+  blokky: 1.0
+  retry: { result: stdout, contains: 'try again' }
+  max: 3
+  every: 0s
+  exec: [blokky-testkit, print, --out-fill, 2MiB, --exit, '1']
+expect:
+  status: failed
+  error:
+    code: BK_CONDITION_ERROR
+    node: /
+    detail: { reason: output_too_large }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 1 }
+  invocations:
+    - { argv: [print, --out-fill, 2MiB, --exit, '1'] }
+notes: >-
+  Conformance runs use the default max_capture_bytes of 1 MiB (CF-57). In a
+  retry condition, a condition error ends the repetition (CO-40); the reason
+  for result output over the limit is output_too_large (errors.md §5).

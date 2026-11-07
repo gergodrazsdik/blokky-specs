@@ -1,0 +1,38 @@
+title: An operand that doesn't match the number grammar is a plan error for a numeric operator
+rules: [CO-19]
+features: [vars, do, when, log, cond-var, cond-numeric]
+plan: |
+  blokky: 1.0
+  vars:
+    COUNT: '3'
+  do:
+    - when: { var: COUNT, gt: '+1' }
+      log: never
+    - when: { var: COUNT, gt: '1e3' }
+      log: never
+    - when: { var: COUNT, gt: '.5' }
+      log: never
+    - when: { var: COUNT, gt: '5.' }
+      log: never
+    - when: { var: COUNT, gt: 'NaN' }
+      log: never
+    - when: { var: COUNT, gt: '0x10' }
+      log: never
+    - when: { var: COUNT, gt: ' 1' }
+      log: never
+    - when: { var: COUNT, gt: '1 000' }
+      log: never
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, detail: { rule: CO-19 }, line: 5, column: 29 }
+    - { code: BK_PLAN_VALUE, detail: { rule: CO-19 }, line: 7, column: 29 }
+    - { code: BK_PLAN_VALUE, detail: { rule: CO-19 }, line: 9, column: 29 }
+    - { code: BK_PLAN_VALUE, detail: { rule: CO-19 }, line: 11, column: 29 }
+    - { code: BK_PLAN_VALUE, detail: { rule: CO-19 }, line: 13, column: 29 }
+    - { code: BK_PLAN_VALUE, detail: { rule: CO-19 }, line: 15, column: 29 }
+    - { code: BK_PLAN_VALUE, detail: { rule: CO-19 }, line: 17, column: 29 }
+    - { code: BK_PLAN_VALUE, detail: { rule: CO-19 }, line: 19, column: 29 }
+  exhaustive: true
+notes: >-
+  The operand is decided by its value alone, so the code is BK_PLAN_VALUE
+  (errors.md §4), located at the quoted value (SY-1).

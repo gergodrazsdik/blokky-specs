@@ -1,0 +1,29 @@
+title: Lazy quantifiers are accepted in matches, and laziness doesn't change whether a value matches
+rules: [CO-13]
+spec: [syntax.md§6.7]
+features: [vars, do, when, log, cond-var]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    RUN: aaab
+  do:
+    - when: { var: RUN, matches: '^a+?b$' }
+      log: lazy plus extends as needed
+    - when: { var: RUN, matches: '^a{1,2}?b$' }
+      log: lazy bounded repetition keeps its bound
+    - when: { var: RUN, matches: '^a*?a{3}b$' }
+      log: lazy star
+    - when: { var: RUN, matches: '^a??b' }
+      log: lazy optional
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1: { status: skipped, skip_reason: condition }
+    /do/2: { status: succeeded }
+    /do/3: { status: skipped, skip_reason: condition }
+notes: >-
+  A condition only asks whether a match exists, so lazy and greedy forms
+  differ only in which match an engine finds, never in the result.

@@ -1,0 +1,51 @@
+title: In matches, . excludes only LF, and \d, \w, \s and \b are ASCII-only
+rules: [CO-13]
+spec: [syntax.md§6.7]
+features: [vars, do, when, log, cond-var]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    TWO_LINES: |-
+      a
+      b
+    ARABIC_THREE: '٣'
+    E_ACUTE: 'é'
+    UBER: 'über'
+    NBSP: ' '
+  do:
+    - when: { var: TWO_LINES, matches: 'a.b' }
+      log: dot never matches LF
+    - when: { var: TWO_LINES, matches: 'a\sb' }
+      log: \s matches LF
+    - when: { var: ARABIC_THREE, matches: '\d' }
+      log: \d is ASCII only
+    - when: { var: E_ACUTE, matches: '\w' }
+      log: \w is ASCII only
+    - when: { var: E_ACUTE, matches: '^\W$' }
+      log: so \W matches it
+    - when: { var: UBER, matches: '^.\bber$' }
+      log: \b is an ASCII word boundary
+    - when: { var: NBSP, matches: '\s' }
+      log: \s is ASCII only
+    - when: { var: NBSP, matches: '^\u{A0}$' }
+      log: but a code point escape matches it
+    - when: { var: E_ACUTE, matches: '^.$' }
+      log: dot matches one code point
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: skipped, skip_reason: condition }
+    /do/1: { status: succeeded }
+    /do/2: { status: skipped, skip_reason: condition }
+    /do/3: { status: skipped, skip_reason: condition }
+    /do/4: { status: succeeded }
+    /do/5: { status: succeeded }
+    /do/6: { status: skipped, skip_reason: condition }
+    /do/7: { status: succeeded }
+    /do/8: { status: succeeded }
+notes: >-
+  ARABIC_THREE is U+0663, E_ACUTE U+00E9 (precomposed), NBSP U+00A0. With
+  ASCII classes, the position between U+00FC and b in UBER is a word boundary.
+  /do/8 relies on "any character" meaning one code point (syntax.md §6.7).

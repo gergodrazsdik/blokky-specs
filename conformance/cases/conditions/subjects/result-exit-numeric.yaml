@@ -1,0 +1,20 @@
+title: result exit can be compared numerically
+rules: [CO-6]
+spec: [reference.md§5.4]
+features: [exec, retry-condition, cond-result, cond-numeric]
+plan: |
+  blokky: 1.0
+  retry: { result: exit, ge: '75' }
+  max: 3
+  every: 0s
+  exec: [blokky-testkit, flaky, --state, attempts.txt, --fail-times, '2', --code, '9']
+expect:
+  status: failed
+  error: { code: BK_EXIT, node: /, detail: { exit_code: 9 } }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 1 }
+  invocations:
+    - { argv: [flaky, --state, attempts.txt, --fail-times, '2', --code, '9'] }
+notes: 9 is less than 75 as a number, though '9' sorts after '75' as a string, so the attempt isn't retried.

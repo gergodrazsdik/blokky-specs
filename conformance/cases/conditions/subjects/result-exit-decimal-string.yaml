@@ -1,0 +1,21 @@
+title: result exit is the attempt's exit code as a decimal string
+rules: [CO-6]
+spec: [reference.md§5.4]
+features: [exec, retry-condition, cond-result]
+plan: |
+  blokky: 1.0
+  retry: { result: exit, in: ['10', '11'] }
+  max: 3
+  every: 0s
+  exec: [blokky-testkit, flaky, --state, attempts.txt, --fail-times, '1', --code, '10']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 0
+      repetition: { count: 2, ended_by: success }
+  invocations:
+    - { argv: [flaky, --state, attempts.txt, --fail-times, '1', --code, '10'] }
+    - { argv: [flaky, --state, attempts.txt, --fail-times, '1', --code, '10'] }

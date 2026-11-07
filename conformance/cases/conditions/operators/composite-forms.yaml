@@ -1,0 +1,29 @@
+title: all, any and not combine conditions with their usual truth values
+rules: [CO-3]
+features: [vars, do, when, log, cond-composite, cond-var, cond-path]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: fast
+  do:
+    - when: { all: [ { var: MODE, equals: fast }, { var: MODE, contains: as } ] }
+      log: all true
+    - when: { all: [ { var: MODE, equals: fast }, { var: MODE, equals: slow } ] }
+      log: all with one false
+    - when: { any: [ { var: MODE, equals: slow }, { var: MODE, equals: fast } ] }
+      log: any with one true
+    - when: { any: [ { var: MODE, equals: slow }, { var: MODE, equals: off } ] }
+      log: any all false
+    - when: { not: { path: missing.txt, is_file: true } }
+      log: not false
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1: { status: skipped, skip_reason: condition }
+    /do/2: { status: succeeded }
+    /do/3: { status: skipped, skip_reason: condition }
+    /do/4: { status: succeeded }
+notes: Evaluation order and short-circuiting (CO-23) are tested with probes elsewhere.

@@ -1,0 +1,25 @@
+title: An operator with a subject outside its valid subjects is a plan error at the operator
+rules: [CO-47]
+features: [vars, do, when, log, until, exec, cond-var, cond-path, cond-result]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: fast
+  do:
+    - when: { var: MODE, exists: true }
+      log: exists on a variable
+    - when: { path: build, equals: build }
+      log: equals on a path
+    - until: { result: exit, contains: '0' }
+      max: 3
+      exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - { code: BK_PLAN_INVALID, detail: { rule: CO-47 }, line: 5, column: 24 }
+    - { code: BK_PLAN_INVALID, detail: { rule: CO-47 }, line: 7, column: 26 }
+    - { code: BK_PLAN_INVALID, detail: { rule: CO-47 }, line: 9, column: 28 }
+  exhaustive: true
+notes: >-
+  contains is valid with result only for stdout and stderr (conditions.md §3).
+  The pairing relates two keys, so the code is BK_PLAN_INVALID at the later
+  key (SY-1).

@@ -1,0 +1,41 @@
+title: exists, is_file and is_dir test a host path, and not_exists is the negation of exists
+rules: [CO-48, CO-49, CO-50]
+features: [do, when, log, cond-path, cond-composite]
+clock: [real, scaled, virtual]
+files:
+  build: { dir: true }
+  build/app.txt: app
+plan: |
+  blokky: 1.0
+  do:
+    - when: { path: build, exists: true }
+      log: dir exists
+    - when: { path: build/app.txt, exists: true }
+      log: file exists
+    - when: { path: build, is_dir: true }
+      log: is_dir
+    - when: { path: build/app.txt, is_file: true }
+      log: is_file
+    - when: { path: build, is_file: true }
+      log: a dir isn't a file
+    - when: { path: build/app.txt, is_dir: true }
+      log: a file isn't a dir
+    - when: { path: missing, exists: true }
+      log: missing
+    - when: { path: missing, not_exists: true }
+      log: not_exists
+    - when: { not: { path: build, is_file: true } }
+      log: not is_file
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1: { status: succeeded }
+    /do/2: { status: succeeded }
+    /do/3: { status: succeeded }
+    /do/4: { status: skipped, skip_reason: condition }
+    /do/5: { status: skipped, skip_reason: condition }
+    /do/6: { status: skipped, skip_reason: condition }
+    /do/7: { status: succeeded }
+    /do/8: { status: succeeded }

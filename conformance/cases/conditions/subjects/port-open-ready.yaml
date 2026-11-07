@@ -1,0 +1,29 @@
+title: A service is ready once a TCP connection to its loopback port succeeds
+rules: [CO-42]
+spec: [reference.md§4.9]
+features: [exec, services]
+clock: [real]
+requires:
+  ports: [47000]
+plan: |
+  blokky: 1.0
+  services:
+    - name: api
+      exec: [blokky-testkit, listen, --port, '47000', --after, 2s]
+      ready: { port: 47000, open: true }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      services:
+        - { name: api, ready_after: { $min: 2s, $max: 10s }, ended: stopped }
+  invocations:
+    - { argv: [listen, --port, '47000', --after, 2s] }
+    - { argv: [exit, '0'] }
+notes: >-
+  The port isn't open during the first 2s, so readiness can't come earlier.
+  The service's testkit is logged before the body's (the body starts after
+  the service is ready).

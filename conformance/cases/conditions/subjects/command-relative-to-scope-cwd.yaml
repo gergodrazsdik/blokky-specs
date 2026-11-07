@@ -1,0 +1,26 @@
+title: A command path is resolved against the cwd of the scope that evaluates the condition
+rules: [CO-45]
+spec: [conditions.md§6]
+features: [do, when, log, cwd, cond-command]
+clock: [real, scaled, virtual]
+requires:
+  os: [linux, macos]   # the executable bit
+files:
+  sub/tool: { text: "#!/bin/sh\nexit 0\n", executable: true }
+plan: |
+  blokky: 1.0
+  do:
+    - when: { command: ./tool, exists: true }
+      log: in the run cwd
+    - cwd: sub
+      do:
+        - when: { command: ./tool, exists: true }
+          log: in sub
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: skipped, skip_reason: condition }
+    /do/1/do/0: { status: succeeded }
+  invocations: []
+notes: A when is evaluated in its parent's scope (conditions.md §6), which for /do/1/do/0 has cwd sub.

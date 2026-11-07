@@ -1,0 +1,33 @@
+title: Glob matches are sorted ordinally, and the iterations follow that order
+spec: [reference.md§5.7]
+features: [for-glob, exec]
+files:
+  g/b2.txt: b2
+  g/B1.txt: B1
+  g/a.txt: a
+  g/_u.txt: underscore
+  g/10.txt: ten
+  g/9.txt: nine
+plan: |
+  blokky: 1.0
+  for: { glob: 'g/*.txt', as: FILE }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  nodes:
+    /:
+      status: succeeded
+      repetition:
+        count: 6
+        ended_by: items
+        entries:
+          - { index: 0, item: { $regex: '(^|/)g/10\.txt$' } }
+          - { index: 1, item: { $regex: '(^|/)g/9\.txt$' } }
+          - { index: 2, item: { $regex: '(^|/)g/B1\.txt$' } }
+          - { index: 3, item: { $regex: '(^|/)g/_u\.txt$' } }
+          - { index: 4, item: { $regex: '(^|/)g/a\.txt$' } }
+          - { index: 5, item: { $regex: '(^|/)g/b2\.txt$' } }
+notes: >-
+  Ordinal order compares code points: 1 < 9 < B < _ < a < b, so 10 sorts
+  before 9 and uppercase before lowercase. No two names differ only in case,
+  so the files exist on case-insensitive file systems too.

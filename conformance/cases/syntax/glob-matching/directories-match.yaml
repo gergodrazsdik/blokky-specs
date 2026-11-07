@@ -1,0 +1,22 @@
+title: A glob matches directories as well as files
+rules: [SY-99]
+spec: [reference.md§5.7]
+features: [for-glob, exec]
+files:
+  d/file.txt: file
+  d/sub: { dir: true }
+  d/sub/inner.txt: inner
+plan: |
+  blokky: 1.0
+  for: { glob: 'd/*', as: ENTRY }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  nodes:
+    /:
+      repetition:
+        count: 2
+        entries:
+          - { index: 0, item: { $regex: '(^|/)d/file\.txt$' } }
+          - { index: 1, item: { $regex: '(^|/)d/sub$' } }
+notes: The matches are sorted ordinally (reference.md §5.7); * doesn't cross into d/sub (SY-71).

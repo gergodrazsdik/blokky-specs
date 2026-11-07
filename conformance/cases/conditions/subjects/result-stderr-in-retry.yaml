@@ -1,0 +1,34 @@
+title: In a retry condition, result stderr is the failed attempt's stderr, and only a match retries
+rules: [CO-5, CO-6]
+spec: [reference.md§5.4]
+features: [do, exec, retry-condition, cond-result, ignore-errors]
+plan: |
+  blokky: 1.0
+  do:
+    - retry: { result: stderr, contains: temporarily unavailable }
+      max: 2
+      every: 0s
+      ignore_errors: true
+      exec: [blokky-testkit, print, --err, 'service temporarily unavailable', --exit, '1']
+    - retry: { result: stderr, contains: temporarily unavailable }
+      max: 2
+      every: 0s
+      exec: [blokky-testkit, print, --err, 'permission denied', --exit, '1']
+expect:
+  status: failed
+  error: { code: BK_EXIT, node: /do/1 }
+  nodes:
+    /do/0:
+      status: failed
+      ignored: true
+      error: { code: BK_RETRIES_EXHAUSTED }
+      repetition: { count: 2, ended_by: max }
+    /do/1:
+      status: failed
+      error: { code: BK_EXIT, detail: { exit_code: 1 } }
+      repetition: { count: 1 }
+  invocations:
+    - { argv: [print, --err, 'service temporarily unavailable', --exit, '1'] }
+    - { argv: [print, --err, 'service temporarily unavailable', --exit, '1'] }
+    - { argv: [print, --err, 'permission denied', --exit, '1'] }
+notes: A retry condition that doesn't hold ends the node with the attempt's own error (reference.md §5.4, step 4).

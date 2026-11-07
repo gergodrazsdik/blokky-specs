@@ -1,0 +1,39 @@
+title: empty on an undefined variable is a condition error; not_defined or empty in an any is the way to test "undefined or blank"
+rules: [CO-17, CO-38]
+features: [vars, do, when, log, exec, capture, ignore-errors, cond-var, cond-composite]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: off
+  do:
+    - when: { var: MODE, equals: on }
+      exec: [blokky-testkit, print, --out, token]
+      capture: TOKEN
+    - when: { any: [ { var: TOKEN, not_defined: true }, { var: TOKEN, empty: true } ] }
+      log: undefined or blank
+    - when: { var: TOKEN, empty: true }
+      ignore_errors: true
+      do:
+        - log: never logged
+    - when: { var: TOKEN, not_empty: true }
+      ignore_errors: true
+      do:
+        - log: never logged either
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: skipped, skip_reason: condition }
+    /do/1: { status: succeeded }
+    /do/2:
+      status: failed
+      ignored: true
+      error: { code: BK_CONDITION_ERROR, node: /do/2, detail: { reason: undefined_variable } }
+    /do/3:
+      status: failed
+      ignored: true
+      error: { code: BK_CONDITION_ERROR, node: /do/3, detail: { reason: undefined_variable } }
+  invocations: []
+notes: >-
+  A condition error in when fails the node, and its ignore_errors applies
+  (CO-41). The reason is undefined_variable (CO-38).

@@ -1,0 +1,28 @@
+title: A service's output has its trailing CR and LF removed, so a pattern can anchor at its end
+rules: [CO-43, CO-14]
+spec: [reference.md§4.9]
+features: [exec, services]
+clock: [real]
+plan: |
+  blokky: 1.0
+  services:
+    - name: worker
+      exec: [blokky-testkit, print, --newline, crlf, --err, 'listening on port 8080', --hang]
+      ready: { output: stderr, matches: 'port \d+$' }
+      ready_timeout: 5s
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      services:
+        - { name: worker, ended: stopped }
+  invocations:
+    - { argv: [print, --newline, crlf, --err, 'listening on port 8080', --hang] }
+    - { argv: [exit, '0'] }
+notes: >-
+  stderr is "listening on port 8080", CR, LF. Without the removal, $ couldn't
+  match, because it never matches before a final newline (CO-14), and the
+  service would never be ready.

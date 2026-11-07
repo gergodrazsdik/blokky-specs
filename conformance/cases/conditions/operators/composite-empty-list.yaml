@@ -1,0 +1,24 @@
+title: An empty all or any list is a plan error, and so is an empty in list
+rules: [CO-3, RF-21]
+features: [vars, do, when, log, cond-composite, cond-var]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: fast
+  do:
+    - when: { all: [] }
+      log: empty all
+    - when: { any: [] }
+      log: empty any
+    - when: { var: MODE, in: [] }
+      log: empty in
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-21 }, line: 5, column: 18 }
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-21 }, line: 7, column: 18 }
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-21 }, line: 9, column: 28 }
+  exhaustive: true
+notes: >-
+  CO-3 asks for non-empty lists, and the in operand is a non-empty list
+  (conditions.md §3). An empty list is decided by the value alone, and RF-21 is
+  the canonical rule for it (ADR 0021, D-1 and D-2).

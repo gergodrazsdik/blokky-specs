@@ -1,0 +1,29 @@
+title: In a service's ready condition, output refers to that service, not to the services before it
+rules: [CO-44]
+spec: [reference.md§4.9]
+features: [exec, services]
+clock: [real]
+plan: |
+  blokky: 1.0
+  services:
+    - name: first
+      exec: [blokky-testkit, print, --out, ready, --hang]
+      ready: { output: stdout, contains: ready }
+    - name: second
+      exec: [blokky-testkit, sleep, 1m]
+      ready: { output: stdout, contains: ready }
+      ready_timeout: 2s
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: failed
+  error: { code: BK_SERVICE_NOT_READY, node: /, detail: { service: second } }
+  nodes:
+    /:
+      status: failed
+      services:
+        - { name: first, ended: stopped }
+        - { name: second, ended: never_ready }
+  invocations:
+    - { argv: [print, --out, ready, --hang] }
+    - { argv: [sleep, 1m] }
+notes: second writes nothing, so its own stdout never contains ready, although first's does.

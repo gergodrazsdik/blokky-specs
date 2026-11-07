@@ -1,0 +1,21 @@
+title: A bare probe has no operator and is true or false by its exit code
+rules: [CO-2]
+features: [do, when, log, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  do:
+    - when: { probe: { exec: [blokky-testkit, exit, '0'] } }
+      log: exit 0 is true
+    - when: { probe: { exec: [blokky-testkit, exit, '1'] } }
+      log: exit 1 is false
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1: { status: skipped, skip_reason: condition }
+  invocations:
+    - { argv: [exit, '0'] }
+    - { argv: [exit, '1'] }
+notes: The exit-code lists true_exit and false_exit (CO-33) are tested with the probe cases.

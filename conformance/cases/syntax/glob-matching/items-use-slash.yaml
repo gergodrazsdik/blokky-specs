@@ -1,0 +1,19 @@
+title: Glob items use / as the separator on every OS
+spec: [reference.md§5.7]
+rules: [SY-70]
+features: [for-glob, exec]
+files:
+  src/a/x.txt: x
+plan: |
+  blokky: 1.0
+  for: { glob: 'src/*/*.txt', as: FILE }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  nodes:
+    /:
+      repetition:
+        count: 1
+        entries:
+          - { item: { $regex: '^[^\\]*src/a/x\.txt$' } }
+notes: The item may be relative or absolute, but holds no backslash, also on Windows.

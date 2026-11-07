@@ -1,0 +1,34 @@
+title: The env subject sees the effective environment, including enclosing env and export
+rules: [CO-48]
+spec: [conditions.md§6]
+features: [vars, do, when, log, env, export, cond-env]
+clock: [real, scaled, virtual]
+env:
+  BASE_MODE: from-runner
+plan: |
+  blokky: 1.0
+  vars:
+    STAGE: deploy
+  do:
+    - when: { env: BASE_MODE, equals: from-runner }
+      log: Blokky's own environment
+    - when: { env: NODE_MODE, defined: true }
+      env: { NODE_MODE: own }
+      do:
+        - log: a node's own env doesn't apply to its when
+    - env: { NODE_MODE: enclosing }
+      export: [STAGE]
+      do:
+        - when: { env: NODE_MODE, equals: enclosing }
+          log: enclosing env
+        - when: { env: STAGE, equals: deploy }
+          log: enclosing export
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1: { status: skipped, skip_reason: condition }
+    /do/2/do/0: { status: succeeded }
+    /do/2/do/1: { status: succeeded }
+notes: A when is evaluated in its parent's scope (conditions.md §6), so /do/1's own env isn't seen.

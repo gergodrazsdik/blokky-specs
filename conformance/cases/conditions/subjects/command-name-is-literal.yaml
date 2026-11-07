@@ -1,0 +1,17 @@
+title: The command name is a literal; a variable reference there is a plan error
+rules: [RF-9]
+features: [vars, when, log, cond-command]
+plan: |
+  blokky: 1.0
+  vars:
+    TOOL: ruff
+  when: { command: { var: TOOL }, exists: true }
+  log: never
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-9 }
+      line: 4
+      column: 18   # the reference, the value that is wrong
+  exhaustive: true
+notes: RF-9 is the canonical rule for a variable in a literal field (ADR 0021, D-1).

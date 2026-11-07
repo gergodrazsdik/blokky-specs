@@ -1,0 +1,18 @@
+title: A literal .. segment in a glob is a plan error
+rules: [SY-102]
+features: [do, for-glob, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - for: { glob: '../*.txt', as: FILE }
+      exec: [blokky-testkit, exit, '0']
+    - for: { glob: 'src/../docs/*.md', as: FILE }
+      exec: [blokky-testkit, exit, '0']
+    - for: { glob: 'src/..x/*.md', as: FILE, allow_empty: true }
+      exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-102 }, line: 3, column: 18 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-102 }, line: 5, column: 18 }
+  exhaustive: true
+notes: ..x is an ordinary segment name, not a .. segment, so the third pattern is valid.

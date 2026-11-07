@@ -1,0 +1,22 @@
+title: In until, result stdout is the iteration's trimmed stdout
+rules: [CO-5, CO-6]
+spec: [reference.md§5.6]
+features: [exec, until, cond-result]
+plan: |
+  blokky: 1.0
+  until: { result: stdout, equals: '3' }
+  max: 5
+  every: 0s
+  exec: [blokky-testkit, count, --state, polls.txt]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      repetition: { count: 3, ended_by: condition }
+  invocations:
+    - { argv: [count, --state, polls.txt] }
+    - { argv: [count, --state, polls.txt] }
+    - { argv: [count, --state, polls.txt] }
+notes: count writes the new counter value and an LF (TK-19); the LF is removed, so the third iteration's stdout equals 3.
