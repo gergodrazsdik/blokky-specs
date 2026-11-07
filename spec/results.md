@@ -34,23 +34,23 @@ This document defines the **run result**: the abstract outcome of a run that eve
 | name | if set | The raw `name` template. |
 | status | all | `succeeded`, `failed`, `skipped`, `timed_out` or `cancelled` ([execution-model.md §8](execution-model.md#8-status)). |
 | ignored | failed nodes | Whether `ignore_errors` hid the failure from the parent. |
-| skip reason | skipped nodes | `condition`, `not_reached`, `returned`, `pruned` (a `host:` condition was false, CO-7), or `not_taken` (the branch of an `if` that didn't run). |
+| skip reason | skipped nodes | `condition`, `not_reached`, `returned`, `pruned` (a `host:` condition was false, CO-7), or `not_taken` (the branch of an `if` that didn't run, unless a `host:` condition decided it: then `pruned`). |
 | error | failed, timed out, cancelled | The node's error (§5). |
-| repetition | `retry`, `while`, `until`, `for` | The number of attempts or iterations; what ended them (`ended_by`: `success` for `retry`, `condition` for `while`/`until`, `items` for `for`, or `max`, `timeout`, `failure`); the last condition result (`true`, `false`, `error`); and for each attempt or iteration its index, rendered name, item, status and error. Entries are listed in index order. |
+| repetition | `retry`, `while`, `until`, `for` | The number of attempts or iterations; what ended them (`ended_by`: `success` for `retry`, `condition` for `while`/`until`, `items` for `for`, or `max`, `timeout`, `failure`, which includes a condition error that ended the repetition, CO-40); the last condition result (`true`, `false`, `error`); and for each attempt or iteration its index, rendered name, item, status and error. Entries are listed in index order. |
 | children | groups, `if` | The children's results, in plan order. |
 | finally | nodes with `finally` | The `finally` list's results and its status. |
 | lock wait | nodes with `lock` | How long the node waited for its lock. |
 | services | nodes with `services` | For each service: its name, when it became ready, and how it ended (stopped by the run, exited with code N, never ready). |
 | messages | `log`, `fail`, `assert` | The rendered message and, for `log`, its level. |
-| probes | nodes whose conditions ran probes | For each executed probe: the command, exit code and result (`true`, `false`, `error`). |
+| probes | nodes whose conditions ran probes | For each executed probe, in execution order: the command, exit code and result (`true`, `false`, `error`). Its invocation follows the leaf rules (§3.1): masked, element 0 as written, or the resolved shell path for a `script` probe. |
 | bindings | `exec`, `script`, `set`, loops, `tempdir` | The names of the variables the node bound by `capture`, `set`, `collect` or `tempdir.as` (never their values). |
 
 ### 3.1 Leaves
 
 | Field | Meaning |
 |---|---|
-| program | The resolved absolute path of argv[0] or of the shell. |
-| invocation | The argv as run (masked), including the shell invocation for `script`; element 0 is argv[0] as written (`program` holds the resolved path). |
+| program | The resolved absolute path of argv[0] or of the shell, as found on `PATH` or against the cwd; symbolic links aren't followed (SH-29). |
+| invocation | The argv as run (masked), including the shell invocation for `script`. For `exec`, element 0 is argv[0] as written (`program` holds the resolved path); for `script`, element 0 is the resolved shell path. |
 | cwd | The leaf's working directory (on the host; for a container leaf, also the container path). |
 | exit code | The exit code (an unsigned 32-bit value on Windows), if the process exited. |
 | signal | The terminating signal (Unix), if any. |

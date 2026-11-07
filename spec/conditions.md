@@ -18,11 +18,13 @@ A condition is a mapping in one of four forms:
 - **CO-1.** A **simple condition** has exactly one subject key and exactly one operator key, plus the optional modifiers `json:` and `ignore_case:`.
 - **CO-2.** A **bare probe** is a `probe:` subject with no operator; it is true or false by the probe's exit code (§5). It is the only form without an operator.
 - **CO-3.** A **composite** is `all: [ … ]`, `any: [ … ]` (non-empty lists of conditions) or `not: <condition>`.
-- **CO-4.** Anything else is a plan error with a targeted fix-it: a string (`if: "$X == 1"` → `{ var: X, equals: '1' }`), two subjects, two operators, a node where a condition is expected, or a condition where a node list is expected.
+- **CO-4.** Anything else is a plan error with a targeted fix-it: a string (`if: "$X == 1"` → `{ var: X, equals: '1' }`), a missing subject or operator, two subjects, two operators, a node where a condition is expected, or a condition where a node list is expected. A mistake that has a targeted error in [syntax.md §9](syntax.md#9-targeted-errors) is reported as SY-91 (SY-3). A node used as a condition (`when: { exec: … }`) is `BK_PLAN_INVALID`, reported at the kind key ([ADR 0023](../adr/0023-wave-c-gaps.md)).
 
 ## 2. Subjects
 
 All subjects are evaluated by Blokky without starting a process, except `probe`.
+
+- **CO-48.** Each subject tests the value in this table:
 
 | Subject | Value tested |
 |---|---|
@@ -43,7 +45,7 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 
 ### 2.2 `host`
 
-- **CO-7.** `host:` is the only subject evaluated statically: a branch whose `host:` condition is false on this machine is **pruned** before the shell and OS checks. A pruned node is `skipped` with `skip_reason: pruned`. Static views still show a pruned branch, marked as pruned with its condition, so a review on one OS sees what the plan runs on another ([ADR 0018](../adr/0018-review-semantics.md)). A `host:` condition inside a composite with other subjects is evaluated at run time like any other.
+- **CO-7.** `host:` is the only subject evaluated statically: a branch whose `host:` condition is false on this machine is **pruned** before the shell and OS checks. A pruned node is `skipped` with `skip_reason: pruned`, also when it is the branch of an `if` that a `host:` condition decided, so `pruned` wins over `not_taken`. Static views still show a pruned branch, marked as pruned with its condition, so a review on one OS sees what the plan runs on another ([ADR 0018](../adr/0018-review-semantics.md)). A `host:` condition inside a composite with other subjects is evaluated at run time like any other.
 
 ### 2.3 `port` and `output` (services)
 
@@ -65,6 +67,8 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 
 ## 3. Operators
 
+- **CO-47.** An operator is valid only with the subjects in its "Valid subjects" column, and with `result` only for the parts listed there; any other pairing is a plan error.
+
 | Operator | Negation | Operand | Valid subjects |
 |---|---|---|---|
 | `equals` | `not_equals` | string | `var`, `env`, `result`, `probe`, `host` |
@@ -78,14 +82,15 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 | `open` | — | `true` | `port` |
 | `gt`, `ge`, `lt`, `le` | (complementary) | number | `var`, `env`, `result` (`stdout`, `exit`), `probe` |
 
-- **CO-8.** Unary operators take the value `true` only.
+- **CO-8.** Unary operators take the value `true` only. Another value is reported as SY-53 (SY-3).
 - **CO-9.** Operand values are literals ([syntax.md §7.4](syntax.md#74-per-field-table)).
+- **CO-50.** A `not_*` operator negates its operator: it is true exactly when the operator would be false. A condition error stays a condition error.
 - **CO-10.** A single negation uses the `not_*` form. `not:` around a simple condition whose operator has a `not_*` form is a plan error with a fix-it.
 
 ### 3.1 String operators
 
 - **CO-11.** `equals`, `in` and `contains` compare strings ordinally. Nothing is trimmed except process output, which has all trailing `\n` and `\r` removed when it becomes a value ([ADR 0002](../adr/0002-language-core.md)).
-- **CO-12.** `ignore_case: true` makes `equals`, `in`, `contains` (ordinal, case-insensitive) and `matches` (as `(?i)`) ignore case: two characters are equal if their Unicode simple uppercase mappings are equal (so `k` matches `K` but not the Kelvin sign `K`). On other operators it is a plan error.
+- **CO-12.** `ignore_case: true` makes `equals`, `in`, `contains` (ordinal, case-insensitive) and `matches` (as `(?i)`), and their negations `not_equals`, `not_in`, `not_contains` and `not_matches`, ignore case: two characters are equal if their Unicode simple uppercase mappings are equal (so `k` matches `K` but not the Kelvin sign `K`). On other operators it is a plan error.
 
 ### 3.2 `matches`
 
@@ -100,6 +105,7 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 
 ### 3.4 Path operators
 
+- **CO-49.** `exists` is true if an entry exists at the path, whatever its type; `is_file` if it is a file; `is_dir` if it is a directory. `not_exists` is true if no entry exists there.
 - **CO-18.** `exists`, `is_file` and `is_dir` follow symbolic links: a link to a file is a file; a dangling link doesn't exist. Permission errors while checking are condition errors.
 
 ### 3.5 Numeric operators
@@ -110,7 +116,7 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 
 - **CO-20.** `json: PATH` parses the subject's value as one JSON value and extracts the value at `PATH` before the operator applies. Paths use the grammar of [syntax.md §6.8](syntax.md#68-json-paths).
 - **CO-21.** The extracted value is converted to a string as in field captures: strings unescaped, numbers as written, `true`/`false`, `null` as `''`, objects and arrays as compact JSON ([variables.md](variables.md), VA-23).
-- **CO-22.** Invalid JSON or a path that doesn't resolve is a condition error, except with `defined`/`not_defined`, where a missing path counts as undefined.
+- **CO-22.** Invalid JSON or a path that doesn't resolve is a condition error. With `defined`/`not_defined`, only a path that doesn't resolve counts as undefined; invalid JSON is still a condition error (`json_invalid`).
 
 ## 4. Composites
 
@@ -129,12 +135,12 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 
 ### 5.1 Shape
 
-- **CO-26.** A probe mapping has exactly one of `exec:` (the same values as the `exec` kind) or `script:` (with optional `shell:`), plus optionally `env`, `export`, `timeout`, `true_exit`, `false_exit` and `timeout_result`. The key list is closed.
+- **CO-26.** A probe mapping has exactly one of `exec:` (the same values as the `exec` kind) or `script:` (with optional `shell:`), plus optionally `env`, `export`, `timeout`, `true_exit`, `false_exit` and `timeout_result`. The key list is closed. Both or neither of `exec:` and `script:`, or `shell:` without `script:`, is `BK_PLAN_INVALID` with rule CO-26.
 - **CO-27.** Probes inherit the evaluating scope's cwd, `env` and `export`; their own `env` and `export` add to it.
 
 ### 5.2 Process
 
-- **CO-28.** A probe is a real process with full process control: its own session or job, empty stdin, tree kill. It is killed when its own timeout expires, when an enclosing limit fires or when the evaluating node is cancelled.
+- **CO-28.** A probe is a real process with full process control: its own session or job, empty stdin, tree kill. It is killed when its own timeout expires, when an enclosing limit fires or when the evaluating node is cancelled. A probe that hits its timeout gets the grace period, like a leaf (EM-26).
 - **CO-29.** Its limit is its own `timeout`, else the smaller of `probe_timeout` (default 30s) and `defaults.leaf_timeout` if set ([ADR 0003](../adr/0003-execution-defaults.md)). Hitting it is a condition error (CO-35).
 - **CO-30.** Its stdout is limited to 64 KiB (implementations MAY let users raise it); more is a condition error. Its stderr is treated like the node's other output.
 - **CO-31.** Every executed probe is recorded in the run result (command, exit code, duration, result), and every probe is part of what a plan can execute ([reference.md §9](reference.md#9-security-considerations)).
@@ -142,7 +148,7 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 
 ### 5.3 Truth value
 
-- **CO-33.** **Bare probe:** with neither list, exit 0 is true and any other exit code false. With only `true_exit`, listed codes are true and all others false; with only `false_exit`, listed codes are false and all others true. With both lists, a code in neither is a condition error.
+- **CO-33.** **Bare probe:** with neither list, exit 0 is true and any other exit code false. With only `true_exit`, listed codes are true and all others false; with only `false_exit`, listed codes are false and all others true. With both lists, a code in neither is a condition error. A bare probe's stdout isn't decoded or checked for its encoding; the limit of CO-30 still applies.
 - **CO-34.** **Probe with an operator:** the probe MUST first exit with a "true" code by the rules of CO-33 (0 by default); otherwise the condition is a condition error. The operator then applies to the probe's stdout, decoded as UTF-8 and with trailing `\n`/`\r` removed.
 - **CO-35.** **Timeout:** a probe that times out is a condition error, unless `timeout_result: true` or `false` gives the value to use instead.
 
@@ -165,19 +171,21 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 
 A condition error makes a condition **neither true nor false**. The node that owns the condition fails with the built-in condition-error code (named in [errors.md](errors.md)); a condition error never counts as false.
 
-- **CO-38.** These are condition errors:
-  - a reference to an undefined variable or unset environment variable, except with `defined`/`not_defined`;
-  - `empty`/`not_empty` on an undefined variable;
-  - a value that isn't a number for a numeric operator;
-  - invalid JSON or an unresolvable path with `json:` (except `defined`/`not_defined`);
-  - a probe exit code outside both `true_exit` and `false_exit`, or not "true" when an operator is given;
-  - a probe timeout without `timeout_result`;
-  - probe output over the limit, or `result:` output over `max_capture_bytes`;
-  - probe stdout or `result:` output that isn't valid in its encoding (it is never replaced with U+FFFD for a condition);
-  - a probe that can't be started (program not found; test for an installed program with the `command` subject instead, §2.4);
-  - a permission error while checking a `path`.
+- **CO-38.** These are condition errors, each with its `detail.reason` ([errors.md §5.3](errors.md#53-conditions-variables-and-captures)):
+  - a reference to an undefined variable or unset environment variable, except with `defined`/`not_defined`: `undefined_variable`;
+  - `empty`/`not_empty` on an undefined variable: `undefined_variable`;
+  - a value that isn't a number for a numeric operator: `not_a_number`;
+  - invalid JSON with `json:` (also with `defined`/`not_defined`): `json_invalid`;
+  - a path that doesn't resolve with `json:` (except `defined`/`not_defined`): `json_path`;
+  - a probe exit code outside both `true_exit` and `false_exit`, or not "true" when an operator is given: `probe_exit`;
+  - a probe timeout without `timeout_result`: `probe_timeout`;
+  - probe output over the limit: `probe_output_too_large`;
+  - `result:` output over `max_capture_bytes`: `output_too_large`;
+  - probe stdout or `result:` output that isn't valid in its encoding (it is never replaced with U+FFFD for a condition): `output_encoding`;
+  - a probe that can't be started (program not found; test for an installed program with the `command` subject instead, §2.4): `probe_spawn`;
+  - a permission error while checking a `path`: `path_access`.
 - **CO-39.** In `assert`, a condition error fails the node with the condition-error code, not the assertion's `code`; the assertion's `message` and `code` are attached as context ([ADR 0002](../adr/0002-language-core.md), Q-n).
-- **CO-40.** In `retry` and `while`, a condition error ends the repetition and fails the node; `retry: true` doesn't retry it. In `until`, a condition error from the `result:` subject (invalid JSON, a path that doesn't resolve, output over the limit) counts as a failed iteration and follows `on_body_failure`: with `continue` (the default) the loop goes on, with `stop` the node fails; other condition errors in `until` end the loop ([ADR 0018](../adr/0018-review-semantics.md)). See also [reference.md §5.5](reference.md#55-what-retry-true-retries).
+- **CO-40.** In `retry` and `while`, a condition error ends the repetition and fails the node; `retry: true` doesn't retry it. In `until`, any condition error caused by the `result:` value (for example invalid JSON, a path that doesn't resolve, output over the limit or not valid in its encoding, a value that isn't a number) counts as a failed iteration and follows `on_body_failure`: with `continue` (the default) the loop goes on, with `stop` the node fails; other condition errors in `until` end the loop ([ADR 0018](../adr/0018-review-semantics.md)). A repetition ended by a condition error records `ended_by: failure` ([results.md §3](results.md#3-nodes)). See also [reference.md §5.5](reference.md#55-what-retry-true-retries).
 - **CO-41.** In `when`, a condition error fails the node; `ignore_errors` on that node applies ([ADR 0009](../adr/0009-status-propagation.md)).
 
 ## 8. Out of scope

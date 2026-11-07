@@ -153,7 +153,7 @@ An implementation can stop a whole run from outside the plan, for example when a
 |---|---|
 | `succeeded` | The node finished without failing. |
 | `failed` | The node failed. With `ignore_errors: true` it also carries `ignored: true`. |
-| `skipped` | The node didn't start: its `when` was false (`skip_reason: condition`), it was never reached because its parent ended early (`skip_reason: not_reached`), a `return` ended its sequence before it (`skip_reason: returned`), a `host:` condition was false on this machine (`skip_reason: pruned`, CO-7), or it is in the branch of an `if` that didn't run (`skip_reason: not_taken`). |
+| `skipped` | The node didn't start: its `when` was false (`skip_reason: condition`), it was never reached because its parent ended early (`skip_reason: not_reached`), a `return` ended its sequence before it (`skip_reason: returned`), a `host:` condition was false on this machine (`skip_reason: pruned`, CO-7), or it is in the branch of an `if` that didn't run (`skip_reason: not_taken`; `pruned` wins when a `host:` condition decided the branch). |
 | `timed_out` | The node's **own** `timeout` or `attempt_timeout` fired. With `ignore_errors: true` it also carries `ignored: true`. |
 | `cancelled` | The node was running and was stopped from outside (§6, §7). |
 

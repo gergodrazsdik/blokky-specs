@@ -360,6 +360,16 @@ Most modifiers can be combined on one node, and their order is fixed (EM-4). Tes
 | ER-2 | Code stability and how consumers treat unknown codes aren't observable in a run. |
 | RS-4 | Cases match mappings as subsets (CF-28), so extra recorded fields are never observed. |
 | VA-53 | Static views of a plan aren't part of the run result. |
+| CO-10 | Reported under RF-14 (errors.md §4). |
+| CO-15 | Reported under RF-22 (errors.md §4). |
+| CO-32 | Advice to plan authors. |
+| CO-37 | A warning (SY-8). |
+| SH-8 | Static views of a plan aren't part of the run result. |
+| SH-19 | Static views of a plan aren't part of the run result. |
+| SH-20 | Provisional until the spike. |
+| SH-30 | A MAY: what implementations analyse is implementation-defined. |
+
+SH-11 is covered except its "readable only by the run's user" part: file modes aren't portable, so no case asserts them.
 
 The list grows as cases are written.
 
@@ -376,7 +386,7 @@ A **runner** reads the cases, prepares each one, runs it through the adapter and
 ### 8.2 What the runner provides
 
 - **CF-56.** **A fresh work directory** per case, empty except for `files`, used as the run's cwd. Nothing in it is shared between cases.
-- **CF-57.** **The base environment:** `PATH` with the directory holding the testkit and the case's aliases first, then the directories the OS's shells need; the variables the OS needs to run processes (`HOME`, `TMPDIR`; on Windows `SystemRoot`, `PATHEXT`, `COMSPEC`, `USERPROFILE`, `TEMP`, `TMP`); `TESTKIT_LOG` (TK-5) and `TESTKIT_TIME_SCALE` (TK-2); then a **passthrough** list per requirement, configured in the runner (for `shells: [pwsh]` or `[powershell]`: the Windows profile variables and `DOTNET_ROOT` when pwsh is a .NET tool; for `container-engine`: the engine's variables such as `DOCKER_HOST`, `XDG_RUNTIME_DIR`); then the case's `env`. Nothing else is inherited from the runner's own environment. Cases that test environment semantics (VA-39 to VA-44, `from_env`) assert only on names they set themselves, so the passthrough doesn't make them nondeterministic. Conformance runs use the language's default bounds (`max_capture_bytes`, the drain bound and the others an implementation may make configurable).
+- **CF-57.** **The base environment:** `PATH` with the directory holding the testkit and the case's aliases first, then the directories the OS's shells need; the variables the OS needs to run processes (`HOME`, `TMPDIR`; on Windows `SystemRoot`, `PATHEXT`, `COMSPEC`, `USERPROFILE`, `TEMP`, `TMP`); `TESTKIT_LOG` (TK-5) and `TESTKIT_TIME_SCALE` (TK-2); then a **passthrough** list per requirement, configured in the runner (for `shells: [pwsh]` or `[powershell]`: the Windows profile variables and `DOTNET_ROOT` when pwsh is a .NET tool; for `container-engine`: the engine's variables such as `DOCKER_HOST`, `XDG_RUNTIME_DIR`); then the case's `env`. Nothing else is inherited from the runner's own environment. Cases that test environment semantics (VA-39 to VA-44, `from_env`) assert only on names they set themselves, so the passthrough doesn't make them nondeterministic. Conformance runs use the language's default bounds (`max_capture_bytes`, the drain bound and the others an implementation may make configurable), and no implementation configuration, such as shell paths (SH-21, SH-28).
 - **CF-58.** **The testkit** ([testkit-interface.md](testkit-interface.md)) as `blokky-testkit` on `PATH`, and an alias for each entry of `programs` (TK-6).
 - **CF-59.** **Isolation:** cases MAY run in parallel, except cases that share a port (CF-14). Lock names are unique per case (CF-14), so parallel cases don't contend.
 
