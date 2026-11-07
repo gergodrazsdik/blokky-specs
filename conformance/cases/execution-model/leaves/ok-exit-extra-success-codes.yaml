@@ -1,0 +1,26 @@
+title: ok_exit makes listed exit codes succeed, and other non-zero codes still fail with BK_EXIT
+rules: [EM-23]
+spec: [reference.md§3, errors.md§5.1]
+features: [do, exec, ok-exit]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, exit, '3']
+      ok_exit: [3]
+    - exec: [blokky-testkit, exit, '4']
+      ok_exit: [3]
+expect:
+  status: failed
+  error: { code: BK_EXIT, node: /do/1, detail: { exit_code: 4 } }
+  nodes:
+    /do/0:
+      status: succeeded
+      exit_code: 3
+      error: { $absent: true }
+    /do/1:
+      status: failed
+      exit_code: 4
+      error: { code: BK_EXIT, node: /do/1, detail: { exit_code: 4 } }
+  invocations:
+    - { argv: [exit, '3'] }
+    - { argv: [exit, '4'] }

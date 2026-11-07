@@ -1,0 +1,24 @@
+title: Windows exit codes are unsigned 32-bit values, in the result and in ok_exit
+rules: [EM-23]
+spec: [reference.md§3, results.md§3.1]
+features: [do, exec, ok-exit]
+requires:
+  os: [windows]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, exit, '4294967295']
+      ok_exit: [4294967295]
+    - exec: [blokky-testkit, exit, '3221225477']
+expect:
+  status: failed
+  error: { code: BK_EXIT, node: /do/1, detail: { exit_code: 3221225477 } }
+  nodes:
+    /do/0:
+      status: succeeded
+      exit_code: 4294967295
+    /do/1:
+      status: failed
+      exit_code: 3221225477
+      error: { code: BK_EXIT, node: /do/1, detail: { exit_code: 3221225477 } }
+notes: 3221225477 is 0xC0000005, never reported as a negative number.

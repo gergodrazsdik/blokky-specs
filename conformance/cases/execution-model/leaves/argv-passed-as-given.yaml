@@ -1,0 +1,22 @@
+title: An exec argv reaches the program unchanged, one element per argument
+rules: [SH-1]
+spec: [reference.md§2.1]
+features: [exec]
+plan: |
+  blokky: 1.0
+  exec: [blokky-testkit, argv, 'a b', '', '-x', '*', '$HOME', '"q"', 'back\slash', ' lead']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      kind: exec
+      status: succeeded
+      exit_code: 0
+      invocation: [blokky-testkit, argv, 'a b', '', '-x', '*', '$HOME', '"q"', 'back\slash', ' lead']   # element 0 as written (results.md §3.1)
+  invocations:
+    - { argv: [argv, 'a b', '', '-x', '*', '$HOME', '"q"', 'back\slash', ' lead'] }
+notes: >-
+  No shell sits between the plan and the program: no splitting, globbing,
+  variable expansion or quote removal. On Windows the command line must be
+  quoted so the program parses back the same argv (SH-9).

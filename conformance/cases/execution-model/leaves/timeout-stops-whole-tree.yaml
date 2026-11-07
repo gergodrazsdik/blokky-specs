@@ -1,0 +1,31 @@
+title: A leaf's limit stops its whole process tree, descendants included
+rules: [EM-15, EM-26, EM-27]
+features: [do, exec, timeout, ignore-errors]
+clock: [real]   # a scaled 1s timeout could fire before spawn writes pids.txt
+plan: |
+  blokky: 1.0
+  do:
+    - timeout: 1s
+      ignore_errors: true
+      exec: [blokky-testkit, spawn, --wait, --count, '2', --pids, pids.txt, --, sleep, 1m]
+    - exec: [blokky-testkit, alive, pids.txt]
+expect:
+  status: succeeded
+  nodes:
+    /do/0:
+      status: timed_out
+      ignored: true
+      killed_by: timeout
+      error: { code: BK_TIMEOUT_TOTAL, node: /do/0 }
+    /do/1:
+      status: succeeded
+      exit_code: 0
+platforms:
+  unix:
+    expect:
+      nodes:
+        /do/0: { signal: SIGTERM }   # the graceful stop request ends the testkit (TK-8)
+notes: >-
+  spawn --wait keeps the testkit running while its two children sleep. All
+  three processes are one tree under the limit (EM-15); none may survive into
+  the next node.

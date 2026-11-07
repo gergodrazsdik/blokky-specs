@@ -1,0 +1,22 @@
+title: keep_descendants true leaves descendants running after the leaf, and the run stops them by its end
+rules: [EM-21, EM-22]
+spec: [reference.md§3]
+features: [do, exec, keep-descendants, ok-exit]
+clock: [real]   # spawn (CF-40)
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, spawn, --release-output, --pids, pids.txt, --, sleep, 1m]
+      keep_descendants: true
+    - exec: [blokky-testkit, alive, pids.txt]
+      ok_exit: [1]
+after_run:
+  - { argv: [alive, pids.txt], exit_code: 0 }
+expect:
+  status: succeeded
+  nodes:
+    /do/0:
+      status: succeeded
+    /do/1:
+      status: succeeded
+      exit_code: 1   # alive: the descendant is still running (TK-16)

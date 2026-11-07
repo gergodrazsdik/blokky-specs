@@ -1,0 +1,32 @@
+title: A program that exists only in the working directory isn't found
+rules: [EM-14, SH-25]
+spec: [errors.md§5.1]
+features: [exec]
+files:
+  conf-local-tool:
+    text: "#!/bin/sh\nexit 0\n"
+    executable: true
+plan: |
+  blokky: 1.0
+  exec: [conf-local-tool]
+expect:
+  status: failed
+  error:
+    code: BK_SPAWN_NOT_FOUND
+    node: /
+    detail: { program: conf-local-tool }
+  nodes:
+    /:
+      status: failed
+      exit_code: { $absent: true }
+      error: { code: BK_SPAWN_NOT_FOUND, node: / }
+  invocations: []
+platforms:
+  windows:
+    files:
+      conf-local-tool: { $delete: true }
+      conf-local-tool.exe: not a program, and never started
+notes: >-
+  The work directory is the run's cwd (CF-56) and is not on PATH (CF-57). On
+  Windows the name would be tried as conf-local-tool.exe (SH-27), so that file
+  is placed there instead.

@@ -1,0 +1,16 @@
+title: stdin with literal text passes that text to the leaf
+rules: [EM-17]
+spec: [reference.md§3]
+features: [outputs, exec, stdin, capture]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  exec: [blokky-testkit, cat]
+  stdin: two words
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: two words
+  invocations:
+    - { argv: [cat] }

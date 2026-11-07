@@ -1,0 +1,18 @@
+title: A leaf writing far more than a pipe buffer to both streams doesn't block
+rules: [EM-18]
+features: [exec, timeout]
+plan: |
+  blokky: 1.0
+  timeout: 30s
+  exec: [blokky-testkit, print, --out-fill, 4MiB, --err-fill, 4MiB]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 0
+notes: >-
+  Pipe buffers are tens of KiB, so an implementation that doesn't read both
+  streams while the leaf runs leaves it blocked until the timeout fires. There
+  is no capture, so nothing is limited by max_capture_bytes.

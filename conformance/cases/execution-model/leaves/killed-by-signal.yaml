@@ -1,0 +1,29 @@
+title: A leaf killed by a signal it didn't get from the run fails with BK_SIGNAL, whatever ok_exit says
+rules: [EM-23]
+spec: [errors.md§5.1, results.md§3.1]
+features: [exec, ok-exit]
+requires:
+  os: [linux, macos]
+plan: |
+  blokky: 1.0
+  exec: [blokky-testkit, die, --signal, SIGTERM]
+  ok_exit: [143]
+expect:
+  status: failed
+  error:
+    code: BK_SIGNAL
+    node: /
+    detail: { signal: SIGTERM }
+  nodes:
+    /:
+      status: failed
+      signal: SIGTERM
+      exit_code: { $absent: true }
+      killed_by: { $absent: true }
+  invocations:
+    - { argv: [die, --signal, SIGTERM] }
+notes: >-
+  143 (128 + 15) is how shells report a SIGTERM death; it isn't an exit code,
+  so ok_exit doesn't apply. The leaf sent the signal to itself, so the run
+  didn't stop it and there is no killed_by. detail.signal is assumed to use
+  the same name form as the signal field (CF §3.6).

@@ -1,0 +1,22 @@
+title: A leaf has no controlling terminal and its stdin is the null device
+rules: [EM-15, EM-17]
+spec: [reference.md§3]
+features: [outputs, exec, capture-fields]
+plan: |
+  blokky: 1.0
+  outputs: [TTY, STDIN]
+  exec: [blokky-testkit, info]
+  capture: { TTY: .tty, STDIN: .stdin }
+expect:
+  status: succeeded
+  outputs:
+    TTY: 'false'
+    STDIN: null-device
+platforms:
+  windows:
+    expect:
+      outputs:
+        TTY: 'true'   # every Windows leaf has a hidden console (EM-15); info.tty reports console attachment (TK-17)
+notes: >-
+  reference.md §3 names the default stdin: /dev/null, or NUL on Windows. The
+  run's own stdin is never forwarded (EM-17).
