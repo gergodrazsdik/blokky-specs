@@ -1,0 +1,42 @@
+title: The grace period follows a fired timeout, and the node is timed_out
+rules: [EM-26, EM-27, EM-43, EM-50, EM-66]
+features: [all, exec, timeout]
+plan: |
+  blokky: 1.0
+  name: grace after limit
+  all:
+    - name: stubborn
+      timeout: 2s
+      exec: [blokky-testkit, sleep, 1m, --ignore-term]
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  status: failed
+  error: { code: BK_TIMEOUT_TOTAL, node: /all/0 }   # the group carries its child's error (EM-66)
+  nodes:
+    /:
+      kind: all
+      status: failed
+      error: { code: BK_TIMEOUT_TOTAL, node: /all/0 }
+    /all/0:
+      status: timed_out
+      killed_by: timeout
+      error: { code: BK_TIMEOUT_TOTAL, node: /all/0 }
+      duration: { $min: 7s, $max: 14s }   # 2s timeout + 5s grace
+    /all/1:
+      status: succeeded
+      exit_code: 0
+  invocations:
+    $unordered:
+      - { argv: [sleep, 1m, --ignore-term] }
+      - { argv: [exit, '0'] }
+platforms:
+  unix:
+    expect:
+      nodes:
+        /all/0: { signal: SIGKILL }
+  windows:
+    expect:
+      nodes:
+        # without a console the leaf has no graceful channel and is killed at once (EM-26)
+        /all/0: { signal: { $absent: true }, duration: { $min: 2s, $max: 14s } }
+notes: The first example of conformance/README.md §3.8.

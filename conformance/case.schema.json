@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:blokky:schema:1.0:conformance-case",
+  "title": "Blokky conformance case",
+  "description": "The structure of a conformance case file (conformance/README.md §3, CF-6 to CF-32, CF-64). Normative for structure; README.md is normative for meaning. Matchers ($regex, $min, ...) are checked by scripts/check.py, not here.",
+  "type": "object",
+  "properties": {
+    "title": { "type": "string", "minLength": 1, "pattern": "^[^\\n]+$" },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^(SY|EM|RS|ER|VA|CO|SH|CP|RF)-[1-9][0-9]*$" }
+    },
+    "spec": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z-]+\\.md§[0-9]+(\\.[0-9]+)*$" }
+    },
+    "features": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9-]+$" }
+    },
+    "requires": { "$ref": "#/$defs/requires" },
+    "clock": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["real", "scaled", "virtual"] }
+    },
+    "plan": { "type": "string", "minLength": 1 },
+    "plan_base64": { "type": "string", "pattern": "^[A-Za-z0-9+/]+={0,2}$" },
+    "inputs": { "type": "array", "items": { "type": "string" } },
+    "env": { "$ref": "#/$defs/env" },
+    "files": { "$ref": "#/$defs/files" },
+    "programs": { "$ref": "#/$defs/programs" },
+    "actions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "after": { "$ref": "#/$defs/duration" },
+          "stop": { "const": true },
+          "kill": { "const": true }
+        },
+        "required": ["after"],
+        "oneOf": [ { "required": ["stop"] }, { "required": ["kill"] } ],
+        "additionalProperties": false
+      }
+    },
+    "after_run": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "argv": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+              "exit_code": { "$ref": "#/$defs/int" }
+            },
+            "required": ["argv", "exit_code"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "plan": { "type": "string", "minLength": 1 },
+              "inputs": { "type": "array", "items": { "type": "string" } },
+              "expect": { "$ref": "#/$defs/expect" }
+            },
+            "required": ["plan", "expect"],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "expect": { "$ref": "#/$defs/expect" },
+    "platforms": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "enum": ["unix", "linux", "macos", "windows"] },
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": { "skip": { "type": "string", "minLength": 1 } },
+            "required": ["skip"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "minProperties": 1,
+            "properties": {
+              "env": { "type": "object" },
+              "files": { "type": "object" },
+              "programs": { "type": "object" },
+              "requires": { "type": "object" },
+              "expect": { "type": "object" }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "notes": { "type": "string" }
+  },
+  "required": ["title", "features", "expect"],
+  "anyOf": [ { "required": ["rules"] }, { "required": ["spec"] } ],
+  "oneOf": [ { "required": ["plan"] }, { "required": ["plan_base64"] } ],
+  "additionalProperties": false,
+  "$defs": {
+    "int": {
+      "anyOf": [
+        { "type": "integer", "minimum": 0 },
+        { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" }
+      ]
+    },
+    "duration": {
+      "type": "string",
+      "pattern": "^(?=[0-9])((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m(?!s))?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$"
+    },
+    "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+    "requires": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "os": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["linux", "macos", "windows"] }
+        },
+        "shells": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["bash", "sh", "pwsh", "powershell", "zsh"] }
+        },
+        "ports": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "integer", "minimum": 47000, "maximum": 47999 }
+        },
+        "container-engine": { "const": true }
+      },
+      "additionalProperties": false
+    },
+    "env": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+      "additionalProperties": { "type": ["string", "null"] }
+    },
+    "files": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[^/\\\\][^\\\\]*$" },
+      "additionalProperties": {
+        "oneOf": [
+          { "type": "string" },
+          {
+            "type": "object",
+            "properties": {
+              "text": { "type": "string" },
+              "base64": { "type": "string" },
+              "executable": { "const": true }
+            },
+            "oneOf": [ { "required": ["text"] }, { "required": ["base64"] } ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": { "dir": { "const": true } },
+            "required": ["dir"],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "programs": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[A-Za-z0-9._-]+$" },
+      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+    },
+    "error": {
+      "type": "object",
+      "properties": {
+        "code": { "$ref": "#/$defs/code" },
+        "detail": { "type": "object" }
+      },
+      "required": ["code"],
+      "additionalProperties": false
+    },
+    "planError": {
+      "type": "object",
+      "properties": {
+        "code": { "$ref": "#/$defs/code" },
+        "detail": { "type": "object" },
+        "line": { "type": "integer", "minimum": 1 },
+        "column": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["code"],
+      "additionalProperties": false
+    },
+    "expect": {
+      "oneOf": [
+        { "$ref": "#/$defs/validationOutcome" },
+        { "$ref": "#/$defs/runOutcome" }
+      ]
+    },
+    "validationOutcome": {
+      "type": "object",
+      "properties": {
+        "plan_errors": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/planError" } },
+        "input_errors": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/error" } },
+        "exhaustive": { "type": "boolean" }
+      },
+      "anyOf": [ { "required": ["plan_errors"] }, { "required": ["input_errors"] } ],
+      "additionalProperties": false
+    },
+    "runOutcome": {
+      "type": "object",
+      "properties": {
+        "status": { "enum": ["succeeded", "failed", "stopped"] },
+        "error": { "type": ["object", "null"] },
+        "outputs": { "type": "object" },
+        "nodes": {
+          "type": "object",
+          "propertyNames": { "pattern": "^/([a-z_]+/[0-9]+(/[a-z_]+/[0-9]+)*)?$" },
+          "additionalProperties": { "type": "object" }
+        },
+        "invocations": { "type": ["array", "object"] },
+        "files": { "type": "object" },
+        "duration": { "type": ["object", "string"] }
+      },
+      "required": ["status"],
+      "additionalProperties": false
+    }
+  }
+}

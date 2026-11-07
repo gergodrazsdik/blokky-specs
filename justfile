@@ -31,6 +31,7 @@ doctor:
     check editorconfig-checker "https://github.com/editorconfig-checker/editorconfig-checker#installation"
     check shellcheck           "https://github.com/koalaman/shellcheck#installing"
     check gitleaks             "https://github.com/gitleaks/gitleaks#installing"
+    check uv                   "https://docs.astral.sh/uv/getting-started/installation/"
     echo "Recommended:"
     check gh                   "https://cli.github.com/"
     check pinact               "https://github.com/suzuki-shunsuke/pinact#install"
@@ -65,7 +66,7 @@ hooks:
 
 # Run all linters
 [group('lint')]
-lint: lint-md lint-yaml lint-actions lint-sh typos editorconfig
+lint: lint-md lint-yaml lint-actions lint-sh typos editorconfig check
 
 # Lint Markdown (markdownlint-cli2)
 [group('lint')]
@@ -96,6 +97,16 @@ typos:
 [group('lint')]
 editorconfig:
     git ls-files -z | xargs -0 scripts/with-tool.sh editorconfig-checker
+
+# Check the schemas, the examples and the conformance cases (scripts/check.py)
+[group('lint')]
+check:
+    scripts/with-tool.sh uv run -q scripts/check.py
+
+# Print the conformance rule coverage (CF-52)
+[group('lint')]
+coverage:
+    scripts/with-tool.sh uv run -q scripts/check.py --coverage
 
 # Pin GitHub Actions to full commit SHAs (pinact)
 [group('meta')]

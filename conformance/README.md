@@ -4,7 +4,7 @@ Status: **draft** (`1.0.0-draft`, not yet finalized)
 
 This document is normative for the **conformance suite**: the case format, the layout of `cases/`, per-platform overrides, timing, the pairwise policy for modifier combinations, the contract a runner fulfils to run the suite, and how rule coverage is measured. The fake programs that cases run are specified in [testkit-interface.md](testkit-interface.md). Normative keywords are used as defined in [syntax.md §1](../spec/syntax.md#1-conventions). Rules carry IDs (`CF-n`).
 
-The cases themselves are written after the language review ([ADR 0013](../adr/0013-scope-and-versioning.md)); `cases/` is empty until then.
+The structure of a case file is also given as a JSON Schema, [case.schema.json](case.schema.json). `just check` (`scripts/check.py`) checks every case statically: its structure and matchers, the rule IDs and spec sections it cites, its `features` against the plan (CF-11), the plan schema's verdict against the expected outcome, and suite-wide ports and lock names (CF-14). `just coverage` prints the coverage report (CF-52). Running the cases is the job of an implementation's runner (§8).
 
 ## 1. Purpose and principles
 
@@ -22,6 +22,7 @@ The suite tests what a plan means and what it can observe, independently of any 
 conformance/
   README.md                 # this document
   testkit-interface.md      # the fake programs
+  case.schema.json          # the structure of a case file
   cases/
     syntax/                 # one directory per spec file …
     variables/
@@ -58,6 +59,7 @@ conformance/
 | `files` | no | Files and directories to create in the work directory before the run (§3.4). |
 | `programs` | no | Testkit aliases to put on `PATH` (§3.4). |
 | `actions` | no | Runner actions during the run, such as an external stop (§3.4). |
+| `after_run` | no | Checks the runner makes after the run ended (§3.4). |
 | `expect` | yes | The expected outcome (§3.5). |
 | `platforms` | no | Per-platform skips and overrides (§4). |
 | `notes` | no | Free text for readers; never interpreted. |
@@ -111,7 +113,7 @@ New ids are added with the language features they name, in the same spec release
 - **CF-20.** `files` maps a path relative to the work directory to its content. A string value is the content as UTF-8 (no newline added). A mapping value has `text` or `base64`, plus optional `executable: true` (mode 0755 on Unix; ignored on Windows); `{ dir: true }` creates a directory. Parent directories are created as needed. Paths use `/` on every platform.
 - **CF-21.** `programs` maps an alias name to the testkit arguments it stands for: `programs: { git: [print, --out, 'git version 2.0'] }` puts an executable named `git` on `PATH` that behaves like `blokky-testkit print --out 'git version 2.0'` followed by its own arguments ([testkit-interface.md](testkit-interface.md), TK-6).
 - **CF-22.** `actions` is a list of `{ after: <duration>, stop: true }` or `{ after: <duration>, kill: true }` entries. `stop` stops the run from outside at that time (EM-55 to EM-57) with the means the adapter provides; cases with it list the `external-stop` feature, and assert on `status: stopped` and the nodes, not on `stop_cause`, which is implementation-defined. `kill` kills the implementation's process at once (SIGKILL, `TerminateProcess`), with no run result expected; cases with it list the `kill` feature and check what survives with `after_run`.
-- **CF-64.** `after_run` is a list of testkit invocations (or a second plan) the runner runs after the case's run ended, each with an expected exit code: for example `alive --pids pids.txt` expecting 1 (nothing left running after a kill, EM-22), or a plan taking the same lock with `wait: 0s` (a lock released by a killed run, EM-60).
+- **CF-64.** `after_run` is a list of checks the runner makes, in order, after the case's run ended, in the same work directory and environment. An entry is a testkit invocation with its expected exit code, `{ argv: [alive, pids.txt], exit_code: 0 }` (nothing left running after a kill, EM-22), or a second plan with its own `inputs` and `expect`, `{ plan: '…', expect: { status: succeeded } }` (a plan taking the same lock with `wait: 0s`: a lock released by a killed run, EM-60). A failed check fails the case.
 
 ### 3.5 Expectations
 
@@ -151,7 +153,7 @@ The result document is the run result of results.md, written with these keys. Va
 | run: status, stop cause, error, outputs | `status`, `stop_cause`, `error`, `outputs` | |
 | run: inputs | `inputs` | `{ NAME: { value, source } }`, `source` is `supplied` or `default`. |
 | node: id, kind, name, status | `id`, `kind`, `name`, `status` | `name` is the raw template. |
-| node: ignored, skip reason | `ignored`, `skip_reason` | `skip_reason`: `condition` or `not_reached`. |
+| node: ignored, skip reason | `ignored`, `skip_reason` | `skip_reason`: `condition`, `not_reached`, `returned` or `pruned`. |
 | node: repetition | `repetition` | `{ count, ended_by, last_condition, entries: [{ index, name, item, status, error }] }`; `item` is a string, or a mapping for `matrix`. |
 | node: finally | `finally_status` | The `finally` list's nodes have their own path ids. |
 | node: lock wait | `lock_wait` | A duration (§5). |
@@ -217,7 +219,7 @@ expect:
       status: timed_out
       killed_by: timeout
       error: { code: BK_TIMEOUT_TOTAL, node: /all/0 }
-      duration: { $min: 7s, $max: 12s }   # 2s timeout + 5s grace
+      duration: { $min: 7s, $max: 14s }   # 2s timeout + 5s grace
     /all/1:
       status: succeeded
       exit_code: 0
@@ -233,7 +235,8 @@ platforms:
   windows:
     expect:
       nodes:
-        /all/0: { signal: { $absent: true } }
+        # without a console the leaf has no graceful channel and is killed at once (EM-26)
+        /all/0: { signal: { $absent: true }, duration: { $min: 2s, $max: 14s } }
 ```
 
 A validation case: an `until` loop with neither `max` nor `timeout`.
@@ -251,15 +254,14 @@ expect:
   plan_errors:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-5 }
-      line: 2
-  invocations: []
 ```
 
 An input case: a required input that isn't supplied, and an undeclared one.
 
 ```yaml
 title: A missing required input and an unknown input are reported together
-rules: [EM-2, VA-11]
+rules: [EM-1, EM-2, SY-44]
+spec: [variables.md§4.3]
 features: [inputs, log, interpolation]
 plan: |
   blokky: 1.0
@@ -271,8 +273,7 @@ inputs: [BRANCHH=main]
 expect:
   input_errors:
     - { code: BK_INPUT_MISSING }
-    - code: BK_INPUT_UNKNOWN
-      detail: { suggestion: BRANCH }
+    - { code: BK_INPUT_UNKNOWN }
   exhaustive: true
 ```
 

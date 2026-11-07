@@ -1,0 +1,32 @@
+title: Nested groups that fail carry the leaf's error unchanged, and later siblings aren't reached
+rules: [EM-43, EM-45, EM-66]
+spec: [reference.md§2.3]   # fail_fast defaults to true on do
+features: [do, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - do:
+        - exec: [blokky-testkit, exit, '3']
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  status: failed
+  error:
+    code: BK_EXIT
+    node: /do/0/do/0
+    detail: { exit_code: 3 }
+  nodes:
+    /:
+      status: failed
+      error: { code: BK_EXIT, node: /do/0/do/0, detail: { exit_code: 3 } }
+    /do/0:
+      status: failed
+      error: { code: BK_EXIT, node: /do/0/do/0, detail: { exit_code: 3 } }
+    /do/0/do/0:
+      status: failed
+      exit_code: 3
+      error: { code: BK_EXIT, node: /do/0/do/0 }
+    /do/1:
+      status: skipped
+      skip_reason: not_reached
+  invocations:
+    - { argv: [exit, '3'] }

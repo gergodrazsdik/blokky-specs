@@ -1,0 +1,17 @@
+title: A missing required input and an unknown input are reported together
+rules: [EM-1, EM-2, SY-44]
+spec: [variables.md§4.3]
+features: [inputs, log, interpolation]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH:
+      description: Branch to build
+  log: "Building ${BRANCH}"
+inputs: [BRANCHH=main]
+expect:
+  input_errors:
+    - { code: BK_INPUT_MISSING }
+    - { code: BK_INPUT_UNKNOWN }
+  exhaustive: true
+notes: The third example of conformance/README.md §3.8.

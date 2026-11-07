@@ -39,7 +39,9 @@ Use `just` (`just --list`):
 |---|---|
 | `just doctor` | Check tools and git settings; prints install hints. |
 | `just hooks` | Install the lefthook git hooks. |
-| `just lint` | All linters: `lint-md`, `lint-yaml`, `lint-actions`, `lint-sh`, `typos`, `editorconfig`. |
+| `just lint` | All linters: `lint-md`, `lint-yaml`, `lint-actions`, `lint-sh`, `typos`, `editorconfig`, `check`. |
+| `just check` | Check the schemas, the examples and the conformance cases (`scripts/check.py`, run with uv). |
+| `just coverage` | Print which spec rules no conformance case cites yet. |
 | `just pin` | Pin workflow actions to full SHAs (`pinact run`). |
 | `just claude` | Start Claude Code with `../blokky-cli` added. |
 

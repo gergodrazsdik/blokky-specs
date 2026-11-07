@@ -69,6 +69,8 @@ You need [just](https://just.systems/) and [lefthook](https://lefthook.dev/), pl
 just doctor   # check tools and git settings, with install hints
 just hooks    # install the git hooks (pre-commit and commit-msg)
 just lint     # run every linter, as CI does
+just check    # schemas, examples and conformance cases (part of lint; needs uv)
+just coverage # which spec rules no conformance case cites yet
 ```
 
 The hooks skip a check whose tool is missing and print a clear message. CI runs every check with all tools installed.
