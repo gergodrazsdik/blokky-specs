@@ -64,9 +64,9 @@ One mistake is one error with one rule. The [reference.md §8](reference.md#8-ru
 | Code | Meaning | Retried |
 |---|---|---|
 | `BK_EXIT` | The leaf exited with a code that isn't 0 or in `ok_exit`. `detail.exit_code`. | yes |
-| `BK_SIGNAL` | The leaf was killed by a signal it didn't get from Blokky (Unix). `detail.signal`. | yes |
-| `BK_SPAWN_NOT_FOUND` | The program or shell couldn't be resolved. `detail.program`. | no |
-| `BK_SPAWN_FAILED` | The OS refused to start the process (not executable, permission denied, a `.bat`/`.cmd` target, a PowerShell execution policy or AppLocker rule that blocks the script). `detail.reason`. | no |
+| `BK_SIGNAL` | The leaf was killed by a signal it didn't get from Blokky (Unix). `detail.signal`: the signal's name (`SIGSEGV`). | yes |
+| `BK_SPAWN_NOT_FOUND` | The program or shell couldn't be resolved. `detail.program`: argv[0] (or the shell) as written. | no |
+| `BK_SPAWN_FAILED` | The OS refused to start the process (not executable, permission denied, a `.bat`/`.cmd` target, a PowerShell execution policy or AppLocker rule that blocks the script). `detail.reason`: `not_executable`, `permission_denied`, `bad_format` or `blocked`. | no |
 | `BK_ENV_TOO_LARGE` | The leaf's environment or one value exceeds the OS limit. `detail.name`. | no |
 | `BK_SHELL_UNAVAILABLE` | The `script` shell isn't supported on this OS or isn't configured (Git Bash on Windows). | no |
 | `BK_CWD_INVALID` | The node's cwd doesn't exist, isn't a directory or can't be entered. | no |
@@ -91,7 +91,7 @@ One mistake is one error with one rule. The [reference.md §8](reference.md#8-ru
 | `BK_CAPTURE_NUL` | stdout contained a NUL byte. | yes |
 | `BK_CAPTURE_ENCODING` | stdout isn't valid in the leaf's `encoding`. | yes |
 | `BK_CAPTURE_JSON` | A field capture's stdout isn't one valid JSON value. | yes |
-| `BK_CAPTURE_PATH` | A field capture's JSON path doesn't resolve. `detail.path`. | yes |
+| `BK_CAPTURE_PATH` | A field capture's JSON path doesn't resolve. `detail.path`: the path as written in the plan. | yes |
 
 ### 5.4 Explicit failures and aggregates
 

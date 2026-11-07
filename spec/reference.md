@@ -147,7 +147,8 @@ Starts all children at once, in declaration order; the **first child to complete
 
 - `if:` takes a condition ([conditions.md](conditions.md)). **Companions:** `then` (required, list of nodes) and `else` (optional, list of nodes). An else-if is an `if` node inside `else`.
 - The condition is evaluated once, in the node's own scope (after its `cwd`, `env` and other scoping modifiers). True runs `then`, false runs `else` (or nothing). A condition error fails the node.
-- The node's status is that of the branch that ran; with no `else` and a false condition, the node succeeds. Implementations SHOULD suggest `when` for an `if` without `else`.
+- The node's status is that of the branch that ran; with no `else` and a false condition, the node succeeds. The nodes of the branch that didn't run are in the run result as `skipped` with skip reason `not_taken` ([ADR 0022](../adr/0022-wave-b-gaps.md)).
+- A branch runs its nodes in order and stops at the first failure, like a `do` with `fail_fast: true`. Implementations SHOULD suggest `when` for an `if` without `else`.
 
 ### 2.8 `sleep`
 
@@ -213,7 +214,7 @@ do:
 
 - **The sequence** is the nearest enclosing `do` list: the root's or a `do` node's, the body of a loop (where `return` ends the current iteration, like `continue`, and the loop goes on), or a `finally` list. `then` and `else` are transparent: a `return` in a branch ends the sequence that contains the `if`.
 - The `return` node succeeds, and the sequence's remaining nodes are `skipped` with skip reason `returned`. The sequence's node then completes normally: its `finally` runs, and a loop goes on to its next iteration or condition check.
-- The message is a display string, recorded like a `log` message.
+- The message is a display string, recorded like a `log` message at level `info`.
 - A `return` whose nearest sequence would be reached through an `all`, `any` or `race` is a plan error: those groups have no order to end early. So is a `return` with no enclosing sequence at all (a root `return`, or one under a root `if` or `all`).
 - A `return` without `when` that isn't inside a `then` or `else` gets a warning, because the nodes after it never run.
 - There is no `break`: a loop ends through its own condition, `max` or source.
@@ -234,7 +235,7 @@ Leaf options are node-level siblings of `exec` or `script`; on any other kind th
 | `capture_file` | — | Write stdout to a runtime-owned file and bind its path. |
 | `secret` | `false` | Mark all captures of this node as secret. |
 
-- **`stdin`.** By default a leaf's stdin is empty (`/dev/null`, or `NUL` on Windows); leaves never read the terminal. `stdin: "text"` passes literal text; `stdin: { var: X }` passes a variable's value; `stdin: { file: P }` passes the content of host file `P` (literal or `{ var: X }`, relative to the node's cwd).
+- **`stdin`.** By default a leaf's stdin is empty (`/dev/null`, or `NUL` on Windows); leaves never read the terminal. `stdin: "text"` passes literal text; `stdin: { var: X }` passes a variable's value; `stdin: { file: P }` passes the content of host file `P` (literal or `{ var: X }`, relative to the node's cwd). Text and `{ var: X }` values are passed as UTF-8 bytes exactly, with no newline added; `{ file: P }` passes the file's bytes unchanged.
 - **`ok_exit`.** A list of exit codes (0 to 4 294 967 295, SY-96); exit 0 always succeeds. On Windows, exit codes are unsigned 32-bit values.
 - **`stderr: merge`.** Both streams go to one pipe, so their interleaving is kept; captures and `result: stdout` then include stderr text.
 - **`encoding`.** `utf-8`, `utf-16le`, `utf-16be` or `latin1`. Invalid sequences become U+FFFD wherever output is shown as text; captures treat them as errors ([variables.md](variables.md)).
@@ -366,7 +367,7 @@ A list of cleanup nodes that runs **once per node** (not per attempt or iteratio
 - **Companion `finally_timeout`** (duration, default 5m). `finally` runs under it even after the node's `timeout` fired; when the runtime stops the whole run, it may get less time ([execution-model.md §7](execution-model.md#7-external-stops)).
 - A node skipped by `when` runs no `finally`.
 - `finally` runs inside the node's tempdir, cwd, env, container and services, and sees what the body bound.
-- **Errors:** a failing `finally` fails an otherwise successful node. If the body failed too, the body error is primary and the `finally` error is attached.
+- **Errors:** a `finally` list runs every node even if one fails, like a `do` with `fail_fast: false`, so each cleanup step is tried; it fails with its first failure ([ADR 0022](../adr/0022-wave-b-gaps.md)). A failing `finally` fails an otherwise successful node. If the body failed too, the body error is primary and the `finally` error is attached.
 - Captures under `finally` are visible only to later nodes in the same `finally` list ([ADR 0002](../adr/0002-language-core.md), Q-s).
 
 ### 4.11 `ignore_errors`

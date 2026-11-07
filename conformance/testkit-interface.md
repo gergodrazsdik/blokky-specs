@@ -53,6 +53,7 @@ Cases MUST NOT expect 123–125 as a command's result; a runner MAY report a lea
 | `count`, `flaky` | Count invocations in a state file; fail N times, then succeed. | TK-19 |
 | `listen` | Listen on a loopback TCP port after a delay. | TK-20 |
 | `die` | Terminate by a signal. | TK-21 |
+| `symlink` | Create a symbolic link. | TK-22 |
 
 ### 2.1 `exit`
 
@@ -180,6 +181,10 @@ Cases MUST NOT expect 123–125 as a command's result; a runner MAY report a lea
 
 - **TK-21.** `die --signal NAME` (Unix) resets the disposition of signal `NAME` (`SIGTERM`, `SIGKILL`, `SIGSEGV`, `SIGABRT`, …) to the default and sends it to itself, so the parent sees a termination by that signal (`BK_SIGNAL`, EM-23). On Windows it exits with 123.
 
+### 2.14 `symlink`
+
+- **TK-22.** `symlink TARGET LINK` (Unix) creates a symbolic link `LINK` (relative to the cwd) pointing at `TARGET`, which need not exist, so cases can check that run-owned files never follow links (EM-69). On Windows it exits with 123.
+
 ## 3. Platform summary
 
 | Behaviour | Unix | Windows |
@@ -188,6 +193,7 @@ Cases MUST NOT expect 123–125 as a command's result; a runner MAY report a lea
 | `spawn --escape` | `setsid`, `double-fork` | `breakaway` |
 | `argv --raw` | 123 | the raw command line |
 | `die` | the named signal | 123 |
+| `symlink` | a symbolic link | 123 |
 | Exit code range | 0–255 | 0–4294967295 |
 | `info.tty` | controlling terminal | console attached |
 | Alias executable | any name, with `<name>.testkit-args` | `<name>.exe`, with `<name>.testkit-args` |

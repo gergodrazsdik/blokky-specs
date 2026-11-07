@@ -91,15 +91,15 @@ Static views of a plan (for review, before a run) MAY accept a missing required 
 
 ### 5.2 Text captures
 
-- **VA-20.** `capture: NAME` binds stdout decoded with the leaf's `encoding` (default UTF-8), with **every trailing `\n` and `\r` removed** ([ADR 0002](../adr/0002-language-core.md)). Nothing else is trimmed.
+- **VA-20.** `capture: NAME` binds stdout decoded with the leaf's `encoding` (default UTF-8), with **every trailing `\n` and `\r` removed** after decoding ([ADR 0002](../adr/0002-language-core.md)). Nothing else is trimmed.
 - **VA-21.** The capture fails the node, with a distinct code, if stdout:
   - is larger than `max_capture_bytes` (default 1 MiB; the message suggests `capture_file`);
-  - contains a NUL byte;
+  - contains U+0000 after decoding (so UTF-16 output can be captured);
   - isn't valid in the leaf's `encoding` (the message suggests `encoding:` or `capture_file`). Captured values are never silently altered ([ADR 0010](../adr/0010-variables-details.md)).
 
 ### 5.3 Field captures
 
-- **VA-22.** `capture: { NAME: PATH, … }` parses stdout (same size and encoding rules) as **one JSON value** and binds each name to the value at its JSON path ([syntax.md](syntax.md); `.`, `.name`, `.["key"]`, `[N]`). Output that isn't valid JSON fails the node.
+- **VA-22.** `capture: { NAME: PATH, … }` parses stdout as **one JSON value**, after the checks of VA-21 in their order, and binds each name to the value at its JSON path ([syntax.md](syntax.md); `.`, `.name`, `.["key"]`, `[N]`). Output that isn't valid JSON fails the node.
 - **VA-23.** Values are converted to strings:
 
 | JSON value | Bound string |
