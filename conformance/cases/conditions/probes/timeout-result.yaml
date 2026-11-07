@@ -1,0 +1,29 @@
+title: timeout_result gives the value of a probe that times out
+rules: [CO-35]
+features: [do, if, exec, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  do:
+    - if: { probe: { exec: [blokky-testkit, sleep, 30s], timeout: 1s, timeout_result: true } }
+      then:
+        - exec: [blokky-testkit, print, --out, first-true]
+      else:
+        - exec: [blokky-testkit, print, --out, first-false]
+    - if: { probe: { exec: [blokky-testkit, sleep, 30s], timeout: 1s, timeout_result: false } }
+      then:
+        - exec: [blokky-testkit, print, --out, second-true]
+      else:
+        - exec: [blokky-testkit, print, --out, second-false]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0/then/0: { status: succeeded }
+    /do/1/else/0: { status: succeeded }
+  invocations:
+    - { argv: [sleep, 30s] }
+    - { argv: [print, --out, first-true] }
+    - { argv: [sleep, 30s] }
+    - { argv: [print, --out, second-false] }
+  duration: { $min: 2s, $max: 12s }

@@ -1,0 +1,30 @@
+title: A condition's any runs its probes one after another, never in parallel
+rules: [CO-25]
+features: [if, exec, cond-composite, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  if:
+    any:
+      - { probe: { exec: [blokky-testkit, sleep, 2s, --exit, '1'] } }
+      - { probe: { exec: [blokky-testkit, sleep, 2s, --exit, '1'] } }
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+  else:
+    - exec: [blokky-testkit, print, --out, else]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      duration: { $min: 4s, $max: 12s }
+    /else/0: { status: succeeded }
+  invocations:
+    - { argv: [sleep, 2s, --exit, '1'] }
+    - { argv: [sleep, 2s, --exit, '1'] }
+    - { argv: [print, --out, else] }
+notes: >-
+  Both probes are false, so both are evaluated. Run in parallel, the condition
+  would take about 2s; sequentially it takes at least 4s. A node any would race
+  them only with concurrency; a condition any never does.

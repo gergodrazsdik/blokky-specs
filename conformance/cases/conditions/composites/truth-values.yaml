@@ -1,0 +1,30 @@
+title: all, any and not give the truth values of conjunction, disjunction and negation
+rules: [CO-3, CO-25]
+features: [vars, do, assert, if, exec, cond-composite, cond-var]
+plan: |
+  blokky: 1.0
+  vars:
+    A: x
+    B: y
+  do:
+    - assert: { all: [ { var: A, equals: x }, { var: B, equals: y } ] }
+    - assert: { any: [ { var: A, equals: z }, { var: B, equals: y } ] }
+    - assert: { not: { any: [ { var: A, equals: z }, { var: B, equals: z } ] } }
+    - assert: { not: { all: [ { var: A, equals: x }, { var: B, equals: z } ] } }
+    - if: { any: [ { var: A, equals: z }, { var: B, equals: z } ] }
+      then:
+        - exec: [blokky-testkit, print, --out, then]
+      else:
+        - exec: [blokky-testkit, print, --out, else]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1: { status: succeeded }
+    /do/2: { status: succeeded }
+    /do/3: { status: succeeded }
+    /do/4: { status: succeeded }
+    /do/4/else/0: { status: succeeded }
+  invocations:
+    - { argv: [print, --out, else] }

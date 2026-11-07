@@ -1,0 +1,27 @@
+title: any stops at its first true operand, so later probes never start and later errors never occur
+rules: [CO-23]
+features: [vars, if, exec, cond-composite, cond-var, cond-probe, cond-numeric]
+clock: [real]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: release
+    COUNT: many
+  if:
+    any:
+      - { var: MODE, equals: release }
+      - { probe: { exec: [blokky-testkit, print, --out, probed] } }
+      - { var: COUNT, gt: '1' }
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+  else:
+    - exec: [blokky-testkit, print, --out, else]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { status: succeeded }
+    /then/0: { status: succeeded }
+    /else/0: { status: skipped, skip_reason: not_taken }
+  invocations:
+    - { argv: [print, --out, then] }

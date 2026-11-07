@@ -1,0 +1,31 @@
+title: An if probe runs in the node's own cwd, a when probe in the parent's
+rules: [CO-27, CO-36]
+spec: [conditions.md§6]
+features: [do, if, when, cwd, exec, cond-probe]
+clock: [real]
+files:
+  sub/marker.txt: here
+plan: |
+  blokky: 1.0
+  do:
+    - cwd: sub
+      when: { probe: { exec: [blokky-testkit, read-file, marker.txt] } }
+      exec: [blokky-testkit, print, --out, when-ran]
+    - cwd: sub
+      if: { probe: { exec: [blokky-testkit, read-file, marker.txt] } }
+      then:
+        - exec: [blokky-testkit, print, --out, if-true]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: skipped, skip_reason: condition }
+    /do/1/then/0: { status: succeeded }
+  invocations:
+    - { argv: [read-file, marker.txt] }
+    - { argv: [read-file, marker.txt], cwd: { $regex: 'sub$' } }
+    - { argv: [print, --out, if-true] }
+notes: >-
+  marker.txt exists only in sub. The when probe runs in the work directory,
+  where read-file exits 3 (false); the if probe runs after the node's cwd
+  applies (EM-8).

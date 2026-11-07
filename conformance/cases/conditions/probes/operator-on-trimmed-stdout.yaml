@@ -1,0 +1,27 @@
+title: A probe with an operator tests its stdout with trailing CR/LF removed
+rules: [CO-34]
+features: [do, if, exec, cond-probe, cond-numeric]
+clock: [real]
+plan: |
+  blokky: 1.0
+  do:
+    - if: { probe: { exec: [blokky-testkit, print, --out, ready, --newline, crlf] }, equals: ready }
+      then:
+        - exec: [blokky-testkit, print, --out, equals-true]
+    - if: { probe: { exec: [blokky-testkit, print, --out, '12'] }, gt: '9' }
+      then:
+        - exec: [blokky-testkit, print, --out, gt-true]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0/then/0: { status: succeeded }
+    /do/1/then/0: { status: succeeded }
+  invocations:
+    - { argv: [print, --out, ready, --newline, crlf] }
+    - { argv: [print, --out, equals-true] }
+    - { argv: [print, --out, '12'] }
+    - { argv: [print, --out, gt-true] }
+notes: >-
+  '12' gt '9' is true only as a number (CO-19); an ordinal string comparison
+  would say false.

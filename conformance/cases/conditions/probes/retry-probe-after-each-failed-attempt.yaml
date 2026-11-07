@@ -1,0 +1,24 @@
+title: A retry condition's probe runs after each failed attempt, and never after the successful one
+rules: [CO-36]
+spec: [conditions.md§6, reference.md§5.4]
+features: [exec, retry-condition, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  retry: { probe: { exec: [blokky-testkit, exit, '0'] } }
+  max: 3
+  every: 0s
+  exec: [blokky-testkit, flaky, --state, attempts.txt, --fail-times, '2']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      repetition: { count: 3, ended_by: success }
+  invocations:
+    - { argv: [flaky, --state, attempts.txt, --fail-times, '2'] }
+    - { argv: [exit, '0'] }
+    - { argv: [flaky, --state, attempts.txt, --fail-times, '2'] }
+    - { argv: [exit, '0'] }
+    - { argv: [flaky, --state, attempts.txt, --fail-times, '2'] }

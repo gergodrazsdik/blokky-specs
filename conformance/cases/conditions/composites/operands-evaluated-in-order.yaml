@@ -1,0 +1,29 @@
+title: all evaluates its operands in plan order, running each probe in turn
+rules: [CO-23, CO-31]
+features: [if, exec, cond-composite, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  if:
+    all:
+      - { probe: { exec: [blokky-testkit, print, --out, first] } }
+      - { probe: { exec: [blokky-testkit, print, --out, second] } }
+      - { probe: { exec: [blokky-testkit, print, --out, third] } }
+  then:
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      probes:
+        - { invocation: [blokky-testkit, print, --out, first], exit_code: 0, result: true }
+        - { invocation: [blokky-testkit, print, --out, second], exit_code: 0, result: true }
+        - { invocation: [blokky-testkit, print, --out, third], exit_code: 0, result: true }
+    /then/0: { status: succeeded }
+  invocations:
+    - { argv: [print, --out, first] }
+    - { argv: [print, --out, second] }
+    - { argv: [print, --out, third] }
+    - { argv: [exit, '0'] }

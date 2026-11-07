@@ -1,0 +1,27 @@
+title: An assert probe sees the node's own env; a when probe on the same kind of node doesn't
+rules: [CO-36]
+spec: [conditions.md§6]
+features: [do, assert, when, env, exec, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  do:
+    - env:
+        STAGE: test
+      assert: { probe: { exec: [blokky-testkit, getenv, STAGE] }, equals: test }
+    - env:
+        STAGE: test
+      when: { probe: { exec: [blokky-testkit, getenv, STAGE] } }
+      exec: [blokky-testkit, print, --out, when-ran]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1: { status: skipped, skip_reason: condition }
+  invocations:
+    - { argv: [getenv, STAGE] }
+    - { argv: [getenv, STAGE] }
+notes: >-
+  The when probe runs in the parent's scope, where STAGE is unset, so getenv
+  exits 3 (false).

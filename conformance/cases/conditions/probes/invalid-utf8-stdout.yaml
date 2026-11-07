@@ -1,0 +1,22 @@
+title: Probe stdout that isn't valid UTF-8 is a condition error, never replaced with U+FFFD
+rules: [CO-34, CO-38]
+features: [if, exec, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  if: { probe: { exec: [blokky-testkit, print, --out-hex, 61ff62] }, contains: a }
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+  else:
+    - exec: [blokky-testkit, print, --out, else]
+expect:
+  status: failed
+  error:
+    code: BK_CONDITION_ERROR
+    node: /
+    detail: { reason: output_encoding }
+  invocations:
+    - { argv: [print, --out-hex, 61ff62] }
+notes: >-
+  With U+FFFD substitution the stdout would contain 'a' and the condition would
+  be true.

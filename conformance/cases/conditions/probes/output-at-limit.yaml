@@ -1,0 +1,17 @@
+title: Probe stdout of exactly 64 KiB is within the limit
+rules: [CO-30]
+features: [if, exec, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  if: { probe: { exec: [blokky-testkit, print, --out-fill, 64KiB] }, contains: xxx }
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /then/0: { status: succeeded }
+  invocations:
+    - { argv: [print, --out-fill, 64KiB] }
+    - { argv: [print, --out, then] }

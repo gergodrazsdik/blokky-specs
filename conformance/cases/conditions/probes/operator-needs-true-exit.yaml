@@ -1,0 +1,21 @@
+title: A probe with an operator that doesn't exit with a true code is a condition error, not false
+rules: [CO-34, CO-38]
+features: [if, exec, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  if: { probe: { exec: [blokky-testkit, print, --out, ready, --exit, '1'] }, equals: ready }
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+  else:
+    - exec: [blokky-testkit, print, --out, else]
+expect:
+  status: failed
+  error:
+    code: BK_CONDITION_ERROR
+    node: /
+    detail: { reason: probe_exit }
+  nodes:
+    /: { status: failed }
+  invocations:
+    - { argv: [print, --out, ready, --exit, '1'] }

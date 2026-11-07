@@ -1,0 +1,27 @@
+title: A script probe runs its text with the given shell, and its operator tests the stdout
+rules: [CO-26, CO-34]
+features: [if, exec, cond-probe, shell-bash]
+requires: { shells: [bash] }
+clock: [real]
+plan: |
+  blokky: 1.0
+  if:
+    probe:
+      script: |
+        if [ -n "$BASH_VERSION" ]; then echo bash; fi
+      shell: bash
+    equals: bash
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+  else:
+    - exec: [blokky-testkit, print, --out, else]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /then/0: { status: succeeded }
+  invocations:
+    - { argv: [print, --out, then] }
+notes: >-
+  BASH_VERSION is set only when bash runs the text. Only the shell, listed in
+  requires.shells, is started by the probe (CF-17).

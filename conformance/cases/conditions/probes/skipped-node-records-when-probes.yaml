@@ -1,0 +1,22 @@
+title: A node skipped by its when still records the probes the when ran
+rules: [CO-31]
+features: [do, when, exec, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  do:
+    - when: { probe: { exec: [blokky-testkit, exit, '1'] } }
+      exec: [blokky-testkit, print, --out, body]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0:
+      status: skipped
+      skip_reason: condition
+      probes:
+        - { invocation: [blokky-testkit, exit, '1'], exit_code: 1, result: false }
+      duration: { $absent: true }
+  invocations:
+    - { argv: [exit, '1'] }
+notes: RS-6 lists the when probes among the few fields of a node that never started.

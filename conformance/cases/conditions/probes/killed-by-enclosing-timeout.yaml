@@ -1,0 +1,18 @@
+title: A running probe is killed when an enclosing timeout fires, which is a timeout, not a condition error
+rules: [CO-28]
+features: [if, timeout, exec, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  timeout: 1s
+  if: { probe: { exec: [blokky-testkit, sleep, 30s] } }
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+expect:
+  status: failed
+  error: { code: BK_TIMEOUT_TOTAL, node: / }
+  nodes:
+    /: { status: timed_out }
+  invocations:
+    - { argv: [sleep, 30s] }
+  duration: { $min: 1s, $max: 10s }

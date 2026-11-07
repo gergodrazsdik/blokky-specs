@@ -1,0 +1,23 @@
+title: An any whose first operand is a condition error is a condition error, even if a later operand is true
+rules: [CO-24]
+features: [vars, if, exec, cond-composite, cond-var, cond-numeric]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: release
+    COUNT: many
+  if:
+    any:
+      - { var: COUNT, gt: '1' }
+      - { var: MODE, equals: release }
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+expect:
+  status: failed
+  error:
+    code: BK_CONDITION_ERROR
+    node: /
+    detail: { reason: not_a_number }
+  nodes:
+    /: { status: failed }
+  invocations: []

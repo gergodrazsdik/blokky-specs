@@ -1,0 +1,28 @@
+title: An until probe runs after each successful iteration only
+rules: [CO-36]
+spec: [conditions.md§6, reference.md§5.6]
+features: [until, exec, cond-probe, cond-numeric]
+clock: [real]
+plan: |
+  blokky: 1.0
+  until: { probe: { exec: [blokky-testkit, count, --state, checks.txt] }, ge: '2' }
+  max: 5
+  every: 0s
+  exec: [blokky-testkit, flaky, --state, runs.txt, --fail-times, '1']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      repetition: { count: 3, ended_by: condition, last_condition: true }
+  invocations:
+    - { argv: [flaky, --state, runs.txt, --fail-times, '1'] }
+    - { argv: [flaky, --state, runs.txt, --fail-times, '1'] }
+    - { argv: [count, --state, checks.txt] }
+    - { argv: [flaky, --state, runs.txt, --fail-times, '1'] }
+    - { argv: [count, --state, checks.txt] }
+notes: >-
+  Iteration 0 fails and, with until's default on_body_failure (continue), its
+  condition isn't checked. The probe prints 1 after iteration 1 (false) and 2
+  after iteration 2 (true).

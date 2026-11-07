@@ -1,0 +1,22 @@
+title: A condition error in a while condition ends the loop and fails the node
+rules: [CO-40]
+features: [while, exec, cond-probe, cond-numeric]
+clock: [real]
+plan: |
+  blokky: 1.0
+  while: { probe: { exec: [blokky-testkit, print, --out, many] }, gt: '0' }
+  max: 3
+  every: 0s
+  exec: [blokky-testkit, print, --out, body]
+expect:
+  status: failed
+  error:
+    code: BK_CONDITION_ERROR
+    node: /
+    detail: { reason: not_a_number }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 0, ended_by: failure, last_condition: error }
+  invocations:
+    - { argv: [print, --out, many] }

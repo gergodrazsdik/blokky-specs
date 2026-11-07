@@ -1,0 +1,31 @@
+title: A service's ready probe is polled until it is true, then the body runs
+rules: [CO-36]
+spec: [conditions.md§6, reference.md§4.9]
+features: [services, exec, cond-probe, cond-numeric]
+clock: [real]
+plan: |
+  blokky: 1.0
+  services:
+    - name: svc
+      exec: [blokky-testkit, sleep, 1m]
+      ready: { probe: { exec: [blokky-testkit, count, --state, polls.txt] }, ge: '3' }
+  exec: [blokky-testkit, print, --out, body]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      services:
+        - { name: svc, ended: stopped }
+  invocations:
+    - { argv: [sleep, 1m] }
+    - { argv: [count, --state, polls.txt] }
+    - { argv: [count, --state, polls.txt] }
+    - { argv: [count, --state, polls.txt] }
+    - { argv: [print, --out, body] }
+  duration: { $min: 500ms }
+notes: >-
+  The first check comes right after the service process starts, the next two
+  250ms after the previous check ends (reference.md §4.9), so the body starts
+  at least 500ms in.
