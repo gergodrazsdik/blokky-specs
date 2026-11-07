@@ -1,0 +1,31 @@
+title: A probe inherits the scope's env and export, and its own env and export add to them
+rules: [CO-27]
+features: [vars, env, export, if, exec, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  vars:
+    V: v1
+    W: w1
+  env:
+    A: a1
+  export: [W]
+  if:
+    probe:
+      exec: [blokky-testkit, env, A, B, V, W]
+      env:
+        B: b1
+      export: [V]
+    equals: '{"A":"a1","B":"b1","V":"v1","W":"w1"}'
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+  else:
+    - exec: [blokky-testkit, print, --out, else]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /then/0: { status: succeeded }
+  invocations:
+    - { argv: [env, A, B, V, W] }
+    - { argv: [print, --out, then] }

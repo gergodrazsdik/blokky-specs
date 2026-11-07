@@ -1,0 +1,17 @@
+title: A key outside the probe's closed key list is an unknown key
+rules: [CO-26]
+features: [if, exec, cond-probe]
+plan: |
+  blokky: 1.0
+  if:
+    probe:
+      exec: [blokky-testkit, exit, '0']
+      retries: '3'
+  then:
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_UNKNOWN_KEY
+      line: 5
+      column: 5
+  exhaustive: true

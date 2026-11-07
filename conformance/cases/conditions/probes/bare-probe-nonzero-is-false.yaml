@@ -1,0 +1,24 @@
+title: A bare probe that exits non-zero is false, not a condition error
+rules: [CO-2, CO-31, CO-33]
+features: [if, exec, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  if: { probe: { exec: [blokky-testkit, exit, '1'] } }
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+  else:
+    - exec: [blokky-testkit, print, --out, else]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      probes:
+        - { invocation: [blokky-testkit, exit, '1'], exit_code: 1, result: false }
+    /then/0: { status: skipped, skip_reason: not_taken }
+    /else/0: { status: succeeded }
+  invocations:
+    - { argv: [exit, '1'] }
+    - { argv: [print, --out, else] }

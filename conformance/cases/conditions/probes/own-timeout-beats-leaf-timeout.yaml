@@ -1,0 +1,20 @@
+title: A probe's own timeout replaces defaults.leaf_timeout, even when it is larger
+rules: [CO-29]
+features: [defaults, if, exec, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  defaults:
+    leaf_timeout: 1s
+  if: { probe: { exec: [blokky-testkit, sleep, 2s], timeout: 20s } }
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /then/0: { status: succeeded }
+  invocations:
+    - { argv: [sleep, 2s] }
+    - { argv: [print, --out, then] }
+  duration: { $min: 2s, $max: 12s }

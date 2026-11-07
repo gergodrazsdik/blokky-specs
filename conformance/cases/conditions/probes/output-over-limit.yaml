@@ -1,0 +1,22 @@
+title: Probe stdout over 64 KiB is a condition error
+rules: [CO-30, CO-38]
+features: [if, exec, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  if: { probe: { exec: [blokky-testkit, print, --out-fill, '65537'] } }
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+  else:
+    - exec: [blokky-testkit, print, --out, else]
+expect:
+  status: failed
+  error:
+    code: BK_CONDITION_ERROR
+    node: /
+    detail: { reason: probe_output_too_large }
+  invocations:
+    - { argv: [print, --out-fill, '65537'] }
+notes: >-
+  65537 bytes is one byte over the 64 KiB limit. Conformance runs use the
+  default bounds (CF-57), so the limit isn't raised.

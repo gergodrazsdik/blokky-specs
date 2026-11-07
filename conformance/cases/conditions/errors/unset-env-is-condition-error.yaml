@@ -1,0 +1,28 @@
+title: An unset environment variable is a condition error, except with defined and not_defined
+rules: [CO-38]
+spec: [conditions.md§3.3]
+features: [do, if, exec, cond-env]
+env:
+  CONF_UNSET_STAGE: null
+plan: |
+  blokky: 1.0
+  do:
+    - if: { env: CONF_UNSET_STAGE, not_defined: true }
+      then:
+        - exec: [blokky-testkit, print, --out, not-defined]
+    - if: { env: CONF_UNSET_STAGE, equals: test }
+      then:
+        - exec: [blokky-testkit, print, --out, then]
+      else:
+        - exec: [blokky-testkit, print, --out, else]
+expect:
+  status: failed
+  error:
+    code: BK_CONDITION_ERROR
+    node: /do/1
+    detail: { reason: undefined_variable }
+  nodes:
+    /do/0/then/0: { status: succeeded }
+    /do/1: { status: failed }
+  invocations:
+    - { argv: [print, --out, not-defined] }

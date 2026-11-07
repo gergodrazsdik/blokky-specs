@@ -1,0 +1,20 @@
+title: Without its own timeout, a probe is limited by defaults.leaf_timeout when that is smaller
+rules: [CO-29, CO-35]
+features: [defaults, if, exec, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  defaults:
+    leaf_timeout: 1s
+  if: { probe: { exec: [blokky-testkit, sleep, 30s] } }
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+expect:
+  status: failed
+  error:
+    code: BK_CONDITION_ERROR
+    node: /
+    detail: { reason: probe_timeout }
+  invocations:
+    - { argv: [sleep, 30s] }
+  duration: { $min: 1s, $max: 5s }

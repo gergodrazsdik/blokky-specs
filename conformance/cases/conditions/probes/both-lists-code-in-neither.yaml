@@ -1,0 +1,32 @@
+title: With both true_exit and false_exit, a listed code decides and a code in neither list is a condition error
+rules: [CO-33, CO-38]
+features: [do, if, exec, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  do:
+    - if: { probe: { exec: [blokky-testkit, exit, '1'], true_exit: [1], false_exit: [0] } }
+      then:
+        - exec: [blokky-testkit, print, --out, one-true]
+    - if: { probe: { exec: [blokky-testkit, exit, '2'], true_exit: [1], false_exit: [0] } }
+      then:
+        - exec: [blokky-testkit, print, --out, two-true]
+      else:
+        - exec: [blokky-testkit, print, --out, two-false]
+expect:
+  status: failed
+  error:
+    code: BK_CONDITION_ERROR
+    node: /do/1
+    detail: { reason: probe_exit }
+  nodes:
+    /do/0/then/0: { status: succeeded }
+    /do/1:
+      status: failed
+      error: { code: BK_CONDITION_ERROR, node: /do/1, detail: { reason: probe_exit } }
+      probes:
+        - { invocation: [blokky-testkit, exit, '2'], exit_code: 2, result: error }
+  invocations:
+    - { argv: [exit, '1'] }
+    - { argv: [print, --out, one-true] }
+    - { argv: [exit, '2'] }

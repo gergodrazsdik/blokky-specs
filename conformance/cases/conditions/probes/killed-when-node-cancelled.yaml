@@ -1,0 +1,25 @@
+title: A running probe is killed when the node evaluating its condition is cancelled
+rules: [CO-28]
+features: [all, if, exec, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  all:
+    - if: { probe: { exec: [blokky-testkit, sleep, 30s] } }
+      then:
+        - exec: [blokky-testkit, print, --out, then]
+    - exec: [blokky-testkit, print, --sleep, 1s, --exit, '3']
+expect:
+  status: failed
+  error: { code: BK_EXIT, node: /all/1 }
+  nodes:
+    /all/0: { status: cancelled }
+    /all/1: { status: failed, exit_code: 3 }
+  invocations:
+    $unordered:
+      - { argv: [sleep, 30s] }
+      - { argv: [print, --sleep, 1s, --exit, '3'] }
+  duration: { $min: 1s, $max: 12s }
+notes: >-
+  The probe would run 30s (its default limit is 30s, CO-29); the failing sibling
+  cancels the if after 1s (EM-49), which kills the probe.

@@ -1,0 +1,21 @@
+title: A probe that hits its timeout gets the grace period before the forced kill
+rules: [CO-28, CO-35]
+features: [if, exec, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  if: { probe: { exec: [blokky-testkit, sleep, 30s, --ignore-term], timeout: 1s } }
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+expect:
+  status: failed
+  error:
+    code: BK_CONDITION_ERROR
+    node: /
+    detail: { reason: probe_timeout }
+  invocations:
+    - { argv: [sleep, 30s, --ignore-term] }
+  duration: { $min: 6s, $max: 14s }
+notes: >-
+  The probe ignores the graceful stop, so it ends only at the forced kill: 1s
+  timeout plus the 5s grace period (EM-26), well before its 30s sleep.

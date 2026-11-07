@@ -1,0 +1,33 @@
+title: retry true doesn't retry an attempt that failed with a condition error
+rules: [CO-40]
+spec: [reference.md§5.5]
+features: [vars, do, if, exec, retry, cond-var, cond-numeric]
+plan: |
+  blokky: 1.0
+  vars:
+    COUNT: many
+  retry: true
+  max: 3
+  every: 0s
+  do:
+    - exec: [blokky-testkit, count, --state, attempts.txt]
+    - if: { var: COUNT, gt: '1' }
+      then:
+        - exec: [blokky-testkit, print, --out, then]
+expect:
+  status: failed
+  error:
+    code: BK_CONDITION_ERROR
+    node: /do/1
+    detail: { reason: not_a_number }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 1, ended_by: failure }
+    /do/1: { status: failed }
+  invocations:
+    - { argv: [count, --state, attempts.txt] }
+notes: >-
+  The do carries its child's error (EM-66), so the attempt failed with
+  BK_CONDITION_ERROR, which retry true never retries (errors.md §5.3); the node
+  fails with the attempt's error, not BK_RETRIES_EXHAUSTED.

@@ -1,0 +1,25 @@
+title: In until, a condition error that doesn't come from the result subject ends the loop
+rules: [CO-40]
+features: [until, exec, capture, cond-var, cond-numeric]
+plan: |
+  blokky: 1.0
+  until: { var: STATE, gt: '1' }
+  max: 3
+  every: 0s
+  exec: [blokky-testkit, print, --out, many]
+  capture: STATE
+expect:
+  status: failed
+  error:
+    code: BK_CONDITION_ERROR
+    node: /
+    detail: { reason: not_a_number }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 1, ended_by: failure, last_condition: error }
+  invocations:
+    - { argv: [print, --out, many] }
+notes: >-
+  With on_body_failure continue (until's default), a result-subject error would
+  let the loop go on; this error comes from a var subject, so it ends the loop.

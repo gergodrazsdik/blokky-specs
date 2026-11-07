@@ -1,0 +1,30 @@
+title: all stops at its first false operand, so later probes never start and later errors never occur
+rules: [CO-23]
+features: [vars, if, exec, cond-composite, cond-var, cond-probe, cond-numeric]
+clock: [real]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: release
+    COUNT: many
+  if:
+    all:
+      - { var: MODE, equals: debug }
+      - { probe: { exec: [blokky-testkit, print, --out, probed] } }
+      - { var: COUNT, gt: '1' }
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+  else:
+    - exec: [blokky-testkit, print, --out, else]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { status: succeeded }
+    /then/0: { status: skipped, skip_reason: not_taken }
+    /else/0: { status: succeeded }
+  invocations:
+    - { argv: [print, --out, else] }
+notes: >-
+  If the probe ran, the log would hold it; if the third operand were evaluated,
+  'many' with gt would be a condition error (CO-19).

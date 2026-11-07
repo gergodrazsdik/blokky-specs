@@ -1,0 +1,27 @@
+title: With only true_exit, the listed codes are true and every other code is false
+rules: [CO-33]
+features: [do, if, exec, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  do:
+    - if: { probe: { exec: [blokky-testkit, exit, '3'], true_exit: [3] } }
+      then:
+        - exec: [blokky-testkit, print, --out, listed-true]
+    - if: { probe: { exec: [blokky-testkit, exit, '0'], true_exit: [3] } }
+      then:
+        - exec: [blokky-testkit, print, --out, zero-true]
+      else:
+        - exec: [blokky-testkit, print, --out, zero-false]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0/then/0: { status: succeeded }
+    /do/1/then/0: { status: skipped, skip_reason: not_taken }
+    /do/1/else/0: { status: succeeded }
+  invocations:
+    - { argv: [exit, '3'] }
+    - { argv: [print, --out, listed-true] }
+    - { argv: [exit, '0'] }
+    - { argv: [print, --out, zero-false] }

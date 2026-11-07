@@ -1,0 +1,25 @@
+title: A condition error in an evaluated operand of all makes the whole all a condition error
+rules: [CO-24]
+features: [vars, if, exec, cond-composite, cond-var, cond-numeric]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: release
+    COUNT: many
+  if:
+    all:
+      - { var: MODE, equals: release }
+      - { var: COUNT, gt: '1' }
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+  else:
+    - exec: [blokky-testkit, print, --out, else]
+expect:
+  status: failed
+  error:
+    code: BK_CONDITION_ERROR
+    node: /
+    detail: { reason: not_a_number }
+  nodes:
+    /: { status: failed }
+  invocations: []

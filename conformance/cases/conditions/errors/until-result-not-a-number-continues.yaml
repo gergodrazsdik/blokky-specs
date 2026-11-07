@@ -1,0 +1,28 @@
+title: In until, a result value that isn't a number counts as a failed iteration and the loop goes on
+rules: [CO-40]
+spec: [reference.md§5.6]
+features: [until, exec, cond-result, cond-numeric]
+plan: |
+  blokky: 1.0
+  until: { result: stdout, gt: '5' }
+  max: 2
+  every: 0s
+  exec: [blokky-testkit, print, --out, many]
+expect:
+  status: failed
+  error:
+    code: BK_LOOP_MAX_REACHED
+    node: /
+    causes:
+      - { code: BK_CONDITION_ERROR, detail: { reason: not_a_number } }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 2, ended_by: max }
+  invocations:
+    - { argv: [print, --out, many] }
+    - { argv: [print, --out, many] }
+notes: >-
+  The not_a_number error comes from the result: value, so with until's default
+  on_body_failure (continue) it doesn't end the loop; a var subject's would
+  (until-other-condition-error-ends-loop).

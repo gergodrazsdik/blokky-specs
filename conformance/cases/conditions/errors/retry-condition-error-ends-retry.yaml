@@ -1,0 +1,25 @@
+title: A condition error in a retry condition ends the repetition and fails the node
+rules: [CO-38, CO-40]
+features: [exec, retry-condition, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  retry: { probe: { exec: [conf-no-such-program] } }
+  max: 3
+  every: 0s
+  exec: [blokky-testkit, flaky, --state, attempts.txt, --fail-times, '2']
+expect:
+  status: failed
+  error:
+    code: BK_CONDITION_ERROR
+    node: /
+    detail: { reason: probe_spawn }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 1, ended_by: failure, last_condition: error }
+  invocations:
+    - { argv: [flaky, --state, attempts.txt, --fail-times, '2'] }
+notes: >-
+  Without the condition error, the second attempt would run (a false condition
+  ends the retry with the attempt's error, BK_EXIT).

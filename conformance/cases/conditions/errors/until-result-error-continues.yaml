@@ -1,0 +1,29 @@
+title: In until, a condition error from the result subject counts as a failed iteration and the loop goes on
+rules: [CO-40]
+spec: [reference.md§5.6]
+features: [until, exec, cond-result, cond-json]
+plan: |
+  blokky: 1.0
+  until: { result: stdout, json: .state, equals: done }
+  max: 3
+  every: 0s
+  exec: [blokky-testkit, print, --out, pending]
+expect:
+  status: failed
+  error:
+    code: BK_LOOP_MAX_REACHED
+    node: /
+    causes:
+      - { code: BK_CONDITION_ERROR, detail: { reason: json_invalid } }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 3, ended_by: max }
+  invocations:
+    - { argv: [print, --out, pending] }
+    - { argv: [print, --out, pending] }
+    - { argv: [print, --out, pending] }
+notes: >-
+  'pending' isn't JSON. With until's default on_body_failure (continue) each
+  such iteration is a body failure, so the loop reaches max, nesting the last
+  condition error (reference.md §5.6).

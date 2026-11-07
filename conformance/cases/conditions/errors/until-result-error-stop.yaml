@@ -1,0 +1,23 @@
+title: In until with on_body_failure stop, a condition error from the result subject fails the node
+rules: [CO-40]
+spec: [reference.md§5.6]
+features: [until, exec, cond-result, cond-json]
+plan: |
+  blokky: 1.0
+  until: { result: stdout, json: .state, equals: done }
+  on_body_failure: stop
+  max: 3
+  every: 0s
+  exec: [blokky-testkit, print, --out, '{"other":1}']
+expect:
+  status: failed
+  error:
+    code: BK_CONDITION_ERROR
+    node: /
+    detail: { reason: json_path }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 1, ended_by: failure }
+  invocations:
+    - { argv: [print, --out, '{"other":1}'] }

@@ -1,0 +1,19 @@
+title: A probe with both exec and script is a plan error
+rules: [CO-26]
+features: [if, exec, cond-probe]
+plan: |
+  blokky: 1.0
+  if:
+    probe:
+      exec: [blokky-testkit, exit, '0']
+      script: |
+        true
+  then:
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: CO-26 }
+      line: 5     # the later of the two conflicting keys (ADR 0021, B-1)
+      column: 5
+  exhaustive: true

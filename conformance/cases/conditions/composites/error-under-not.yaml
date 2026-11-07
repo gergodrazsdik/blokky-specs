@@ -1,0 +1,23 @@
+title: not around a condition error is a condition error, not true
+rules: [CO-24]
+spec: [conditions.md§7]
+features: [vars, if, exec, cond-composite, cond-var, cond-numeric]
+plan: |
+  blokky: 1.0
+  vars:
+    COUNT: many
+  if:
+    not: { all: [ { var: COUNT, gt: '1' } ] }
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+  else:
+    - exec: [blokky-testkit, print, --out, else]
+expect:
+  status: failed
+  error:
+    code: BK_CONDITION_ERROR
+    node: /
+    detail: { reason: not_a_number }
+  nodes:
+    /: { status: failed }
+  invocations: []

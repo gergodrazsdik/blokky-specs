@@ -1,0 +1,20 @@
+title: A bare probe's stdout isn't decoded, so invalid UTF-8 in it is no condition error
+rules: [CO-33]
+features: [if, exec, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  if: { probe: { exec: [blokky-testkit, print, --out-hex, 61ff62] } }
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+  else:
+    - exec: [blokky-testkit, print, --out, else]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /then/0: { status: succeeded }
+  invocations:
+    - { argv: [print, --out-hex, 61ff62] }
+    - { argv: [print, --out, then] }
+notes: Compare invalid-utf8-stdout, where an operator makes the same bytes a condition error.

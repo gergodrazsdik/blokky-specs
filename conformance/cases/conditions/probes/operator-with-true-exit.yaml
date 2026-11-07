@@ -1,0 +1,19 @@
+title: A probe with an operator accepts the codes true_exit lists, then tests its stdout
+rules: [CO-34]
+features: [if, exec, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  if: { probe: { exec: [blokky-testkit, print, --out, dirty, --exit, '1'], true_exit: [1] }, equals: dirty }
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+  else:
+    - exec: [blokky-testkit, print, --out, else]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /then/0: { status: succeeded }
+  invocations:
+    - { argv: [print, --out, dirty, --exit, '1'] }
+    - { argv: [print, --out, then] }

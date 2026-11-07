@@ -1,0 +1,26 @@
+title: A probe that hits its own timeout is killed, and the condition is a condition error
+rules: [CO-28, CO-29, CO-35, CO-38]
+features: [if, exec, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  if: { probe: { exec: [blokky-testkit, sleep, 30s], timeout: 1s } }
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+  else:
+    - exec: [blokky-testkit, print, --out, else]
+expect:
+  status: failed
+  error:
+    code: BK_CONDITION_ERROR
+    node: /
+    detail: { reason: probe_timeout }
+  nodes:
+    /: { status: failed }
+  invocations:
+    - { argv: [sleep, 30s] }
+  duration: { $min: 1s, $max: 5s }
+notes: >-
+  The node isn't timed_out: only a node's own timeout or attempt_timeout makes
+  it timed_out (EM-43). The testkit's sleep ends on the graceful stop, so the
+  grace period isn't used up.
