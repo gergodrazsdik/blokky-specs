@@ -1,0 +1,11 @@
+title: A field capture applies the encoding rule, so invalid UTF-8 is BK_CAPTURE_ENCODING
+rules: [VA-21, VA-22]
+features: [exec, capture-fields]
+plan: |
+  blokky: 1.0
+  exec: [blokky-testkit, print, --out-hex, '22ff220a']
+  capture: { V: . }
+expect:
+  status: failed
+  error: { code: BK_CAPTURE_ENCODING, node: / }
+notes: The output is a JSON string with an invalid byte inside it; field captures follow the same encoding rules as text captures (VA-22).

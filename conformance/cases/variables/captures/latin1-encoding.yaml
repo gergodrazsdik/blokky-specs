@@ -1,0 +1,14 @@
+title: A capture decodes stdout with the leaf's encoding
+rules: [VA-20]
+features: [outputs, exec, capture, encoding]
+plan: |
+  blokky: 1.0
+  outputs: [OUT]
+  exec: [blokky-testkit, print, --out-hex, '636166e90d0a']
+  encoding: latin1
+  capture: OUT
+expect:
+  status: succeeded
+  outputs:
+    OUT: café
+notes: 0xE9 is é in Latin-1 (and invalid as UTF-8); the trailing CR LF is removed.

@@ -1,0 +1,19 @@
+title: A secret is masked in a rendered fail message
+rules: [VA-51]
+features: [do, set, from-env, secret-ref, fail, interpolation]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  do:
+    - set: { TOKEN: { from_env: CONF_TOKEN, secret: true } }
+    - fail: 'rejected ${TOKEN}'
+env:
+  CONF_TOKEN: s3cr3t-value
+expect:
+  status: failed
+  error: { code: BK_FAIL, node: /do/1 }
+  nodes:
+    /do/1:
+      status: failed
+      messages:
+        - { text: rejected *** }

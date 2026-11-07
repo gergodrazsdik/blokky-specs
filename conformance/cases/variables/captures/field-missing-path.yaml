@@ -1,0 +1,40 @@
+title: A field path that doesn't resolve fails the node with BK_CAPTURE_PATH, and no field is bound
+rules: [VA-18, VA-24]
+features: [outputs, do, exec, capture-fields, ignore-errors]
+plan: |
+  blokky: 1.0
+  outputs: [A, B, C, D]
+  do:
+    - exec: [blokky-testkit, print, --out, '{"a":1}']
+      capture: { A: .a, B: .b }
+      ignore_errors: true
+    - exec: [blokky-testkit, print, --out, '[1]']
+      capture: { C: '.[1]' }
+      ignore_errors: true
+    - exec: [blokky-testkit, print, --out, '{"a":1}']
+      capture: { D: .a.b }
+      ignore_errors: true
+expect:
+  status: succeeded
+  outputs:
+    A: null
+    B: null
+    C: null
+    D: null
+  nodes:
+    /do/0:
+      status: failed
+      ignored: true
+      exit_code: 0
+      error: { code: BK_CAPTURE_PATH, node: /do/0, detail: { path: .b } }
+    /do/1:
+      status: failed
+      ignored: true
+      error: { code: BK_CAPTURE_PATH, node: /do/1, detail: { path: '.[1]' } }
+    /do/2:
+      status: failed
+      ignored: true
+      error: { code: BK_CAPTURE_PATH, node: /do/2, detail: { path: .a.b } }
+notes: >-
+  A missing key, an index out of range, and a key on a non-object (VA-24).
+  A resolves, but the node failed, so nothing is bound (VA-18).

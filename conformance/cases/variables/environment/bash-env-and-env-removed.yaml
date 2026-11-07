@@ -1,0 +1,16 @@
+title: BASH_ENV and ENV are removed from every leaf's environment
+rules: [VA-39]
+features: [outputs, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  exec: [blokky-testkit, env, BASH_ENV, ENV, CONF_KEEP]
+  capture: SEEN
+env:
+  BASH_ENV: /conf/bash-env
+  ENV: /conf/env
+  CONF_KEEP: kept
+expect:
+  status: succeeded
+  outputs:
+    SEEN: '{"BASH_ENV":null,"ENV":null,"CONF_KEEP":"kept"}'

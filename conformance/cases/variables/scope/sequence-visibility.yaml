@@ -1,0 +1,23 @@
+title: A capture is visible to later siblings, their descendants, and after the do to its later siblings
+rules: [VA-28]
+features: [outputs, do, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [A, B]
+  do:
+    - do:
+        - exec: [blokky-testkit, print, --out, one]
+          capture: A
+        - do:
+            - exec: [blokky-testkit, print, --out, { var: A }]
+              capture: B
+    - exec: [blokky-testkit, argv, { var: A }, { var: B }]
+expect:
+  status: succeeded
+  outputs:
+    A: one
+    B: one
+  invocations:
+    - { argv: [print, --out, one] }
+    - { argv: [print, --out, one] }
+    - { argv: [argv, one, one] }

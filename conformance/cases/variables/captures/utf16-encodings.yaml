@@ -1,0 +1,21 @@
+title: UTF-16 output is captured, decoded first and then trimmed, although its bytes contain NUL
+rules: [VA-20, VA-21]
+features: [outputs, do, exec, capture, encoding]
+plan: |
+  blokky: 1.0
+  outputs: [LE, BE]
+  do:
+    - exec: [blokky-testkit, print, --out-hex, '6f006b000d000a00']
+      encoding: utf-16le
+      capture: LE
+    - exec: [blokky-testkit, print, --out-hex, '006f006b000a']
+      encoding: utf-16be
+      capture: BE
+expect:
+  status: succeeded
+  outputs:
+    LE: ok
+    BE: ok
+notes: >-
+  The NUL check applies to the decoded text (VA-21), which has no U+0000 here;
+  the trailing CR LF and LF are removed after decoding (VA-20).

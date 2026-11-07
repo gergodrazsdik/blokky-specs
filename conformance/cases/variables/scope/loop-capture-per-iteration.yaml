@@ -1,0 +1,22 @@
+title: A capture in a for body is bound per iteration and seen by later nodes of the same iteration
+rules: [VA-33]
+features: [for-each, do, exec, capture]
+plan: |
+  blokky: 1.0
+  for: { each: [a, b], as: ITEM }
+  do:
+    - exec: [blokky-testkit, print, --out, { var: ITEM }]
+      capture: V
+    - exec: [blokky-testkit, argv, { var: V }]
+expect:
+  status: succeeded
+  nodes:
+    /:
+      status: succeeded
+      repetition: { count: 2 }
+  invocations:
+    - { argv: [print, --out, a] }
+    - { argv: [argv, a] }
+    - { argv: [print, --out, b] }
+    - { argv: [argv, b] }
+notes: Binding V again in the second iteration isn't a second assignment, because each iteration has its own scope.

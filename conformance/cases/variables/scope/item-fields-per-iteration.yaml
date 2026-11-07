@@ -1,0 +1,21 @@
+title: for items fields bind per iteration, converted like field captures
+rules: [VA-54]
+features: [vars, for-items, exec]
+plan: |
+  blokky: 1.0
+  vars:
+    LIST: '[{"n":1,"b":"x"},{"n":2.0,"b":null}]'
+  for:
+    items: { var: LIST }
+    as: IT
+    fields: { N: .n, B: .b }
+  exec: [blokky-testkit, argv, { var: N }, { var: B }]
+expect:
+  status: succeeded
+  nodes:
+    /:
+      repetition: { count: 2 }
+  invocations:
+    - { argv: [argv, '1', x] }
+    - { argv: [argv, '2.0', ''] }
+notes: The number keeps its text as written and null becomes '' (VA-23).

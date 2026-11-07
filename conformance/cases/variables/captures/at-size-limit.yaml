@@ -1,0 +1,14 @@
+title: stdout of exactly max_capture_bytes is captured
+rules: [VA-21]
+features: [exec, capture]
+plan: |
+  blokky: 1.0
+  exec: [blokky-testkit, print, --out-fill, 1MiB]
+  capture: OUT
+expect:
+  status: succeeded
+  nodes:
+    /:
+      status: succeeded
+      bindings: [OUT]
+notes: Only output larger than the default 1 MiB fails (VA-21); 1 MiB is 16384 lines of 63 x and an LF.

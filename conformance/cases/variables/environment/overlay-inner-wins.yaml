@@ -1,0 +1,20 @@
+title: A leaf's environment is the run's environment overlaid by env from the root down, inner wins
+rules: [VA-39]
+features: [outputs, env, do, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  env: { CONF_A: root, CONF_B: root }
+  do:
+    - env: { CONF_B: middle, CONF_C: middle }
+      do:
+        - env: { CONF_C: leaf }
+          exec: [blokky-testkit, env, CONF_BASE, CONF_A, CONF_B, CONF_C]
+          capture: SEEN
+env:
+  CONF_BASE: base
+  CONF_A: base
+expect:
+  status: succeeded
+  outputs:
+    SEEN: '{"CONF_BASE":"base","CONF_A":"root","CONF_B":"middle","CONF_C":"leaf"}'

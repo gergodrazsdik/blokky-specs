@@ -1,0 +1,35 @@
+title: Every leaf gets the run's id as BLOKKY_RUN_ID, set by Blokky over the run's own environment
+rules: [VA-39, VA-44]
+features: [outputs, do, exec, capture-fields, assert, cond-var, script, shell-sh, export]
+requires:
+  shells: [sh]
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [FIRST]
+  do:
+    - exec: [blokky-testkit, env, BLOKKY_RUN_ID]
+      capture: { FIRST: .BLOKKY_RUN_ID }
+    - assert: { var: FIRST, not_equals: conf-stale-id }
+    - do:
+        - exec: [blokky-testkit, env, BLOKKY_RUN_ID]
+          capture: { SECOND: .BLOKKY_RUN_ID }
+    - script: |
+        test -n "$FIRST" && test "$FIRST" = "$SECOND"
+      shell: sh
+      export: [FIRST, SECOND]
+env:
+  BLOKKY_RUN_ID: conf-stale-id
+expect:
+  status: succeeded
+  id: { $regex: '.' }
+  outputs:
+    FIRST: { $regex: '.' }
+  nodes:
+    /do/3: { status: succeeded, exit_code: 0 }
+notes: >-
+  An unset variable would print null and capture as '' (VA-23). The inherited
+  value is replaced, because the variables Blokky sets come last (VA-39). The
+  script compares the two leaves' values, which conditions can't (their
+  operands are literals). Matchers can't compare FIRST with the result's id,
+  so the case checks that both are present and the leaves agree.
