@@ -8,9 +8,9 @@ This document defines how a plan is written: encoding, the YAML subset, the root
 
 The key words MUST, MUST NOT, REQUIRED, SHALL, SHALL NOT, SHOULD, SHOULD NOT, RECOMMENDED, MAY and OPTIONAL are to be interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) and [RFC 8174](https://www.rfc-editor.org/rfc/rfc8174) when, and only when, they appear in all capitals.
 
-- **SY-1.** A **plan error** is detected before anything runs, and prevents the run. Every plan error carries a code from [errors.md](errors.md), a line and column (of the offending key, or of its value when the value is what is wrong; for a missing key, of the key that requires it, such as `until` for a missing `max` or `timeout` (RF-5) or `if` for a missing `then`, and the subject key for a condition's missing operator, or, when no key requires it, of the mapping that lacks it), and, where this document says so, a corrected snippet. Lines are counted from 1 and end at LF, CRLF or a lone CR; columns are 1-based code points, and a UTF-8 BOM isn't counted. A quoted scalar is located at its opening quote, a block scalar (`|`, `>`) at the first character of its first content line (after the indentation), and an error inside a string value (a `${X}`, a regex) at the value's start. A missing value is located at its key. When two keys conflict, the later one in document order is reported. Errors about the whole text (encoding, size) are at line 1, column 1; the depth error is at the first node that is too deep ([ADR 0021](../adr/0021-wave-a-gaps.md)).
+- **SY-1.** A **plan error** is detected before anything runs, and prevents the run. Every plan error carries a code from [errors.md](errors.md), a line and column (of the offending key, or of its value when the value is what is wrong; for a missing key, of the key that requires it, such as `until` for a missing `max` or `timeout` (RF-5) or `if` for a missing `then`, and the subject key for a condition's missing operator, or, when no key requires it, of the mapping that lacks it), and, where this document says so, a corrected snippet. Lines are counted from 1 and end at LF, CRLF or a lone CR; columns are 1-based code points, and a UTF-8 BOM isn't counted. A quoted scalar is located at its opening quote, a block scalar (`|`, `>`) at the first character of its first content line (after the indentation), and an error inside a string value (a `${X}`, a regex) at the value's start. A missing value is located at its key. When two keys conflict, the later one in document order is reported. Errors about the whole text (encoding, size) are at line 1, column 1 ([ADR 0021](../adr/0021-wave-a-gaps.md)). Otherwise an error is located at the narrowest token that is wrong ([ADR 0025](../adr/0025-open-points.md)): a scope error at the variable name inside `{ var: X }`; a secret literal at its `secret` key; the depth error at the first key of the first node that is too deep; content after `...` at that content; an unset `from_env` in `vars` at the environment variable name; an `env`/`export` name conflict at the later of the two names; `for` without `as` at the `for` key.
 - **SY-2.** A **warning** points at something legal but likely wrong. Warnings never block a run by themselves; implementations decide how they are shown and whether users can tune them (for blokky-cli: lint rules).
-- **SY-3.** An implementation MUST report all plan errors it can find in one pass, not just the first. One mistake is one error: a rule here that restates a rule of [reference.md §8](reference.md#8-rules-beyond-the-schema) is reported as that `RF-n` rule ([errors.md §4](errors.md#4-plan-errors)), and a targeted error (SY-91) replaces the generic error for the same mistake. Where a rule of [conditions.md](conditions.md) restates a rule here, the rule here is reported: SY-91 over CO-4, SY-53 over CO-8.
+- **SY-3.** An implementation MUST report all plan errors it can find in one pass, not just the first. One mistake is one error with one rule ID ([errors.md §4](errors.md#4-plan-errors), [ADR 0025](../adr/0025-open-points.md)): a rule that restates a rule of [reference.md §8](reference.md#8-rules-beyond-the-schema) is reported as that `RF-n` rule. When no `RF-n` rule applies, the grammar or structure rule of this document is reported (SY-52 for names, SY-53 for booleans, SY-54 for integers, SY-56 and SY-57 for durations, SY-20 for empty values …), and a rule elsewhere that restates it (VA-4, VA-6, ER-1, SY-24, SY-25, SY-41, SY-42, CO-8 …) is reported as that `SY-n` rule. A targeted error (SY-91) changes the message, not the rule: it is reported with the ID of the generic rule it replaces (a string condition as CO-4).
 
 ## 2. Plan text
 
@@ -74,8 +74,8 @@ Each of these is a plan error:
 
 **SY-23.** There is no implicit typing. YAML 1.1 and 1.2 type resolution doesn't apply: `on`, `yes`, `no`, `null`, `~`, `0x10`, `1e3` and `1.10` are all strings. Each field then parses its string with the grammar in §6:
 
-- **SY-24.** in a **boolean** field, the value MUST be exactly `true` or `false`; `True`, `yes`, `on` and `1` are plan errors with a fix-it;
-- **SY-25.** in an **integer**, **duration** or **size** field, the value MUST match that grammar;
+- **SY-24.** in a **boolean** field, the value MUST be exactly `true` or `false`; `True`, `yes`, `on` and `1` are plan errors with a fix-it, reported as SY-53 (SY-3);
+- **SY-25.** in an **integer**, **duration** or **size** field, the value MUST match that grammar, and a mismatch is reported as that grammar's rule (SY-54, SY-56, SY-57 or SY-60; SY-3);
 - **SY-26.** in a **string** field, any scalar is taken as written (`version: 1.10` is the string `1.10`, not the number 1.1).
 
 **SY-27.** Quoting changes nothing about the type: `max: '3'` and `max: 3` are the same.
@@ -114,7 +114,7 @@ Each of these is a plan error:
 
 ### 4.1 Root
 
-**SY-32.** The root MUST be a single mapping. It holds the **plan-only keys** below plus exactly one **root node** (its kind and modifiers sit directly in the root mapping). A bare top-level list is a plan error whose fix-it wraps it in `do:`.
+**SY-32.** The root MUST be a single mapping. It holds the **plan-only keys** below plus exactly one **root node** (its kind and modifiers sit directly in the root mapping). A bare top-level list is a plan error, `BK_PLAN_VALUE` with rule SY-32, whose fix-it wraps it in `do:`.
 
 | Key | Required | Value |
 |---|---|---|
@@ -183,17 +183,17 @@ inputs:
     default: ''                                    # optional, may be blank
 ```
 
-**SY-41.** An input with no keys at all is written `NAME: { description: … }` or given a `default`; `NAME:` with no value is an empty value (§3.1).
+**SY-41.** An input with no keys at all is written `NAME: { description: … }` or given a `default`; `NAME:` with no value is an empty value (§3.1), reported as SY-20 (SY-3).
 
 ### 5.2 Rules
 
-- **SY-42.** Input names follow the variable-name grammar (§6.2).
+- **SY-42.** Input names follow the variable-name grammar (§6.2); a violation is reported as SY-52 (SY-3).
 - **SY-43.** **Strings only.** `default: 3` is the string `3`. There is no `type:` key.
 - **SY-44.** **Required is derived.** Without `default:` the input is required and its value MUST NOT be empty. There is no `required:` key.
 - **SY-45.** **At most one constraint:** `in:` or `matches:`, not both.
 - **SY-46.** **The `default` MUST satisfy the constraint.** A violation is a plan error.
 - **SY-47.** **Defaults are literal.** A reference (`default: { from_env: X }`) is a plan error.
-- **SY-48.** **No secret inputs.** `secret:` on an input is a plan error with a fix-it to `env: { X: { from_env: X, secret: true } }`.
+- **SY-48.** **No secret inputs.** `secret:` on an input is a plan error, `BK_PLAN_UNKNOWN_KEY` with the targeted message and a fix-it to `env: { X: { from_env: X, secret: true } }` (SY-91); like every unknown key, it carries no `detail.rule`.
 - **SY-49.** `description` MUST NOT contain `${`.
 - **SY-50.** Inputs bind into the plan scope that encloses the root node; they are used only through the variable forms of §7 and never reach literal fields.
 
@@ -282,7 +282,7 @@ How values are supplied, the value rules and the input error codes are in [varia
 - **SY-73.** `\` escapes the next character. There are no braces and no negation patterns: an unescaped `{` or `}` is a plan error, so `{a,b}` doesn't silently match a literal name.
 - **SY-74.** Matching is **ordinal and case-sensitive on every OS**, so a plan finds the same items everywhere; on case-insensitive file systems, `*.CS` doesn't match `Program.cs`.
 - **SY-99.** A glob matches files and directories, as shells do.
-- **SY-100.** `*` and `**` never enter or match an entry whose name starts with `.`, unless the pattern segment that matches it starts with `.` (`.*`, `.github`).
+- **SY-100.** `*`, `**`, `?` and character classes (`[…]`) never enter or match an entry whose name starts with `.`, unless the pattern segment that matches it starts with `.` (`.*`, `.github`): `?env` doesn't match `.env` ([ADR 0025](../adr/0025-open-points.md)).
 - **SY-101.** A symbolic link is matched as an entry, by its own name, but never followed into: `**` doesn't descend through a link to a directory.
 - **SY-102.** A literal `..` segment is a plan error (`BK_PLAN_VALUE`), so a pattern can't leave the cwd subtree.
 - **SY-75.** The other glob rules (sorting, the error on zero matches) are in [reference.md §5.7](reference.md#57-for).
@@ -484,7 +484,7 @@ How values are supplied, the value rules and the input error codes are in [varia
 
 ## 9. Targeted errors
 
-**SY-91.** Each of these plan errors names the problem and includes a corrected snippet, and replaces the generic error for the same mistake (SY-3). Codes are assigned in [errors.md](errors.md).
+**SY-91.** Each of these plan errors names the problem and includes a corrected snippet, and replaces the generic error message for the same mistake. SY-91 is about the message, not the rule ID: the error carries the code and `detail.rule` of the generic rule it replaces (SY-3). Codes are assigned in [errors.md](errors.md).
 
 | Mistake | Fix-it |
 |---|---|

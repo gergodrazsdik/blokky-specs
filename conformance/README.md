@@ -13,7 +13,7 @@ The suite tests what a plan means and what it can observe, independently of any 
 - **CF-1.** Cases are **implementation-independent**. They assert on the abstract run result ([results.md](../spec/results.md)) and on plan and input errors ([errors.md](../spec/errors.md)), never on an implementation's report format, messages, exit codes, file layout or configuration.
 - **CF-2.** Each implementation provides an **adapter** that runs a plan and maps its own output (for blokky-cli: the JSON run report) to the **result document** (§3.6), the form of the run result that cases are matched against. Mapping is the adapter's only job: it MUST NOT repair, reorder or infer anything the implementation didn't record.
 - **CF-3.** Cases never assert on human-readable messages (results.md §5) or on non-deterministic fields (results.md §6) except through the tolerances and matchers of this document.
-- **CF-4.** Cases don't depend on real tools. Every process a case starts is the testkit ([testkit-interface.md](testkit-interface.md)) or a shell the case lists under `requires` (§3.2).
+- **CF-4.** Cases don't depend on real tools. Every process a case starts is the testkit ([testkit-interface.md](testkit-interface.md)) or a shell the case lists under `requires` (§3.2); inside a `container`, also a program of the suite's pinned image (CF-66).
 - **CF-5.** Each case tests a small number of rules and cites them (§7). A case that fails points at the rules it cites.
 
 ## 2. Layout
@@ -98,13 +98,14 @@ New ids are added with the language features they name, in the same spec release
 | `container-engine` | `true`: a container engine is available, for `container`. |
 
 - **CF-13.** A case whose requirements aren't met is skipped with the reason `requirement: <key>`. Requirements never make a case pass.
+- **CF-66.** **Cases that start a container** list `requires: { container-engine: true }` and name one image, pinned by digest: `docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec` (busybox 1.37.0, a multi-arch index; it provides `sh`, `sleep` and `kill`, CP-36). The one exception is the CP-36 case for an image without them, which names `gcr.io/distroless/static-debian12@sha256:d75cdd72874d4790092fcb1b058493ecf6bb5bf2b2b897045b00ff01d91843f2`. Runners pull both before running the cases. Without a container engine, or without the image a case names, the case is skipped with `requirement: container-engine`. Validation cases that use `container` start nothing and need neither ([ADR 0025](../adr/0025-open-points.md)).
 - **CF-14.** Because `port` values and `lock` names are literal in plans, cases that use them MUST be unique suite-wide: ports come from the range 47000–47999 and are listed in `requires.ports`; lock names start with `conf-` followed by the case's file name. A runner MUST NOT run two cases that list the same port at the same time.
 
 ### 3.3 The plan
 
 - **CF-15.** `plan` holds the plan text exactly as it is passed to the implementation: a YAML literal block scalar (`plan: |`), so the plan's line numbers are the block's lines counted from 1. The plan is not parsed as part of the case file.
 - **CF-16.** Plans in cases use canonical forms: `blokky: 1.0`, argv arrays, block-scalar scripts, mappings in flow or block style as in the spec. A case that tests a non-canonical form (an `exec` string, a quoting pitfall) says so in its `title`.
-- **CF-17.** Programs are the testkit (`exec: [blokky-testkit, …]`), a testkit alias from `programs`, or a shell listed in `requires.shells`.
+- **CF-17.** Programs are the testkit (`exec: [blokky-testkit, …]`), a testkit alias from `programs`, or a shell listed in `requires.shells`; under `container`, programs of the pinned image (busybox: `sh`, `sleep`, `id`, `cat`, …, CF-66).
 
 ### 3.4 Inputs, environment, files and actions
 
@@ -358,6 +359,8 @@ Most modifiers can be combined on one node, and their order is fixed (EM-4). Tes
 | EM-56 | How far an implementation shortens `finally` during an external stop is its own choice. |
 | EM-32 | Its survivor clause only: the testkit can't make a process that survives a forced kill. The rest of EM-32 is cited by cases. |
 | CP-7 | Which engines an implementation supports is implementation-defined. |
+| CP-5 | Whether a container was removed is visible only to the engine's own CLI, which a case can't run. |
+| CP-37 | Labelling isn't visible to a process inside or outside the container in a portable way. |
 | SY-4 | How the plan text reaches the implementation is the adapter's concern (CF-53). |
 | SY-8 | Warnings have no codes and no result key in 1.0, so they can't be asserted. |
 | SY-31 | Covered by the runner's not-supported check (CF-12) for every case. |
@@ -371,6 +374,7 @@ Most modifiers can be combined on one node, and their order is fixed (EM-4). Tes
 | ER-2 | Code stability and how consumers treat unknown codes aren't observable in a run. |
 | RS-4 | Cases match mappings as subsets (CF-28), so extra recorded fields are never observed. |
 | VA-53 | Static views of a plan aren't part of the run result. |
+| CO-9 | Reported under RF-9 (errors.md §4). |
 | CO-10 | Reported under RF-14 (errors.md §4). |
 | CO-15 | Reported under RF-22 (errors.md §4). |
 | CO-32 | Advice to plan authors. |

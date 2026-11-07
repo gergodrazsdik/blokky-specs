@@ -30,8 +30,9 @@ ADRs are **grouped**: a baseline ADR, then one ADR per batch of answered open qu
 | [0020](0020-conformance-gaps.md) | Gaps found by the first conformance cases | accepted | — (F-0015) |
 | [0021](0021-wave-a-gaps.md) | Gaps found by the wave A conformance cases | accepted | — (F-0016) |
 | [0022](0022-wave-b-gaps.md) | Gaps found by the wave B conformance cases | accepted | — (F-0018) |
-| [0023](0023-wave-c-gaps.md) | Gaps found by the wave C conformance cases | accepted | — (F-0019) |
+| [0023](0023-wave-c-gaps.md) | Gaps found by the wave C conformance cases | accepted; K-1's "SY-91 over CO-4" superseded by 0025 | — (F-0019) |
 | [0024](0024-wave-d-gaps.md) | Gaps found by the wave D conformance cases | accepted | — (F-0020) |
+| [0025](0025-open-points.md) | Open points after the conformance waves | accepted | — (F-0017, F-0021) |
 
 ## Format
 

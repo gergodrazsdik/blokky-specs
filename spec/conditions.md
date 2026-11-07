@@ -18,7 +18,7 @@ A condition is a mapping in one of four forms:
 - **CO-1.** A **simple condition** has exactly one subject key and exactly one operator key, plus the optional modifiers `json:` and `ignore_case:`.
 - **CO-2.** A **bare probe** is a `probe:` subject with no operator; it is true or false by the probe's exit code (§5). It is the only form without an operator.
 - **CO-3.** A **composite** is `all: [ … ]`, `any: [ … ]` (non-empty lists of conditions) or `not: <condition>`.
-- **CO-4.** Anything else is a plan error with a targeted fix-it: a string (`if: "$X == 1"` → `{ var: X, equals: '1' }`), a missing subject or operator, two subjects, two operators, a node where a condition is expected, or a condition where a node list is expected. A mistake that has a targeted error in [syntax.md §9](syntax.md#9-targeted-errors) is reported as SY-91 (SY-3). A node used as a condition (`when: { exec: … }`) is `BK_PLAN_INVALID`, reported at the kind key ([ADR 0023](../adr/0023-wave-c-gaps.md)).
+- **CO-4.** Anything else is a plan error with a targeted fix-it: a string (`if: "$X == 1"` → `{ var: X, equals: '1' }`), a missing subject or operator, two subjects, two operators, a node where a condition is expected, or a condition where a node list is expected. A mistake that has a targeted error in [syntax.md §9](syntax.md#9-targeted-errors) gets that error's message and is still reported as CO-4 (SY-3, SY-91; [ADR 0025](../adr/0025-open-points.md)). A node used as a condition (`when: { exec: … }`) is `BK_PLAN_INVALID`, reported at the kind key ([ADR 0023](../adr/0023-wave-c-gaps.md)).
 
 ## 2. Subjects
 
