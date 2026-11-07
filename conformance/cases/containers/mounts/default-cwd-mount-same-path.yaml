@@ -1,0 +1,32 @@
+title: Without mounts, the cwd is mounted read-write at the same path and is the container cwd
+rules: [CP-9, CP-10, CP-14]
+features: [outputs, do, container, exec, capture]
+requires:
+  os: [linux, macos]
+  container-engine: true
+clock: [real]
+files:
+  marker.txt: from the host
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  do:
+    - container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+      do:
+        - exec: [sh, -c, 'cat marker.txt && echo made > made.txt']
+          capture: SEEN
+        - exec: [pwd]
+          capture: CONTAINER_CWD
+    - exec: [blokky-testkit, exit, '0', --cwd-check, { var: CONTAINER_CWD }]
+expect:
+  status: succeeded
+  outputs:
+    SEEN: from the host
+  nodes:
+    /do/1: { status: succeeded, exit_code: 0 }
+  files:
+    made.txt: { text: "made\n" }
+notes: >-
+  The host leaf passes the container cwd to --cwd-check, which exits with 125
+  unless it is the host leaf's own cwd, the work directory: on Linux and macOS
+  the mount path is the host path (CP-10).

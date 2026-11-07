@@ -1,0 +1,20 @@
+title: On a Windows host, the default mount path of a Linux container is the drive-letter path
+rules: [CP-10]
+features: [outputs, container, exec, capture]
+requires:
+  os: [windows]
+  container-engine: true
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [CONTAINER_CWD]
+  container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+  exec: [pwd]
+  capture: CONTAINER_CWD
+expect:
+  status: succeeded
+  outputs:
+    CONTAINER_CWD: { $regex: '^/[a-z]/[^:\\]*$' }
+notes: >-
+  The pinned image is a Linux image. The work directory C:\...\case maps to
+  /c/.../case: a lowercase drive letter and forward slashes.

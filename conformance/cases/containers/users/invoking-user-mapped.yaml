@@ -1,0 +1,30 @@
+title: The invoking user is mapped into the container
+rules: [CP-17]
+features: [do, exec, capture-fields, container, capture, export, script, shell-sh]
+requires:
+  os: [linux]
+  shells: [sh]
+  container-engine: true
+clock: [real]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, info]
+      capture: { HOST_UID: .uid }
+    - container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+      exec: [id, -u]
+      capture: CONTAINER_UID
+    - export: [HOST_UID, CONTAINER_UID]
+      shell: sh
+      script: |
+        test "$HOST_UID" = "$CONTAINER_UID"
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/2: { status: succeeded, exit_code: 0 }
+notes: >-
+  The pinned image's default user is root, so a uid equal to the host's shows
+  the mapping (rootless Podman --userns=keep-id, rootful Docker --user). CP-17
+  is provisional (verify in spike) and engine-dependent: it applies only "where
+  the engine allows it", so an engine without such mapping fails this case.

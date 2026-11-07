@@ -6,7 +6,7 @@ plan: |
   blokky: 1.0
   do:
     - sleep: 0s
-      container: { image: docker.io/library/alpine:3.20 }
+      container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
 expect:
   plan_errors:
     - code: BK_PLAN_INVALID

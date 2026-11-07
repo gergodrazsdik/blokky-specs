@@ -1,0 +1,19 @@
+title: A container mount can't use the tempdir variable its own node introduces
+rules: [RF-6]
+features: [tempdir, container, exec]
+plan: |
+  blokky: 1.0
+  tempdir: { as: WORK_DIR }
+  container:
+    image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+    mounts:
+      - { host: { var: WORK_DIR }, path: /conf-work }
+  exec: [sh, -c, 'exit 0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-6 }
+      line: 6
+      column: 22   # the variable the node introduces
+  exhaustive: true
+notes: The container is set up after the tempdir, but RF-6 keeps the modifiers outside repetition from using the node's own variables ("move it into the body").

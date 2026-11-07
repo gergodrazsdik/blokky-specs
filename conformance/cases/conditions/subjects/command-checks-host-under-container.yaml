@@ -1,0 +1,28 @@
+title: A command condition on a container node looks at the host, not the image
+rules: [CO-46]
+features: [if, cond-command, container, exec]
+programs:
+  conf-host-tool: [exit, '0']
+requires:
+  container-engine: true
+clock: [real]
+plan: |
+  blokky: 1.0
+  if: { command: conf-host-tool, exists: true }
+  container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+  then:
+    - exec: [sh, -c, 'exit 0']
+  else:
+    - exec: [sh, -c, 'exit 0']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /then/0: { status: succeeded }
+    /else/0: { status: skipped, skip_reason: not_taken }
+  invocations: []
+notes: >-
+  conf-host-tool is a testkit alias on the host's PATH (CF-21) and isn't in the
+  busybox image. The if condition is evaluated in the node's own scope, after
+  container (EM-8), yet command: still checks the host; a when would be
+  evaluated outside the container anyway (CP-18). Nothing runs the alias.

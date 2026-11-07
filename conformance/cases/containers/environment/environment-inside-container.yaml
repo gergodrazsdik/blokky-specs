@@ -1,0 +1,33 @@
+title: A container process gets env, export, env_pass and BLOKKY_RUN_ID, and nothing else from the host
+rules: [CP-16]
+features: [outputs, vars, env, export, container, script, shell-sh, capture]
+env:
+  CONF_PASSED: passed
+  CONF_HOST: host
+requires:
+  container-engine: true
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  vars:
+    CONF_EXPORTED: exported
+  env:
+    CONF_ENV: env
+  export: [CONF_EXPORTED]
+  container:
+    image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+    env_pass: [CONF_PASSED, CONF_UNSET]
+  shell: sh
+  script: |
+    echo "${CONF_ENV-unset} ${CONF_EXPORTED-unset} ${CONF_PASSED-unset} ${CONF_UNSET-unset} ${CONF_HOST-unset}"
+    case "${BLOKKY_RUN_ID-}" in '') echo no-run-id ;; *) echo run-id ;; esac
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: "env exported passed unset unset\nrun-id"
+notes: >-
+  CONF_UNSET isn't set in the environment the run starts with, so it isn't
+  passed and isn't an error. CONF_HOST is in that environment but not in
+  env_pass, so it stays outside.

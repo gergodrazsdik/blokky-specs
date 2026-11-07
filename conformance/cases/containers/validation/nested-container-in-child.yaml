@@ -1,0 +1,16 @@
+title: A container on a node inside another container's scope is a plan error
+rules: [CP-19]
+features: [container, do, exec]
+plan: |
+  blokky: 1.0
+  container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+  do:
+    - container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+      exec: [sh, -c, 'exit 0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: CP-19 }
+      line: 4      # the inner container
+      column: 5
+  exhaustive: true

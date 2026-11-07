@@ -1,0 +1,20 @@
+title: A container cwd that doesn't exist in the container fails the node
+rules: [CP-14]
+spec: [reference.md§4.6]
+features: [cwd, container, exec]
+requires:
+  os: [linux, macos]
+  container-engine: true
+clock: [real]
+plan: |
+  blokky: 1.0
+  cwd: /conf-missing
+  container:
+    image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+    mounts: []
+  exec: [pwd]
+expect:
+  status: failed
+  error: { code: BK_CWD_INVALID, node: / }
+  nodes:
+    /: { status: failed }

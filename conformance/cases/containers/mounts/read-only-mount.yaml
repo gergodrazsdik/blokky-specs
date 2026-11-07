@@ -1,0 +1,26 @@
+title: A read_only mount can be read but not written
+rules: [CP-13]
+features: [container, do, exec]
+requires:
+  container-engine: true
+clock: [real]
+files:
+  marker.txt: from the host
+plan: |
+  blokky: 1.0
+  container:
+    image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+    mounts:
+      - { host: ., path: /conf-work, read_only: true }
+  do:
+    - exec: [cat, marker.txt]
+    - exec: [sh, -c, 'echo made > made.txt']
+expect:
+  status: failed
+  error: { code: BK_EXIT, node: /do/1 }
+  nodes:
+    /do/0: { status: succeeded, exit_code: 0 }
+    /do/1: { status: failed }
+  files:
+    made.txt: { exists: false }
+notes: The work directory, the node's cwd, maps to /conf-work through the read-only mount (CP-14).

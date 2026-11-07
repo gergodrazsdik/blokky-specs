@@ -1,0 +1,35 @@
+title: The image and a mount's container path are literal and take no variables
+rules: [RF-9]
+spec: [syntax.md§7.4]
+features: [vars, do, container, exec]
+plan: |
+  blokky: 1.0
+  vars:
+    IMAGE: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+    MOUNT_PATH: /conf-work
+  do:
+    - container: { image: { var: IMAGE } }
+      exec: [sh, -c, 'exit 0']
+    - container: { image: '${IMAGE}' }
+      exec: [sh, -c, 'exit 0']
+    - container:
+        image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+        mounts:
+          - { host: ., path: { var: MOUNT_PATH } }
+      exec: [sh, -c, 'exit 0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-9 }
+      line: 6
+      column: 25
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-9 }   # RF-9 over RF-27 for ${…} in a literal field (errors.md §4)
+      line: 8
+      column: 25   # the opening quote (SY-1)
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-9 }
+      line: 13
+      column: 28
+  exhaustive: true
+notes: container.image and container.mounts[].path are L in the per-field table; only mounts[].host takes { var }.

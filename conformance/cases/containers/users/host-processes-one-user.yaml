@@ -1,0 +1,27 @@
+title: Every host process of a plan runs as the same user, with no switch
+rules: [CP-39]
+features: [do, exec, capture-fields, env, export, script, shell-sh]
+requires:
+  os: [linux, macos]
+  shells: [sh]
+clock: [real]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, info]
+      capture: { FIRST_UID: .uid, FIRST_EUID: .euid }
+    - env: { CONF_OTHER: other }
+      exec: [blokky-testkit, info]
+      capture: { SECOND_UID: .uid }
+    - export: [FIRST_UID, FIRST_EUID, SECOND_UID]
+      shell: sh
+      script: |
+        test "$FIRST_UID" = "$FIRST_EUID" && test "$FIRST_UID" = "$SECOND_UID" && test "$FIRST_UID" = "$(id -u)"
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/2: { status: succeeded, exit_code: 0 }
+notes: >-
+  The case can't name the user Blokky runs as, so it checks that the exec
+  leaves and the script's shell share one real and effective uid.

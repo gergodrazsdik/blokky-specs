@@ -1,0 +1,26 @@
+title: The leaves of a container node share one container, and another node gets a fresh one
+rules: [CP-3, CP-4]
+features: [do, container, exec]
+requires:
+  container-engine: true
+clock: [real]
+plan: |
+  blokky: 1.0
+  do:
+    - container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+      do:
+        - exec: [sh, -c, 'echo shared > /tmp/conf-shared']
+        - exec: [test, -f, /tmp/conf-shared]
+    - container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+      exec: [test, '!', -e, /tmp/conf-shared]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0/do/1: { status: succeeded, exit_code: 0 }
+    /do/1: { status: succeeded, exit_code: 0 }
+notes: >-
+  /tmp is in the container's own filesystem, not a mount. The second leaf sees
+  the first one's file because both run in the node's container; the second
+  node starts its own ephemeral container from the image, which has no such
+  file.

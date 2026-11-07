@@ -1,0 +1,20 @@
+title: A program that exists only on the host isn't found inside the container
+rules: [CP-15]
+features: [container, exec]
+requires:
+  container-engine: true
+clock: [real]
+plan: |
+  blokky: 1.0
+  container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: failed
+  error: { node: / }
+  nodes:
+    /: { status: failed }
+  invocations: []
+notes: >-
+  The testkit is on the host's PATH but not in the image; argv[0] resolves
+  inside (the engine's lookup), so the host's testkit never runs. Which error
+  code the failed lookup gets isn't specified, so only the status is asserted.
