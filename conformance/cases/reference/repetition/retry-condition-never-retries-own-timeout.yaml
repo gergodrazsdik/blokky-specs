@@ -1,0 +1,26 @@
+title: The retrying node's own timeout is never retried, even by a condition matching BK_TIMEOUT_TOTAL
+rules: [EM-53]
+spec: [reference.md§5.5, errors.md§5.2]
+features: [exec, retry-condition, cond-result, timeout]
+plan: |
+  blokky: 1.0
+  timeout: 1s
+  retry: { result: error, equals: BK_TIMEOUT_TOTAL }
+  max: 3
+  every: 0s
+  exec: [blokky-testkit, sleep, 30s]
+expect:
+  status: failed
+  error:
+    code: BK_TIMEOUT_TOTAL
+    node: /
+    causes:
+      - { code: BK_CANCELLED }   # the interrupted attempt is the last one (EM-53)
+  nodes:
+    /:
+      status: timed_out
+      killed_by: timeout
+      repetition: { count: 1, ended_by: timeout }
+  invocations:
+    - { argv: [sleep, 30s] }
+  duration: { $min: 1s, $max: 10s }

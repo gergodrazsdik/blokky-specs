@@ -1,0 +1,25 @@
+title: A retry condition sees a descendant's BK_TIMEOUT_TOTAL inside an attempt and retries it
+spec: [reference.md§5.5, errors.md§5.2]
+features: [do, exec, retry-condition, cond-result, timeout]
+plan: |
+  blokky: 1.0
+  retry: { result: error, equals: BK_TIMEOUT_TOTAL }
+  max: 2
+  every: 0s
+  do:
+    - timeout: 1s
+      exec: [blokky-testkit, sleep, 30s]
+expect:
+  status: failed
+  error:
+    code: BK_RETRIES_EXHAUSTED
+    node: /
+    causes:
+      - { code: BK_TIMEOUT_TOTAL, node: /do/0 }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 2, ended_by: max, last_condition: true }
+  invocations:
+    - { argv: [sleep, 30s] }
+    - { argv: [sleep, 30s] }

@@ -1,0 +1,25 @@
+title: every waits between the end of one attempt and the start of the next
+spec: [reference.md§5.3, reference.md§5.4]
+features: [vars, assert, cond-var, retry-condition, cond-result]
+clock: [virtual, scaled, real]
+plan: |
+  blokky: 1.0
+  vars:
+    X: a
+  retry: { result: error, equals: BK_ASSERT }
+  max: 3
+  every: 3s
+  assert: { var: X, equals: b }
+expect:
+  status: failed
+  error:
+    code: BK_RETRIES_EXHAUSTED
+    node: /
+    causes:
+      - { code: BK_ASSERT }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 3, ended_by: max }
+  duration: { $min: 6s, $max: 12s }
+notes: Three attempts, two 3s delays between them.

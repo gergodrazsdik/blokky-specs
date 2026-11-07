@@ -1,0 +1,20 @@
+title: There is no every delay before the first iteration, nor after the last
+spec: [reference.md§5.3]
+features: [vars, do, log, until, cond-var]
+clock: [virtual, scaled, real]
+plan: |
+  blokky: 1.0
+  vars:
+    X: a
+  until: { var: X, equals: a }
+  max: 3
+  every: 10s
+  do:
+    - log: tick
+expect:
+  status: succeeded
+  nodes:
+    /:
+      status: succeeded
+      repetition: { count: 1, ended_by: condition, last_condition: true }
+  duration: { $max: 2s }

@@ -1,0 +1,24 @@
+title: jitter keeps each delay between (1 − J) and 1 times its value
+spec: [reference.md§5.3]
+features: [vars, assert, cond-var, retry-condition, cond-result, jitter]
+clock: [virtual, scaled, real]
+plan: |
+  blokky: 1.0
+  vars:
+    X: a
+  retry: { result: error, equals: BK_ASSERT }
+  max: 3
+  every: 4s
+  jitter: 0.5
+  assert: { var: X, equals: b }
+expect:
+  status: failed
+  error: { code: BK_RETRIES_EXHAUSTED, node: / }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 3, ended_by: max }
+  duration: { $min: 4s, $max: 16s }
+notes: >-
+  Each of the two 4s delays is multiplied by a value in [0.5, 1], so they total
+  4s to 8s. Only bounds are asserted, never the drawn values (CF-41).

@@ -1,0 +1,17 @@
+title: defaults.leaf_timeout doesn't apply to a leaf with its own timeout
+rules: [SY-37]
+spec: [execution-model.md§5]
+features: [defaults, exec, timeout]
+plan: |
+  blokky: 1.0
+  defaults:
+    leaf_timeout: 1s
+  timeout: 20s
+  exec: [blokky-testkit, sleep, 2s]
+expect:
+  status: succeeded
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 0
+  duration: { $min: 2s, $max: 10s }

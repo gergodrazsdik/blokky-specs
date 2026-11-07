@@ -1,0 +1,21 @@
+title: every 0s removes the delay between attempts
+spec: [reference.md§5.3]
+features: [vars, assert, cond-var, retry-condition, cond-result]
+clock: [virtual, scaled, real]
+plan: |
+  blokky: 1.0
+  vars:
+    X: a
+  retry: { result: error, equals: BK_ASSERT }
+  max: 5
+  every: 0s
+  assert: { var: X, equals: b }
+expect:
+  status: failed
+  error: { code: BK_RETRIES_EXHAUSTED, node: / }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 5, ended_by: max }
+  duration: { $max: 2s }
+notes: With the default every (1s), the four delays would take 4s.

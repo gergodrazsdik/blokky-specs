@@ -1,0 +1,26 @@
+title: attempt_timeout covers the attempt's body only, not the every wait before the next attempt
+spec: [reference.md§4.12, reference.md§5.3]
+features: [vars, assert, cond-var, retry-condition, cond-result, attempt-timeout]
+clock: [virtual, scaled, real]
+plan: |
+  blokky: 1.0
+  vars:
+    X: a
+  retry: { result: error, equals: BK_ASSERT }
+  max: 2
+  every: 3s
+  attempt_timeout: 1s
+  assert: { var: X, equals: b }
+expect:
+  status: failed
+  error:
+    code: BK_RETRIES_EXHAUSTED
+    node: /
+    causes:
+      - { code: BK_ASSERT }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 2, ended_by: max }
+  duration: { $min: 3s, $max: 6s }
+notes: The 3s wait is longer than the 1s attempt_timeout, yet no attempt fails with BK_TIMEOUT_ATTEMPT.

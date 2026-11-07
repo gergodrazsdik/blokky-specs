@@ -1,0 +1,19 @@
+title: Without every, attempts are 1s apart
+spec: [reference.md§5.2, reference.md§5.3]
+features: [vars, assert, cond-var, retry-condition, cond-result]
+clock: [virtual, scaled, real]
+plan: |
+  blokky: 1.0
+  vars:
+    X: a
+  retry: { result: error, equals: BK_ASSERT }
+  max: 3
+  assert: { var: X, equals: b }
+expect:
+  status: failed
+  error: { code: BK_RETRIES_EXHAUSTED, node: / }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 3, ended_by: max }
+  duration: { $min: 2s, $max: 4s }

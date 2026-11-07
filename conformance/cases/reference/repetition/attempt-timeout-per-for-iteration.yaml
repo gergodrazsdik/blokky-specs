@@ -1,0 +1,34 @@
+title: attempt_timeout on for limits each iteration separately
+rules: [EM-27]
+spec: [reference.md§4.12, reference.md§5.2]
+features: [for-each, exec, attempt-timeout]
+clock: [real]   # the 1s margin under the limit includes process start-up
+plan: |
+  blokky: 1.0
+  for: { each: [2s, 2s, 30s], as: D }
+  attempt_timeout: 3s
+  exec: [blokky-testkit, sleep, { var: D }]
+expect:
+  status: failed
+  error: { code: BK_TIMEOUT_ATTEMPT, node: / }
+  nodes:
+    /:
+      status: timed_out
+      repetition:
+        count: 3
+        ended_by: items
+        entries:
+          - { index: 0, item: 2s, status: succeeded }
+          - { index: 1, item: 2s, status: succeeded }
+          - { index: 2, item: 30s, status: timed_out, error: { code: BK_TIMEOUT_ATTEMPT } }
+  invocations:
+    - { argv: [sleep, 2s] }
+    - { argv: [sleep, 2s] }
+    - { argv: [sleep, 30s] }
+  duration: { $min: 7s, $max: 14s }
+notes: >-
+  The first two iterations take 4s together, more than the 3s limit, and still
+  succeed; the third is ended after 3s. The failed loop carries the iteration's
+  error and, since
+  that is its own attempt_timeout's code, is timed_out (EM-27). It ran every
+  item, so ended_by is items.

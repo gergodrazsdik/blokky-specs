@@ -1,0 +1,30 @@
+title: An every wait between attempts ends at once when the node's timeout fires
+rules: [EM-28, EM-53]
+spec: [reference.md§5.3]
+features: [vars, assert, cond-var, retry-condition, cond-result, timeout]
+clock: [virtual, scaled, real]
+plan: |
+  blokky: 1.0
+  vars:
+    X: a
+  timeout: 1s
+  retry: { result: error, equals: BK_ASSERT }
+  max: 2
+  every: 30s
+  assert: { var: X, equals: b }
+expect:
+  status: failed
+  error:
+    code: BK_TIMEOUT_TOTAL
+    node: /
+    causes:
+      - { code: BK_ASSERT }
+  nodes:
+    /:
+      status: timed_out
+      repetition: { count: 1, ended_by: timeout }
+  duration: { $min: 1s, $max: 3s }
+notes: >-
+  Attempt 1 fails at once and the condition asks for a retry; the timeout fires
+  1s into the 30s wait, so attempt 2 never starts. BK_TIMEOUT_TOTAL nests the
+  last attempt's error (EM-53).

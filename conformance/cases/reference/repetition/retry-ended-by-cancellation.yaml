@@ -1,0 +1,31 @@
+title: A retry loop cancelled during its every wait ends with ended_by cancelled and counts the attempts so far
+rules: [EM-28, EM-33]
+spec: [reference.md§5.3]
+features: [vars, all, do, sleep, assert, cond-var, retry-condition, cond-result, fail]
+clock: [virtual, scaled, real]
+plan: |
+  blokky: 1.0
+  vars:
+    X: a
+  all:
+    - retry: { result: error, equals: BK_ASSERT }
+      max: 3
+      every: 30s
+      assert: { var: X, equals: b }
+    - do:
+        - sleep: 1s
+        - fail: stop the retry
+expect:
+  status: failed
+  error: { code: BK_FAIL, node: /all/1/do/1 }
+  nodes:
+    /all/0:
+      status: cancelled
+      error: { code: BK_CANCELLED, node: /all/0 }
+      repetition: { count: 1, ended_by: cancelled }
+    /all/1: { status: failed }
+  duration: { $min: 1s, $max: 3s }
+notes: >-
+  Attempt 1 fails at once and the retry waits 30s; 1s later the sibling fails
+  and fail_fast cancels the retry in its wait (EM-28), so no further attempt
+  starts (EM-33).

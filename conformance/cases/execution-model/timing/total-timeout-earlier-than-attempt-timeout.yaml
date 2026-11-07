@@ -1,0 +1,28 @@
+title: A node's timeout earlier than its attempt_timeout fires first, ends the node and isn't retried
+rules: [EM-25, EM-27, EM-53]
+spec: [reference.md§4.3, reference.md§5.5]
+features: [exec, retry, timeout, attempt-timeout]
+plan: |
+  blokky: 1.0
+  timeout: 1s
+  retry: true
+  max: 3
+  every: 0s
+  attempt_timeout: 20s
+  exec: [blokky-testkit, sleep, 30s]
+expect:
+  status: failed
+  error:
+    code: BK_TIMEOUT_TOTAL
+    node: /
+    causes:
+      - { code: BK_CANCELLED }   # the interrupted attempt is the last one (EM-53)
+  nodes:
+    /:
+      status: timed_out
+      killed_by: timeout
+      error: { code: BK_TIMEOUT_TOTAL, node: / }
+      repetition: { count: 1, ended_by: timeout }
+      duration: { $min: 1s, $max: 10s }
+  invocations:
+    - { argv: [sleep, 30s] }

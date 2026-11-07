@@ -1,0 +1,23 @@
+title: attempt_timeout doesn't cover the loop's condition, whose probe has its own limit
+spec: [reference.md§4.12]
+features: [do, log, until, cond-probe, attempt-timeout]
+clock: [real]
+plan: |
+  blokky: 1.0
+  until: { probe: { exec: [blokky-testkit, sleep, 2s] } }
+  max: 2
+  attempt_timeout: 1s
+  do:
+    - log: tick
+expect:
+  status: succeeded
+  nodes:
+    /:
+      status: succeeded
+      repetition: { count: 1, ended_by: condition, last_condition: true }
+      probes:
+        - { exit_code: 0, result: true }
+  invocations:
+    - { argv: [sleep, 2s] }
+  duration: { $min: 2s, $max: 10s }
+notes: The probe runs for 2s after the iteration's body, beyond the 1s attempt_timeout, and isn't stopped.

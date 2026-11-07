@@ -1,0 +1,45 @@
+title: When an attempt_timeout fires, the attempt's process gets one graceful stop request, then is killed after the grace period
+rules: [EM-26, EM-27, EM-43]
+spec: [reference.md§4.12]
+features: [exec, retry, attempt-timeout]
+clock: [real]   # the testkit must have installed its handler before the limit fires
+plan: |
+  blokky: 1.0
+  retry: true
+  max: 1
+  attempt_timeout: 1s
+  exec: [blokky-testkit, sleep, 1m, --ignore-term, --record-signals, signals.txt]
+expect:
+  status: failed
+  error:
+    code: BK_RETRIES_EXHAUSTED
+    node: /
+    causes:
+      - { code: BK_TIMEOUT_ATTEMPT }
+  nodes:
+    /:
+      status: failed
+      killed_by: attempt_timeout
+      repetition:
+        count: 1
+        ended_by: max
+        entries:
+          - { index: 0, status: timed_out, error: { code: BK_TIMEOUT_ATTEMPT } }
+      duration: { $min: 6s, $max: 14s }   # 1s limit + 5s grace
+  files:
+    signals.txt: { text: "SIGTERM\n" }
+  invocations:
+    - { argv: [sleep, 1m, --ignore-term, --record-signals, signals.txt] }
+platforms:
+  unix:
+    expect:
+      nodes:
+        /: { signal: SIGKILL }
+  windows:
+    expect:
+      files:
+        signals.txt: { text: "CTRL_BREAK\n" }
+notes: >-
+  The process ignores the request and records it, so only the forced kill
+  after the grace period ends it. With max 1 the retried BK_TIMEOUT_ATTEMPT
+  exhausts the attempts (reference.md §5.4).

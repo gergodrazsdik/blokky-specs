@@ -1,0 +1,24 @@
+title: defaults.leaf_timeout doesn't limit a retrying leaf as a whole, so delays may take it past the limit
+spec: [execution-model.md§5, reference.md§4.3]
+features: [defaults, exec, retry]
+clock: [real]   # each attempt's margin under the 1s limit includes process start-up
+plan: |
+  blokky: 1.0
+  defaults:
+    leaf_timeout: 1s
+  retry: true
+  max: 3
+  every: 1s
+  exec: [blokky-testkit, flaky, --state, attempts.txt, --fail-times, '2']
+expect:
+  status: succeeded
+  nodes:
+    /:
+      status: succeeded
+      repetition: { count: 3, ended_by: success }
+  invocations:
+    - { argv: [flaky, --state, attempts.txt, --fail-times, '2'] }
+    - { argv: [flaky, --state, attempts.txt, --fail-times, '2'] }
+    - { argv: [flaky, --state, attempts.txt, --fail-times, '2'] }
+  duration: { $min: 2s, $max: 6s }
+notes: The two 1s delays alone exceed the 1s leaf_timeout; only each attempt is limited.

@@ -1,0 +1,21 @@
+title: every also waits between until iterations, and reaching max fails with BK_LOOP_MAX_REACHED
+spec: [reference.md§5.3, reference.md§5.6]
+features: [vars, do, log, until, cond-var]
+clock: [virtual, scaled, real]
+plan: |
+  blokky: 1.0
+  vars:
+    X: a
+  until: { var: X, equals: b }
+  max: 3
+  every: 2s
+  do:
+    - log: tick
+expect:
+  status: failed
+  error: { code: BK_LOOP_MAX_REACHED, node: / }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 3, ended_by: max, last_condition: false }
+  duration: { $min: 4s, $max: 8s }
