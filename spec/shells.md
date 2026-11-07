@@ -67,7 +67,7 @@ The `powershell` invocation passes `-ExecutionPolicy Bypass` so a plan's script 
 ### 2.3 Choosing the shell
 
 - **SH-21.** A `script` leaf's (or script probe's) shell is, in order: its own `shell:`, `defaults.shell`, the implementation's configuration (if it has one), then detection.
-- **SH-22.** **Detection** is fixed and deterministic: on Unix, `bash` if it resolves on `PATH`, else `sh` (`$SHELL` is never consulted); on Windows, `pwsh`, else `powershell`.
+- **SH-22.** **Detection** is fixed and deterministic: on Unix, `bash` if it resolves on `PATH`, else `sh` (`$SHELL` is never consulted); on Windows, `pwsh`, else `powershell`. For a container leaf, detection runs inside the image, in the same order: `bash`, else `sh` (CP-15).
 - **SH-23.** A reached `script` whose shell isn't supported on the current OS (§5), or can't be resolved, fails the node. Statically false `host:` branches are pruned before this check, so portable plans work.
 
 ## 3. A leaf's environment

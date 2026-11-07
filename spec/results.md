@@ -8,7 +8,7 @@ This document defines the **run result**: the abstract outcome of a run that eve
 
 - **RS-1.** Every run that reaches execution ends with a run result (EM-3). A run that fails validation ends with its plan and input errors instead (EM-1, EM-2).
 - **RS-2.** The run result contains no secret value: secrets are masked as described in [variables.md §9](variables.md#9-secrets), and secret outputs are marked without a value.
-- **RS-3.** Nodes appear in plan order, as a tree mirroring the plan. Only the fields listed as non-deterministic (§6) may differ between two runs of the same plan with the same inputs and the same process behaviour.
+- **RS-3.** Nodes appear in plan order, as a tree mirroring the plan, except below a node whose `when` was false or failed (RS-7, RS-8). Only the fields listed as non-deterministic (§6) may differ between two runs of the same plan with the same inputs and the same process behaviour.
 - **RS-4.** Implementations MAY record more than this document lists; conformance cases assert only on what is listed here.
 
 ## 2. The run
@@ -36,7 +36,7 @@ This document defines the **run result**: the abstract outcome of a run that eve
 | ignored | failed and timed-out nodes | `true` when `ignore_errors` hid the failure from the parent; absent otherwise. |
 | skip reason | skipped nodes | `condition`, `not_reached`, `returned`, `pruned` (a `host:` condition was false, CO-7), or `not_taken` (the branch of an `if` that didn't run, unless a `host:` condition decided it: then `pruned`). |
 | error | failed, timed out, cancelled | The node's error (§5). |
-| repetition | `retry`, `while`, `until`, `for` | The number of attempts or iterations, including one that was cancelled; what ended them (`ended_by`: `success` for `retry`; `condition` for `while`/`until`; `items` for a `for` that ran all its items, even if some failed; or `max`, `timeout`, `cancelled` (cancellation or an external stop), or `failure`, which includes a `for` stopped by `fail_fast` and a condition error that ended the repetition, CO-40); the last condition result (`true`, `false`, `error`); and for each attempt or iteration its index, rendered name, item, status and error (an entry ended by `attempt_timeout` is `timed_out`, EM-27). Entries are listed in index order. |
+| repetition | `retry`, `while`, `until`, `for` | The number of attempts or iterations, including one that was cancelled (a node that passed its `when` and failed before its first attempt or iteration, in a layer outside repetition (EM-63) or while evaluating its items (`BK_GLOB_EMPTY`, `BK_ITEMS_TOO_MANY`, `BK_ITEMS_INVALID`), records `count: 0` and `ended_by: failure`); what ended them (`ended_by`: `success` for `retry`; `condition` for `while`/`until`; `items` for a `for` that ran all its items, even if some failed; or `max`, `timeout`, `cancelled` (cancellation or an external stop), or `failure`, which includes a `for` stopped by `fail_fast` and a condition error that ended the repetition, CO-40); the last condition result (`true`, `false`, `error`); and for each attempt or iteration its index, rendered name, item, status and error (an entry ended by `attempt_timeout` is `timed_out`, EM-27; an entry interrupted by the node's own `timeout` is `cancelled`, EM-53). Entries are listed in index order. |
 | children | groups, `if` | The children's results, in plan order. |
 | finally | nodes with `finally` | The `finally` list's results and its status. |
 | lock wait | nodes with `lock` | How long the node waited for its lock. |
@@ -51,7 +51,7 @@ This document defines the **run result**: the abstract outcome of a run that eve
 | Field | Meaning |
 |---|---|
 | program | The resolved absolute path of argv[0] or of the shell, as found on `PATH` or against the cwd; symbolic links aren't followed (SH-29). |
-| invocation | The argv as run (masked), including the shell invocation for `script`. For `exec`, element 0 is argv[0] as written (`program` holds the resolved path); for `script`, element 0 is the resolved shell path. |
+| invocation | The argv as run (masked), including the shell invocation for `script`. For `exec`, element 0 is argv[0] as written (`program` holds the resolved path); for `script`, element 0 is the resolved shell path. For a container leaf, it is the argv run inside the container, not the engine command that starts it (CP-38). |
 | cwd | The leaf's working directory (on the host; for a container leaf, also the container path). |
 | exit code | The exit code (an unsigned 32-bit value on Windows), if the process exited. |
 | signal | The terminating signal (Unix), if any. |
@@ -60,7 +60,7 @@ This document defines the **run result**: the abstract outcome of a run that eve
 | descendants held output | Whether a descendant kept the output open after the leaf completed (EM-20). |
 | survivors | Processes still alive after a join's reap timeout (EM-32). |
 | left running | For `keep_descendants: detach`: the processes left running after the run (program and process id, EM-22). |
-| container | The engine, image digest and container id (CP-6), and whether labelling was disabled for Blokky's mounts (CP-37). |
+| container | For a container leaf: `{ engine, image_digest, id, labelling_disabled }`: the engine, the image digest and the container id (CP-6), and whether labelling was disabled for Blokky's mounts (CP-37). |
 
 How much of a leaf's output the run result keeps (if any) is implementation-defined; conformance cases assert on output only through captures, `result:` conditions and outputs.
 
@@ -68,6 +68,8 @@ How much of a leaf's output the run result keeps (if any) is implementation-defi
 
 - **RS-5.** Node statuses and their propagation are defined in [execution-model.md §8](execution-model.md#8-status); the run status in EM-50.
 - **RS-6.** A node that never started has its id, kind, name (if set), status `skipped` and skip reason, plus the probes its `when` ran (CO-31), and no other result fields: no duration, error or bindings.
+- **RS-7.** **A node skipped by its `when`** appears alone: its id, kind, name (if set), status `skipped`, skip reason `condition` and its `when` probes (RS-6). Its descendants and its `finally` nodes don't appear in the run result ([ADR 0026](../adr/0026-runtime-edge-cases.md)).
+- **RS-8.** **A node that failed in its `when`** (a condition error, EM-47) records its id, kind, name (if set), status `failed` (with `ignored` when `ignore_errors` applies), its error and its `when` probes, and no other result fields. Its descendants and its `finally` nodes don't appear, as in RS-7.
 
 ## 5. Errors
 
