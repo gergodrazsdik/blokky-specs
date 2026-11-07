@@ -1,0 +1,18 @@
+# Polling a JSON health endpoint
+# `until` with `result: stdout` and `json:` polls until a field has a value. A
+# response that isn't the expected JSON yet (an empty body, {"starting": true})
+# counts as "not done yet", like a failed attempt under the default
+# `on_body_failure: continue`; when the loop gives up, the last condition error
+# is the cause. Read-only. Needs curl and a service on the given URL.
+# Run: blokky run examples/basics/until-json-poll.blokky.yaml --input URL=http://127.0.0.1:8080/healthz
+blokky: 1.0
+inputs:
+  URL:
+    description: Health endpoint that returns JSON with a status field
+    matches: '^https?://[A-Za-z0-9.:/_-]+$'
+name: wait until ${URL} reports ok
+exec: [curl, -fsS, { var: URL }]
+until: { result: stdout, json: .status, equals: ok }
+every: 2s
+attempt_timeout: 10s
+timeout: 2m

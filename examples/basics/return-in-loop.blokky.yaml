@@ -1,0 +1,19 @@
+# return in a loop body and an if branch
+# In a loop body, `return` ends the current iteration (like `continue`) and the
+# loop goes on. `then` and `else` are transparent: a `return` in a branch ends
+# the sequence that contains the `if`, here the loop body. Syntax-checks the
+# JavaScript files changed on this branch, skipping minified ones. Read-only.
+# Needs git and Node.js.
+# Run: blokky run examples/basics/return-in-loop.blokky.yaml
+blokky: 1.0
+do:
+  - exec: [git, diff, --name-only, --diff-filter=ACMR, origin/main...HEAD, --, '*.js']
+    capture: FILES
+  - name: check ${FILE}
+    for: { lines: { var: FILES }, as: FILE, fail_fast: false }
+    do:
+      - if: { var: FILE, matches: '\.min\.js$' }
+        then:
+          - log: "Skipping minified ${FILE}"
+          - return: "minified"
+      - exec: [node, --check, { var: FILE }]

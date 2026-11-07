@@ -26,6 +26,7 @@ For the rules behind each feature, see the [reference](../spec/reference.md). Th
 | [cwd-nesting](basics/cwd-nesting.blokky.yaml) | `cwd` inherited and resolved through nesting |
 | [tempdir](basics/tempdir.blokky.yaml) | a temp dir owned by the run, removed when the node succeeds |
 | [return-early](basics/return-early.blokky.yaml) | `return`: end a sequence early |
+| [return-in-loop](basics/return-in-loop.blokky.yaml) | `return` in a loop body (next iteration) and in an `if` branch |
 
 ### Leaves and shells
 
@@ -71,12 +72,14 @@ For the rules behind each feature, see the [reference](../spec/reference.md). Th
 | [for-each](basics/for-each.blokky.yaml) | `for` over a list |
 | [for-items-fields](basics/for-items-fields.blokky.yaml) | `for` over JSON `items` with `fields` |
 | [for-lines](basics/for-lines.blokky.yaml) | `for` over `lines`, with and without `keep_blank` |
-| [for-glob](basics/for-glob.blokky.yaml) | `for` over a `glob` |
+| [for-glob](basics/for-glob.blokky.yaml) | `for` over a `glob`, with `max_items` |
 | [for-matrix](basics/for-matrix.blokky.yaml) | `for` over a `matrix` |
 | [for-collect](basics/for-collect.blokky.yaml) | `collect`: gather a capture from every iteration |
 | [while-batches](basics/while-batches.blokky.yaml) | `while`: work in batches while any work is left |
+| [while-carry](basics/while-carry.blokky.yaml) | `while` with `carry`, `index` and `collect`: walk history to the last tag |
 | [until-polling](basics/until-polling.blokky.yaml) | `until`: poll until a condition holds |
-| [until-pagination](basics/until-pagination.blokky.yaml) | `carry`, `collect` and `index`: follow a cursor page by page |
+| [until-json-poll](basics/until-json-poll.blokky.yaml) | `until` on a JSON field; a non-JSON response means "not done yet" |
+| [until-pagination](basics/until-pagination.blokky.yaml) | Pagination with a cursor: `carry` passes `next` to the next page, `collect` gathers the pages, `index` numbers them |
 
 ### Retries, time and concurrency
 
