@@ -1,0 +1,49 @@
+title: Case-insensitive matching maps dotless i to I, folds classes before negating them, and leaves \w alone
+rules: [CO-12, SY-61]
+spec: [syntax.md§6.7]
+features: [vars, do, when, log, cond-var]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    DOTLESS_I: 'ı'
+    DOTTED_I: 'İ'
+    LONG_S: 'ſ'
+    UPPER_A: 'A'
+  do:
+    - when: { var: DOTLESS_I, equals: I, ignore_case: true }
+      log: dotless i uppercases to I
+    - when: { var: DOTLESS_I, matches: '(?i)^i$' }
+      log: so does i
+    - when: { var: DOTTED_I, equals: i, ignore_case: true }
+      log: dotted capital I is its own uppercase
+    - when: { var: LONG_S, matches: '(?i)^[a-z]$' }
+      log: the class is case-folded
+    - when: { var: LONG_S, matches: '(?i)^\w$' }
+      log: \w stays ASCII
+    - when: { var: LONG_S, matches: '(?i)^\W$' }
+      log: and so does \W
+    - when: { var: UPPER_A, matches: '(?i)^[^a-z]$' }
+      log: folded, then negated
+    - when: { var: LONG_S, matches: '(?i)^[^a-z]$' }
+      log: folded, then negated
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1: { status: succeeded }
+    /do/2: { status: skipped, skip_reason: condition }
+    /do/3: { status: succeeded }
+    /do/4: { status: skipped, skip_reason: condition }
+    /do/5: { status: succeeded }
+    /do/6: { status: skipped, skip_reason: condition }
+    /do/7: { status: skipped, skip_reason: condition }
+notes: >-
+  Unicode 16.0 simple uppercase mappings: U+0131 LATIN SMALL LETTER DOTLESS I
+  maps to I, as i does; U+0130 LATIN CAPITAL LETTER I WITH DOT ABOVE maps to
+  itself, so it doesn't equal i. U+017F LATIN SMALL LETTER LONG S maps to S,
+  so the folded class [a-z] contains it (/do/3), while \w and \W keep their
+  ASCII meaning under (?i) (/do/4, /do/5). [^a-z] is folded first and then
+  negated, so it excludes A and long s (/do/6, /do/7); negating first would
+  keep A in the class.

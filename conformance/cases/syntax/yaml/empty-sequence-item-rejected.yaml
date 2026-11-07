@@ -1,0 +1,19 @@
+title: A sequence item with nothing after the '-' is an empty value
+rules: [SY-20]
+features: [do, log]
+plan: |
+  blokky: 1.0
+  do:
+    - log: first
+    -
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: SY-20 }
+      line: 4
+  exhaustive: true
+notes: >-
+  An empty item is a null value, never an absent node; like a key with no
+  value (syntax/yaml/key-without-value-rejected) it is an error. The column
+  isn't asserted: the item has no key, so the error sits at its '-' or just
+  after it.

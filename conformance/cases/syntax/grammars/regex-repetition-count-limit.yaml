@@ -1,0 +1,28 @@
+title: Repetition counts in a regex are at most 1000
+rules: [SY-61, SY-104, RF-22]
+features: [vars, do, when, cond-var, exec]
+plan: |
+  blokky: 1.0
+  vars:
+    X: abc
+  do:
+    - when: { var: X, matches: 'a{1000}' }
+      exec: [blokky-testkit, exit, '0']
+    - when: { var: X, matches: 'a{1001}' }
+      exec: [blokky-testkit, exit, '0']
+    - when: { var: X, matches: 'a{2,1001}' }
+      exec: [blokky-testkit, exit, '0']
+    - when: { var: X, matches: 'a{1001,}' }
+      exec: [blokky-testkit, exit, '0']
+    - when: { var: X, matches: 'a{0,1000}?' }
+      exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-22 }, line: 7, column: 30 }
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-22 }, line: 9, column: 30 }
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-22 }, line: 11, column: 30 }
+  exhaustive: true
+notes: >-
+  The bound applies to every count of {n}, {n,} and {n,m}, so engines with
+  different limits agree on what compiles. a{1000} and a{0,1000}? are at the
+  bound and valid; exhaustive makes the case fail if either is reported.

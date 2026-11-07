@@ -1,0 +1,18 @@
+title: An uncaught throw ends a PowerShell script with exit code 1
+rules: [SH-20]
+features: [script, shell-pwsh, ok-exit]
+requires:
+  shells: [pwsh]
+clock: [real]
+plan: |
+  blokky: 1.0
+  shell: pwsh
+  script: |
+    throw 'conf: failed'
+  ok_exit: [1]
+expect:
+  status: succeeded
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 1

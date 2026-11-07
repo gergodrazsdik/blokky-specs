@@ -1,0 +1,13 @@
+title: Every leaf gets NO_COLOR=1, and TERM=dumb when its environment has no TERM
+rules: [VA-44]
+features: [outputs, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  exec: [blokky-testkit, env, NO_COLOR, TERM]
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: '{"NO_COLOR":"1","TERM":"dumb"}'
+notes: The base environment has no TERM and no NO_COLOR (CF-57).

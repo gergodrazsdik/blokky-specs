@@ -1,0 +1,29 @@
+title: An executable file without a shebang that the OS can't run fails with BK_SPAWN_FAILED bad_format, with no /bin/sh fallback
+rules: [SH-26]
+spec: [errors.md§5.1, results.md§3.1]
+features: [exec]
+requires:
+  os: [linux, macos]
+files:
+  tool: { text: 'echo hi', executable: true }
+plan: |
+  blokky: 1.0
+  exec: [./tool]
+expect:
+  status: failed
+  error:
+    code: BK_SPAWN_FAILED
+    node: /
+    detail: { reason: bad_format }
+  nodes:
+    /:
+      status: failed
+      stdout: { $absent: true }
+      exit_code: { $absent: true }
+      error: { code: BK_SPAWN_FAILED, node: / }
+  invocations: []
+notes: >-
+  execve fails with ENOEXEC. A shell (and posix_spawnp, execvp in some C
+  libraries) would retry the file with /bin/sh and print hi; Blokky starts
+  processes directly and reports the refusal instead. Unix-only; on Windows
+  a text file is bad_format anyway (execution-model/leaves/spawn-failed-not-executable).

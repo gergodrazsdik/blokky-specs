@@ -1,0 +1,32 @@
+title: Empty and relative PATH entries are skipped when argv[0] is looked up
+rules: [SH-25]
+spec: [errors.md§5.1]
+features: [exec]
+requires:
+  os: [linux, macos]
+env:
+  PATH: ':.:bin:./bin'
+files:
+  conf-tool: { text: "#!/bin/sh\nexit 0\n", executable: true }
+  bin/conf-tool: { text: "#!/bin/sh\nexit 0\n", executable: true }
+plan: |
+  blokky: 1.0
+  exec: [conf-tool]
+expect:
+  status: failed
+  error:
+    code: BK_SPAWN_NOT_FOUND
+    node: /
+    detail: { program: conf-tool }
+  nodes:
+    /:
+      status: failed
+      exit_code: { $absent: true }
+notes: >-
+  The case replaces the base environment's PATH (CF-19, CF-57) with an empty
+  entry (the leading ':'), '.', and two relative entries. Each would find an
+  executable conf-tool in the work directory or in bin/; skipping them
+  leaves nothing, so the leaf fails with BK_SPAWN_NOT_FOUND. The testkit
+  isn't on this PATH and isn't needed. A plan's env can't set PATH (VA-41),
+  so the case-level env is the only way to get such entries. Unix-only: the
+  files are shell scripts with a shebang.

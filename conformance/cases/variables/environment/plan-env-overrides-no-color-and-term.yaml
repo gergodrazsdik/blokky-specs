@@ -1,0 +1,23 @@
+title: A plan's env overrides the NO_COLOR and TERM that Blokky sets
+rules: [VA-39, VA-44]
+features: [outputs, env, do, exec, capture]
+env:
+  TERM: xterm
+plan: |
+  blokky: 1.0
+  outputs: [SEEN, INNER]
+  env: { NO_COLOR: '0' }
+  do:
+    - exec: [blokky-testkit, env, NO_COLOR, TERM]
+      capture: SEEN
+    - env: { TERM: vt100 }
+      exec: [blokky-testkit, env, NO_COLOR, TERM]
+      capture: INNER
+expect:
+  status: succeeded
+  outputs:
+    SEEN: '{"NO_COLOR":"0","TERM":"xterm"}'
+    INNER: '{"NO_COLOR":"0","TERM":"vt100"}'
+notes: >-
+  Unlike BLOKKY_RUN_ID, NO_COLOR and TERM are defaults: the plan's env wins
+  over them, and TERM=dumb is only for a leaf with no TERM at all.

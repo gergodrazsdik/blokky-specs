@@ -1,0 +1,45 @@
+title: In a regex, a bare ] or } and a - at a class edge are literal, \f and \v are allowed, and classes take escapes
+rules: [SY-61]
+spec: [syntax.md§6.7]
+features: [vars, do, exec, capture, when, log, cond-var]
+plan: |
+  blokky: 1.0
+  vars:
+    CLOSERS: 'a]b}c'
+    DASHES: '-a-b'
+    ESCAPED: '^]\-'
+    LETTERS: 'AB'
+  do:
+    - exec: [blokky-testkit, print, --out-hex, '610c620b63']
+      capture: CONTROLS
+    - when: { var: CLOSERS, matches: '^a]b}c$' }
+      log: a bare ] or } is literal
+    - when: { var: DASHES, matches: '^[-a]{3}[b-]$' }
+      log: '- is literal at the start and at the end of a class'
+    - when: { var: DASHES, matches: '^[a-]+$' }
+      log: '[a-] is a and -, not a range'
+    - when: { var: CONTROLS, matches: '^a\fb\vc$' }
+      log: \f is FF and \v is VT
+    - when: { var: CONTROLS, matches: '^a\sb\sc$' }
+      log: \s includes FF and VT
+    - when: { var: ESCAPED, matches: '^[\^\]\\\-]{4}$' }
+      log: escapes inside a class
+    - when: { var: LETTERS, matches: '^[\x41\u{42}]{2}$' }
+      log: code point escapes inside a class
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/1: { status: succeeded }
+    /do/2: { status: succeeded }
+    /do/3: { status: skipped, skip_reason: condition }
+    /do/4: { status: succeeded }
+    /do/5: { status: succeeded }
+    /do/6: { status: succeeded }
+    /do/7: { status: succeeded }
+notes: >-
+  CONTROLS is a, FF (U+000C), b, VT (U+000B), c, made by the testkit because
+  a plan can't contain those characters (SY-12). /do/3 is the control for
+  /do/2: DASHES contains b, which [a-] doesn't. ESCAPED is the four
+  characters ^ ] \ -, each matched by an escape inside the class. A pattern
+  the subset rejected would be a plan error, not a skipped node.

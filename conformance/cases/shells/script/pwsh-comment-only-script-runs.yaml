@@ -1,0 +1,23 @@
+title: A PowerShell script with only comments runs and exits 0
+rules: [SH-17]
+features: [script, shell-pwsh]
+requires:
+  shells: [pwsh]
+clock: [real]
+plan: |
+  blokky: 1.0
+  shell: pwsh
+  script: |
+    # conf: nothing to do yet
+    <# a block
+        comment #>
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 0
+notes: >-
+  There is no line for the prologue to share. It may go after the last
+  comment or be left out; either way the script does nothing and exits 0.
