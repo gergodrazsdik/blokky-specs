@@ -14,7 +14,7 @@ This document is the catalogue of the built-in error codes of the language: plan
 
 | Kind | When | Where it is defined |
 |---|---|---|
-| **Plan error** | Before anything runs: the plan text, its structure or a static rule is invalid. | §4; the rules in [syntax.md](syntax.md) and [reference.md §8](reference.md#8-rules-the-schema-doesnt-express) |
+| **Plan error** | Before anything runs: the plan text, its structure or a static rule is invalid. | §4; the rules in [syntax.md](syntax.md) and [reference.md §8](reference.md#8-rules-beyond-the-schema) |
 | **Input error** | Before anything runs: an input value is missing or invalid. | §3; [variables.md §4](variables.md#4-plan-inputs) |
 | **Node error** | While the plan runs: a node fails. Plans observe node errors through `result: error`, `retry:` conditions and statuses. | §5 |
 
@@ -34,7 +34,7 @@ How an implementation reports errors (JSON formats, exit codes) and the errors i
 
 ## 4. Plan errors
 
-Plan errors carry a line and column. `BK_PLAN_INVALID` covers every rule of [reference.md §8](reference.md#8-rules-the-schema-doesnt-express) and the static rules of the other spec files; `detail.rule` is the ID of the rule that was broken (for example `RF-1`, `RF-5`, `SY-12`), so new rules don't need new codes and every error points at its spec text ([ADR 0018](../adr/0018-review-semantics.md)).
+Plan errors carry a line and column. `BK_PLAN_INVALID` covers every rule of [reference.md §8](reference.md#8-rules-beyond-the-schema) and the static rules of the other spec files; `detail.rule` is the ID of the rule that was broken (for example `RF-1`, `RF-5`, `SY-12`), so new rules don't need new codes and every error points at its spec text ([ADR 0018](../adr/0018-review-semantics.md)).
 
 | Code | Meaning |
 |---|---|
@@ -60,7 +60,7 @@ Plan errors carry a line and column. `BK_PLAN_INVALID` covers every rule of [ref
 | `BK_EXIT` | The leaf exited with a code that isn't 0 or in `ok_exit`. `detail.exit_code`. | yes |
 | `BK_SIGNAL` | The leaf was killed by a signal it didn't get from Blokky (Unix). `detail.signal`. | yes |
 | `BK_SPAWN_NOT_FOUND` | The program or shell couldn't be resolved. `detail.program`. | no |
-| `BK_SPAWN_FAILED` | The OS refused to start the process (not executable, permission denied, a `.bat`/`.cmd` target). `detail.reason`. | no |
+| `BK_SPAWN_FAILED` | The OS refused to start the process (not executable, permission denied, a `.bat`/`.cmd` target, a PowerShell execution policy or AppLocker rule that blocks the script). `detail.reason`. | no |
 | `BK_ENV_TOO_LARGE` | The leaf's environment or one value exceeds the OS limit. `detail.name`. | no |
 | `BK_SHELL_UNAVAILABLE` | The `script` shell isn't supported on this OS or isn't configured (Git Bash on Windows). | no |
 | `BK_CWD_INVALID` | The node's cwd doesn't exist, isn't a directory or can't be entered. | no |
@@ -78,7 +78,7 @@ Plan errors carry a line and column. `BK_PLAN_INVALID` covers every rule of [ref
 
 | Code | Meaning | Retried |
 |---|---|---|
-| `BK_CONDITION_ERROR` | A condition was neither true nor false ([conditions.md §7](conditions.md#7-condition-errors)). `detail.reason`: `undefined_variable`, `not_a_number`, `json_invalid`, `json_path`, `probe_exit`, `probe_timeout`, `probe_output_too_large`, `probe_spawn`, `output_too_large`, `path_access`. In `assert`, `context` holds the assertion's `message` and `code`. | no |
+| `BK_CONDITION_ERROR` | A condition was neither true nor false ([conditions.md §7](conditions.md#7-condition-errors)). `detail.reason`: `undefined_variable`, `not_a_number`, `json_invalid`, `json_path`, `probe_exit`, `probe_timeout`, `probe_output_too_large`, `probe_spawn`, `output_too_large`, `output_encoding`, `path_access`. In `assert`, `context` holds the assertion's `message` and `code`. | no |
 | `BK_UNDEFINED_VARIABLE` | A display string or reference used a variable that isn't bound at that point. `detail.name`. | no |
 | `BK_FROM_ENV_UNSET` | A `{ from_env: NAME }` names an unset environment variable. `detail.name`. | no |
 | `BK_CAPTURE_TOO_LARGE` | stdout exceeded `max_capture_bytes`. | yes |
@@ -93,22 +93,22 @@ Plan errors carry a line and column. `BK_PLAN_INVALID` covers every rule of [ref
 |---|---|---|
 | `BK_FAIL` | A `fail` node without its own `code`. | no |
 | `BK_ASSERT` | An `assert` whose condition was false, without its own `code`. | no |
-| `BK_RETRIES_EXHAUSTED` | `retry` reached `max`; the last attempt's error is the cause. | — |
-| `BK_LOOP_MAX_REACHED` | `while`/`until` reached `max` without the condition ending the loop; the last iteration's error, if any, is the cause. | — |
-| `BK_ANY_ALL_FAILED` | Every child of an `any` failed; each child's error is a cause, in plan order. | as its causes |
+| `BK_RETRIES_EXHAUSTED` | `retry` reached `max`; the last attempt's error is the cause. | no |
+| `BK_LOOP_MAX_REACHED` | `while`/`until` reached `max` without the condition ending the loop; the last iteration's error, if any, is the cause. | no |
+| `BK_ANY_ALL_FAILED` | Every child of an `any` failed; each child's error is a cause, in plan order. | yes if any cause is retried |
 | `BK_FINALLY_FAILED` | The node's body succeeded but its `finally` failed; the `finally` error is the cause. (If the body failed, its error stays primary and the `finally` error is attached.) | no |
 | `BK_GLOB_EMPTY` | A `for: { glob }` matched nothing and `allow_empty` isn't set. | no |
 | `BK_ITEMS_TOO_MANY` | A `for` source produced more than `max_items` items (for `matrix`: combinations). | no |
 | `BK_ITEMS_INVALID` | A `for: { items }` value isn't JSON, or its path doesn't select an array. | yes |
 
-User codes from `fail` and `assert` (`code:`) are node errors too; `retry: true` doesn't retry them.
+User codes from `fail` and `assert` (`code:`) are node errors too; `retry: true` doesn't retry them. The "Retried" column is the complete answer for `retry: true` ([reference.md §5.5](reference.md#55-what-retry-true-retries) summarizes it); a `retry:` condition can retry any code, except that the retrying node's own `timeout`, an ancestor's limit, cancellation and external stops are never retried.
 
-### 5.5 Later features
+### 5.5 Locks, containers and services
 
-| Code | Meaning |
-|---|---|
-| `BK_LOCK_TIMEOUT` | A `lock` wasn't acquired within `wait`. |
-| `BK_CONTAINER_FAILED` | The container couldn't be started, the image lacks `sh`, `sleep` or `kill` (CP-36; `detail.missing`), or the engine failed. `detail.engine`. |
-| `BK_CWD_UNMAPPED` | The node's cwd maps through no container mount. |
-| `BK_SERVICE_NOT_READY` | A service's `ready:` condition didn't hold within `ready_timeout`. `detail.service`. |
-| `BK_SERVICE_EXITED` | A service exited before it was ready, or (with `on_exit: fail`) after it was ready while the body ran; an exit after the body ended is recorded, not an error. `detail.service`, `detail.exit_code`. |
+| Code | Meaning | Retried |
+|---|---|---|
+| `BK_LOCK_TIMEOUT` | A `lock` wasn't acquired within `wait`. | no |
+| `BK_CONTAINER_FAILED` | The container couldn't be started, the image lacks `sh`, `sleep` or `kill` (CP-36; `detail.missing`), or the engine failed. `detail.engine`. | no |
+| `BK_CWD_UNMAPPED` | The node's cwd maps through no container mount. | no |
+| `BK_SERVICE_NOT_READY` | A service's `ready:` condition didn't hold within `ready_timeout`. `detail.service`. | yes |
+| `BK_SERVICE_EXITED` | A service exited before it was ready, or (with `on_exit: fail`) after it was ready while the body ran; an exit after the body ended is recorded, not an error. `detail.service`, `detail.exit_code`. | yes |

@@ -8,14 +8,14 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 
 ## Plans and documents
 
-- **Plan.** A YAML document that describes what to run: a single root mapping with plan-only keys (`blokky:`, `inputs:`, `outputs:`, `defaults:`) and one root node. See [syntax.md](syntax.md).
+- **Plan.** A YAML document that describes what to run: a single root mapping with plan-only keys (`blokky:`, `inputs:`, `vars:`, `outputs:`, `defaults:`) and one root node. See [syntax.md](syntax.md).
 - **Plan file.** A plan stored as `*.blokky.yaml` (or `*.blokky.yml`) and run by path.
 - **Stdin plan.** A plan passed on standard input, typically from a bash heredoc with a quoted delimiter.
 - **Spec version.** The version of this specification a plan targets, written as `MAJOR.MINOR` in the required `blokky:` field (`blokky: 1.0`). Spec patch releases never change the language. See [syntax.md](syntax.md).
 - **Plan SHA-256.** The SHA-256 of the exact plan bytes. It is part of the run result, and implementations can use it to check that the plan reviewed is the plan run.
 - **Surface rules.** The YAML restrictions every plan obeys: no anchors, aliases, merge keys, explicit tags, multi-document streams, duplicate keys or unknown keys; every scalar is a string. See [syntax.md](syntax.md).
 - **Character lint.** One pass over the raw decoded plan text, comments and keys included, before parsing. It allows only TAB, LF and CR as part of CRLF among control characters.
-- **Canonical form.** The single preferred spelling of a construct. Examples, the agent guide and fix-it snippets use canonical forms only; other accepted spellings are shorthands.
+- **Canonical form.** The preferred spelling for an intent, listed in [syntax.md §8](syntax.md#8-plain-scalar-pitfalls) (SY-97). Examples, the agent guide and fix-it snippets use canonical forms only.
 - **Targeted error.** A parse or validation error that names the problem and includes a corrected YAML snippet (a *fix-it*).
 - **Not supported.** A feature an implementation doesn't support yet. Plans that use it are rejected before anything runs (`BK_PLAN_NOT_SUPPORTED`); the language itself is the same for every implementation.
 
@@ -24,10 +24,10 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 - **Node.** One element of the plan tree. Every node has exactly one **kind** and any number of **modifiers**. See [reference.md](reference.md).
 - **Kind.** What a node does: `exec`, `script`, `do`, `all`, `any`, `race`, `if`, `sleep`, `log`, `fail`, `assert`, `set`, `return`.
 - **Leaf.** A node that runs a process: an `exec` or `script` node. Probes and services also run processes but are not leaves.
-- **`exec` leaf.** Runs a program directly, without a shell, from an argv array (canonical) or a string split with POSIX shell-like rules and no expansion. See [shells.md](shells.md).
+- **`exec` leaf.** Runs a program directly, without a shell, from an argv array or a string split with POSIX shell-like rules and no expansion (canonical for a static argv that needs no quoting). See [shells.md](shells.md).
 - **`script` leaf.** Writes shell text to a script file owned by the run and runs it with the chosen shell. It compiles to an `exec` of that shell.
-- **Group.** A node whose kind runs child nodes: `do` (sequence), `all` (parallel, all must succeed), `any` (first success wins), `race` (first completion decides).
-- **Modifier.** A key that scopes, repeats, limits or labels a node, such as `when`, `timeout`, `cwd`, `env`, `finally`, `retry` or `capture`. Modifiers apply in a fixed order. See [execution-model.md](execution-model.md).
+- **Group.** A node whose kind runs child nodes: `do` (sequence), `all` (parallel, all must succeed), `any` (first success wins), `race` (first completion decides) and `if` (one branch). Rules about groups (EM-66, `retry` on a group) apply to all five.
+- **Modifier.** A key that scopes, repeats, limits or labels a node, such as `when`, `timeout`, `cwd`, `env`, `finally` or `retry`. (`capture` is a leaf option, not a modifier.) Modifiers apply in a fixed order. See [execution-model.md](execution-model.md).
 - **Modifier order.** The normative nesting of modifiers, outermost to innermost: `when` → `timeout` → `lock` → `tempdir` → `cwd` → `env` → `container` → `services` → `finally` → repetition → `attempt_timeout` → kind.
 - **Companion field.** A field that belongs to one kind or modifier, such as `then`/`else` for `if`, `shell` for `script`, or `concurrency` and `fail_fast` for `all`.
 - **Body field.** A field that holds a list of nodes: `do`, `then`, `else`, `finally`, `all`, `any`, `race`. Body fields take lists only.

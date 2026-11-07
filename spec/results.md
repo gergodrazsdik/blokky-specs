@@ -2,7 +2,7 @@
 
 Status: **draft** (`1.0.0-draft`, not yet finalized)
 
-This document defines the **run result**: the abstract outcome of a run that every implementation must be able to produce, and that conformance cases assert on. It fixes what is recorded, not how it is serialized; for blokky-cli the run result is serialized as the JSON run report ([output-contract.md](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/contracts/output-contract.md)). Normative keywords are used as defined in [syntax.md §1](syntax.md#1-conventions). Rules carry IDs (`RS-n`).
+This document defines the **run result**: the abstract outcome of a run that every implementation MUST be able to produce, and that conformance cases assert on. It fixes what is recorded, not how it is serialized; for blokky-cli the run result is serialized as the JSON run report ([output-contract.md](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/contracts/output-contract.md)). Normative keywords are used as defined in [syntax.md §1](syntax.md#1-conventions). Rules carry IDs (`RS-n`).
 
 ## 1. Principles
 
@@ -33,16 +33,16 @@ This document defines the **run result**: the abstract outcome of a run that eve
 | name | if set | The raw `name` template. |
 | status | all | `succeeded`, `failed`, `skipped`, `timed_out` or `cancelled` ([execution-model.md §8](execution-model.md#8-status)). |
 | ignored | failed nodes | Whether `ignore_errors` hid the failure from the parent. |
-| skip reason | skipped nodes | `condition`, `not_reached` or `returned`. |
+| skip reason | skipped nodes | `condition`, `not_reached`, `returned`, or `pruned` (a `host:` condition was false, CO-7). |
 | error | failed, timed out, cancelled | The node's error (§5). |
-| repetition | `retry`, `while`, `until`, `for` | The number of attempts or iterations; what ended them (`condition`, `max`, `timeout`, `failure`, `success`); the last condition result (`true`, `false`, `error`); and for each attempt or iteration its index, rendered name, item, status and error. |
+| repetition | `retry`, `while`, `until`, `for` | The number of attempts or iterations; what ended them (`ended_by`: `success` for `retry`, `condition` for `while`/`until`, `items` for `for`, or `max`, `timeout`, `failure`); the last condition result (`true`, `false`, `error`); and for each attempt or iteration its index, rendered name, item, status and error. |
 | children | groups, `if` | The children's results, in plan order. |
 | finally | nodes with `finally` | The `finally` list's results and its status. |
 | lock wait | nodes with `lock` | How long the node waited for its lock. |
 | services | nodes with `services` | For each service: its name, when it became ready, and how it ended (stopped by the run, exited with code N, never ready). |
 | messages | `log`, `fail`, `assert` | The rendered message and, for `log`, its level. |
 | probes | nodes whose conditions ran probes | For each executed probe: the command, exit code and result (`true`, `false`, `error`). |
-| bindings | `exec`, `script`, `set` | The names of the variables the node bound by `capture` or `set` (never their values). |
+| bindings | `exec`, `script`, `set`, loops, `tempdir` | The names of the variables the node bound by `capture`, `set`, `collect` or `tempdir.as` (never their values). |
 
 ### 3.1 Leaves
 
@@ -54,6 +54,7 @@ This document defines the **run result**: the abstract outcome of a run that eve
 | exit code | The exit code (an unsigned 32-bit value on Windows), if the process exited. |
 | signal | The terminating signal (Unix), if any. |
 | killed by | If the run stopped the leaf: `timeout`, `attempt_timeout`, `cancel`, or the external stop's cause. |
+| graceful | `none` when the leaf had no graceful stop channel and was killed at once (EM-26). |
 | descendants held output | Whether a descendant kept the output open after the leaf completed (EM-20). |
 | survivors | Processes still alive after a join's reap timeout (EM-32). |
 | left running | For `keep_descendants: detach`: the processes left running after the run (program and process id, EM-22). |
@@ -64,7 +65,7 @@ How much of a leaf's output the run result keeps (if any) is implementation-defi
 ## 4. Statuses and outcomes
 
 - **RS-5.** Node statuses and their propagation are defined in [execution-model.md §8](execution-model.md#8-status); the run status in EM-50.
-- **RS-6.** A node that never started has status `skipped` with its skip reason and no other result fields.
+- **RS-6.** A node that never started has status `skipped` with its skip reason and no other result fields, except the probes its `when` ran (CO-31).
 
 ## 5. Errors
 
@@ -76,6 +77,7 @@ How much of a leaf's output the run result keeps (if any) is implementation-defi
 | detail | The code's machine-readable fields ([errors.md](errors.md)). |
 | causes | Nested errors, in order: the last attempt's error, aggregated child errors in plan order, an attached `finally` error. |
 | context | Extra context, for example an assertion's message and code on a condition error. |
+| iteration, item | For an error raised inside a loop iteration or a retry attempt: its index and, for `for`, its item (masked like other values), so the causes of a `fail_fast: false` loop say which item failed. |
 
 ## 6. Non-deterministic fields
 

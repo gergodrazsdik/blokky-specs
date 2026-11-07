@@ -6,7 +6,7 @@ This document is normative for plan variables: names, the kinds of bindings, pla
 
 ## 1. Two namespaces
 
-- **VA-1.** **Plan variables** (bound by the plan) and **environment variables** (of processes) are separate namespaces. Nothing is exported implicitly: a plan variable reaches a process only through `env:` (`{ var: X }` as a value), `export: [X]`, or a `{ var: X }` element of an `exec` array.
+- **VA-1.** **Plan variables** (bound by the plan) and **environment variables** (of processes) are separate namespaces. Nothing is exported implicitly: a plan variable reaches a process only through four routes: `env:` (`{ var: X }` as a value), `export: [X]`, a `{ var: X }` element of an `exec` array, or `stdin: { var: X }`. A `{ var: X }` in `cwd`, `stdin.file`, `path:` or `mounts[].host` chooses a location, it doesn't pass the value.
 - **VA-2.** `${X}` in display strings and the `var:` condition subject resolve plan variables only. The `env:` condition subject and `{ from_env: NAME }` resolve environment variables only.
 - **VA-3.** Every plan variable value is a string. A variable bound by `capture_file` holds a path.
 
@@ -123,8 +123,8 @@ Static views of a plan (for review, before a run) MAY accept a missing required 
 
 ([ADR 0015](../adr/0015-set-and-vars.md))
 
-- **VA-56.** A `set` or `vars` value is a literal, a whole-value reference (`{ var: X }`, `{ from_env: NAME }`, optionally `secret: true`), or a **template**: a string containing `${X}` placeholders, with the display-string syntax ([syntax.md §7.3](syntax.md#73-interpolation-in-display-strings)). A literal without `${` is a plain string.
-- **VA-57.** Templates join strings only: `${X}` is replaced by `X`'s value, `$${` produces `${`. There are no functions. Templates appear in `set` and `vars` values and nowhere else in executed fields.
+- **VA-56.** A `set` or `vars` value is a literal, a whole-value reference (`{ var: X }`, `{ from_env: NAME }`, optionally `secret: true`), or a **template**: a string containing `${X}` placeholders, with the display-string syntax ([syntax.md §7.3](syntax.md#73-interpolation-in-display-strings-and-templates)). A literal without `${` is a plain string.
+- **VA-57.** Templates join strings only: `${X}` is replaced by `X`'s value, `$${` produces `${`. There are no functions. Templates appear in `set` and `vars` values and nowhere else in executed fields. A template result passed as code (to `bash -c`, `python -c`, `node -e`, `eval`, an interpreter's stdin) is string interpolation into code, with the same injection risk as unquoted interpolation in bash; the safe pattern is `script` with `export`. Static views SHOULD show the template and the source of each placeholder for a variable in such a position ([reference.md §9](reference.md#9-security-considerations)).
 - **VA-58.** An undefined variable in a template or reference fails the `set` node with `BK_UNDEFINED_VARIABLE` (a plan error for `vars`, and for references the scope check rules out, VA-38); an unset `from_env` fails with `BK_FROM_ENV_UNSET` (VA-40).
 - **VA-59.** A value is secret if it is a secret reference or a template that uses any secret variable.
 - **VA-60.** `set` entries are bound in order, so a later entry may use an earlier one; the bindings are scoped like a capture of the `set` node (§6).
@@ -136,7 +136,7 @@ Static views of a plan (for review, before a run) MAY accept a missing required 
 - **VA-29.** **Parallel children.** Two `all` children MUST NOT bind the same name anywhere in their subtrees. A binding of an `all` child is visible after the `all` completes.
 - **VA-30.** **`any` and `race`.** Only the deciding child's captures are bound. Different children MAY capture the same name (never an input's name).
 - **VA-31.** **Branches.** A name bound (by `set` or a capture) in **both** `then` and `else` of an `if`, or by **every** child of an `any` or `race`, is definitely bound after the node succeeds. Bound in only some branches or children, it is *possibly undefined* afterwards; using it without a `defined` check SHOULD get a warning ([ADR 0015](../adr/0015-set-and-vars.md)).
-- **VA-32.** **Repetition on the node itself.** A capture on a node with `retry`, `while` or `until` is visible to that attempt's own condition (even if the attempt failed) and is **published** to the enclosing scope from the terminating attempt, only if the node succeeds.
+- **VA-32.** **Repetition on the node itself.** A capture on a node with `retry`, `while` or `until` is visible to that attempt's own condition (for a failed attempt, the capture is evaluated best effort for the `retry` condition only: one that can't be evaluated leaves the name undefined and doesn't change the attempt's error) and is **published** to the enclosing scope from the terminating attempt, only if the node succeeds.
 - **VA-33.** **Loop bodies.** Captures of nodes inside a `while`, `until` or `for` body are scoped to the iteration: later nodes in the same iteration see them, the next iteration's condition sees them (`while`, `until`), but they are never published outside the loop. The next iteration's body sees a value of the previous one only through `carry` (VA-62). The first `while` check sees only the enclosing scope; a `while` condition that reads a body capture without `defined` gets a lint warning.
 - **VA-34.** **Loop iterations never publish.** Values leave a `for`, `while` or `until` body only through `collect`, in item or iteration order, with `null` for failed or skipped iterations.
 - **VA-54.** **Item fields.** `fields` binds its variables per iteration, like `as`, with the conversion of VA-23; they count as declarations for collision and shadowing checks.
@@ -167,7 +167,9 @@ Setting these changes what a program loads or runs. Setting one through `env` is
 
 `LD_*`, `DYLD_*`, `BASH_FUNC_*`, `NODE_OPTIONS`, `NODE_PATH`, `PYTHONPATH`, `PYTHONSTARTUP`, `PYTHONHOME`, `PERL5OPT`, `PERL5LIB`, `RUBYOPT`, `RUBYLIB`, `JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS`, `_JAVA_OPTIONS`, `DOTNET_STARTUP_HOOKS`, `DOTNET_ADDITIONAL_DEPS`, `CORECLR_PROFILER*`, `COR_PROFILER*`, `GIT_SSH_COMMAND`, `GIT_SSH`, `GIT_CONFIG_*`, `GIT_EXEC_PATH`, `GIT_ASKPASS`, `SSH_ASKPASS`, `GIT_PROXY_COMMAND`, `GIT_EXTERNAL_DIFF`, `DOCKER_HOST`, `DOCKER_CONFIG`, `KUBECONFIG`.
 
-The list is versioned with the spec; adding a name is a non-breaking change.
+`npm_config_*`, `PSModulePath`, `PAGER`, `GIT_PAGER`, `EDITOR`, `VISUAL`, `PERL5DB`, `R_PROFILE`, `R_PROFILE_USER`, and names ending in `_OPTIONS`.
+
+The list is illustrative, not exhaustive: almost any environment variable can change what some program does. Flagging is a review aid (hygiene), not a control; every `env` entry is shown in static views anyway. The list is versioned with the spec; adding a name is a non-breaking change.
 
 ### 7.4 Variables Blokky sets
 
@@ -185,14 +187,14 @@ The list is versioned with the spec; adding a name is a non-breaking change.
 ### 9.1 Sources
 
 - **VA-49.** Secrets come **only by reference**: `{ from_env: NAME, secret: true }`, `{ var: X, secret: true }`, or captures of a node with `secret: true`. Marking a literal as secret is a plan error. There are no secret inputs.
-- **VA-50.** Secret-ness follows the variable: a variable bound from a secret source is secret wherever it is used.
+- **VA-50.** Secret-ness follows the variable: a variable bound from a secret source is secret wherever it is used, and so is every value derived from one: a template using it (VA-59), `for` items, `fields` and matrix values from it, a `json:` extraction of it, a `carry` of it and a `collect` list of it. Iteration items from a secret source are recorded masked.
 
 ### 9.2 Masking
 
-- **VA-51.** Every secret value of at least **6 characters** MUST be replaced with `***` in everything an implementation shows, keeps or passes on about a run: displayed and stored output, the run result, rendered display strings, and data handed to other tools. Output must be masked even when a value is split across chunks.
+- **VA-51.** Every secret value of at least **6 characters** MUST be replaced with `***` in everything an implementation shows, keeps or passes on about a run: displayed and stored output, the run result, rendered display strings, and data handed to other tools. Output MUST be masked even when a value is split across chunks.
 - **VA-52.** A secret shorter than 6 characters isn't masked; the implementation warns, naming the reference (never the value) ([ADR 0010](../adr/0010-variables-details.md)).
 - **VA-53.** Static views of a plan never show a secret value; they show the source, for example `TOKEN ← env GH_TOKEN (secret)`. Non-secret `from_env` values are shown resolved (VA-40).
 
 ### 9.3 Limits
 
-Masking is hygiene, not secrecy. It matches exact values only and doesn't follow derived or transformed values (base64, substrings, URL encoding). A process that receives a secret can print or send it anywhere. Conditions on secrets act as oracles: `matches` or `gt` on a secret leaks information through the condition result. Implementations SHOULD warn about inputs with secret-looking names (`*TOKEN*`, `*SECRET*`, `*PASSWORD*`, `*_KEY`), because input values appear in the run result verbatim.
+Masking is hygiene, not secrecy. It matches exact values only and doesn't follow derived or transformed values (base64, substrings, URL encoding). A process that receives a secret can print or send it anywhere. Conditions on secrets act as oracles: `matches` or `gt` on a secret leaks information through the condition result. Implementations SHOULD warn about inputs with secret-looking names (`*TOKEN*`, `*SECRET*`, `*PASSWORD*`, `*_KEY`), because input values appear in the run result verbatim. A secret in an `exec` element is on the process's command line, readable by other local users and by audit logs; pass secrets through `env` or `stdin` instead. Implementations SHOULD warn about a secret reference in an `exec` element.

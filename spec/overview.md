@@ -45,7 +45,7 @@ So you can read a node from the outside in: "if this holds, within this time, ho
 
 ### 2.3 Conditions
 
-`if`, `when`, `assert`, `while`, `until`, `retry` and service readiness all use one condition construct: a **subject** (`var`, `env`, `path`, `host`, `result`, `probe`) plus one **operator** (`equals`, `in`, `contains`, `matches`, `empty`, `defined`, `exists`, `gt`, …), or the composites `all`, `any` and `not`:
+`if`, `when`, `assert`, `while`, `until`, `retry` and service readiness all use one condition construct: a **subject** (`var`, `env`, `path`, `command` for "is this program installed?", `host`, `result`, `probe`; `port` and `output` in service readiness only) plus one **operator** (`equals`, `in`, `contains`, `matches`, `empty`, `defined`, `exists`, `gt`, …), or the composites `all`, `any` and `not`:
 
 ```yaml
 { var: STATUS, in: [queued, in_progress] }
@@ -113,6 +113,21 @@ How it reads:
 
 Every process this plan can start is visible in the plan: three `gh` commands with known argv, where only `BRANCH` and `RUN_ID` are filled in at run time. A reviewer, or a permission rule, can judge them one by one.
 
+### 3.1 Idioms
+
+One canonical form per common intent (the full list is [syntax.md SY-97](syntax.md#8-plain-scalar-pitfalls)):
+
+| Intent | Write | When it fails |
+|---|---|---|
+| Wait until a command succeeds | `until: { result: exit, equals: '0' }` on the leaf, with `ok_exit` for "not yet" codes, `every` and `timeout` | `BK_TIMEOUT_TOTAL` or `BK_LOOP_MAX_REACHED` |
+| Poll output until it says done | `until: { result: stdout, json: .status, equals: done }` | as above; the last condition error is the cause |
+| Is a tool installed? | `when: { command: ruff, exists: true }` | skipped, no error |
+| Windows and Unix variants | `if: { host: os, equals: windows }` with `then`/`else` | pruned on the other OS |
+| An optional step | `ignore_errors: true` | `failed` with `ignored: true` |
+| Nothing to do, stop here | `when: …` plus `return: "…"` | the rest is `skipped` (`returned`) |
+| A deadline with your own code | `race` with a `sleep` and a `fail` | your `code` |
+| Retry a flaky command | `retry: true`, `max` (attempts, first included), `backoff` | `BK_RETRIES_EXHAUSTED` |
+
 ## 4. When to use Blokky
 
 Blokky pays off when the scaffolding is a large part of what you would otherwise write:
@@ -133,12 +148,12 @@ Blokky pays off when the scaffolding is a large part of what you would otherwise
 
 ## 6. What Blokky is not
 
-- **Not a sandbox.** Running a plan is equivalent to running the same commands in bash: it grants no capability, bypasses no permission system and hides nothing that will run. A hostile plan is as dangerous as a hostile script. Agents keep their generic shell tool; Blokky is an additional tool, not a replacement.
+- **Not a sandbox.** Running a plan is equivalent to running the same commands in bash: it grants no capability, bypasses no permission system and hides nothing that will run. A hostile plan is as dangerous as a hostile script, and a runner rule that allows `blokky run` without the implementation's approval mechanism allows everything, like allowing `bash`. Agents keep their generic shell tool; Blokky is an additional tool, not a replacement.
 - **Not a control.** Deciding what may run is the job of the agent runner's permission system and the implementation's approval mechanisms. Blokky's warnings, strict YAML rules and secret masking make plans cleaner and easier to review; they are hygiene and are never presented as enforcement. Resource bounds (timeouts, concurrency caps) exist for predictability, not as security boundaries.
 - **Not a CI system.** It runs on the machine it is invoked on, for one run, and keeps no state between runs except what the implementation keeps for cleanup and review.
 - **Not a general workflow engine or a scripting language.** It has no expression language, no functions, no mutable variables and no way to generate plan structure at run time. A feature that would need those probably doesn't belong.
 
-What Blokky does aim for is **reviewability**: the programs a plan can start, the shape of every argv and environment, and the source of every value are determinable from the plan, its inputs and the environment it starts with, before it runs; only captured values are known at run time, so an implementation can list every process, argv and environment entry for a human, a classifier or a validator. The goal is "never less safe than the equivalent bash, and easier to review".
+What Blokky does aim for is **reviewability**: the programs a plan can start, the shape of every argv and environment, and the source of every value are determinable from the plan, its inputs and the environment it starts with, before it runs; only captured values are known at run time. So an implementation can list every process, argv and environment entry for a human, a classifier or a validator. The goal is "never less safe than the equivalent bash, and easier to review".
 
 ## 7. Reading guide
 
@@ -157,4 +172,4 @@ What Blokky does aim for is **reviewability**: the programs a plan can start, th
 | See how Blokky relates to other tools | [prior-art.md](prior-art.md) |
 | Know why a decision was made | [adr/](../adr/README.md) |
 
-The plan schema (`schema/blokky.schema.json`) is normative for structure; [reference.md §8](reference.md#8-rules-the-schema-doesnt-express) lists the rules it can't express. The security considerations are in [reference.md §9](reference.md#9-security-considerations).
+The plan schema (`schema/blokky.schema.json`) is normative for structure; [reference.md §8](reference.md#8-rules-beyond-the-schema) lists the rules it can't express. The security considerations are in [reference.md §9](reference.md#9-security-considerations).

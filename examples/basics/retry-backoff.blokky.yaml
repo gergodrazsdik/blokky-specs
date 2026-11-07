@@ -1,8 +1,9 @@
 # retry with backoff
-# `retry: true` retries failed attempts up to `max` times in total. `every`
-# is the first delay, `backoff` grows it (2s, 4s, 8s, 16s, capped at 30s) and
-# `jitter` spreads retries out. `index` numbers the attempts. Pushes an image
-# you have built and tagged.
+# `retry: true` retries failed attempts; `max` counts attempts, the first
+# included, so `max: 5` is one try and up to four retries. `every` is the first
+# delay, `backoff` grows it (2s, 4s, 8s, 16s, capped at 30s) and `jitter`
+# spreads retries out. `index` numbers the attempts. Pushes an image you have
+# built and tagged.
 # Run: blokky run examples/basics/retry-backoff.blokky.yaml --input IMAGE=ghcr.io/example/web:1.4.0
 blokky: 1.0
 inputs:

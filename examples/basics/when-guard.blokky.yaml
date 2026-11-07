@@ -1,6 +1,8 @@
 # when: a guard
 # `when` skips a node (status `skipped`) if its condition is false. Use it for
-# optional steps; use `if` when there is an else. Run in a .NET repository.
+# optional steps; use `if` when there is an else. Comparing an environment
+# variable that isn't set is a condition error, so check `defined` first.
+# Run in a .NET repository.
 # Run: blokky run examples/basics/when-guard.blokky.yaml
 blokky: 1.0
 do:
@@ -9,5 +11,8 @@ do:
     when: { path: tests, is_dir: true }
     exec: [dotnet, test, tests, --no-build, -c, Release]
   - name: publish only in CI
-    when: { env: CI, equals: 'true' }
+    when:
+      all:
+        - { env: CI, defined: true }
+        - { env: CI, equals: 'true' }
     exec: [dotnet, publish, --no-build, -c, Release, -o, out]

@@ -2,7 +2,7 @@
 
 Status: **draft** (`1.0.0-draft`, not yet finalized)
 
-This document is normative for how leaves become processes: splitting `exec` strings, building Windows command lines, writing and invoking `script` files per shell, choosing a shell, resolving executables, the shell × OS matrix, and the injection properties of each shell. Process lifecycle (sessions, kills, completion) is in [execution-model.md](execution-model.md). Normative keywords are used as defined in [syntax.md §1](syntax.md#1-conventions). Rules carry IDs (`SH-n`) for conformance cases.
+This document is normative for how leaves become processes: splitting `exec` strings, building Windows command lines, writing and invoking `script` files per shell, choosing a shell, resolving executables, the shell × OS matrix, and the injection properties of each shell. Process lifecycle (sessions, kills, completion) is in [execution-model.md](execution-model.md). Normative keywords are used as defined in [syntax.md §1](syntax.md#1-conventions). Rules carry IDs (`SH-n`) for conformance cases; IDs of removed rules (SH-31) are not reused.
 
 ## 1. `exec`
 
@@ -54,13 +54,15 @@ This document is normative for how leaves become processes: splitting `exec` str
 
 `<bash>` etc. are absolute paths (§4).
 
+The `powershell` invocation passes `-ExecutionPolicy Bypass` so a plan's script runs whatever the local execution policy says; a policy set by Group Policy, or AppLocker, can still block it, which fails the leaf with `BK_SPAWN_FAILED`. Allowing `blokky run` is no narrower than allowing `powershell -ExecutionPolicy Bypass` ([reference.md §9](reference.md#9-security-considerations)).
+
 - **SH-15.** `sh` gets no options: common `/bin/sh` implementations (dash) reject `--noprofile`/`--norc`, and a non-interactive `sh` reads no startup file once `ENV` is cleared.
 - **SH-16.** In bash, `pipefail` is set with the `-o pipefail` option, so the script text is unchanged and line numbers match the plan. A failing command in the middle of a bash or sh script doesn't stop it; the script's exit status is the leaf's.
 - **SH-33.** `zsh` is Unix-only and used only when named (`shell:` or `defaults.shell`); detection never picks it. `zsh --no-rcs` still reads `/etc/zshenv`, which zsh can't skip ([ADR 0014](../adr/0014-remaining-features.md)). `fish` isn't supported ([ADR 0017](../adr/0017-review-features.md)).
-- **SH-17.** **PowerShell prologue.** Blokky inserts `$ErrorActionPreference = 'Stop';` (followed by a space) at the start of the first line of the script that isn't blank, a comment, or a `using` statement. The prologue shares that line, so line numbers in error messages stay exact ([ADR 0011](../adr/0011-pwsh-prologue.md)). A `param(` block at that position is a plan error (plan scripts receive no arguments). With the prologue, a cmdlet error ends the script with exit code 1 instead of being written to stderr while the script exits 0.
+- **SH-17.** **PowerShell prologue.** Blokky inserts `$ErrorActionPreference = 'Stop';` (followed by a space) at the start of the first line of the script that isn't blank, a comment, or a `using` statement. The prologue shares that line, so line numbers in error messages stay exact ([ADR 0011](../adr/0011-pwsh-prologue.md)). A `param(` block, or an attribute (`[CmdletBinding()]`, `[Diagnostics.CodeAnalysis…]`) before one, at that position is a plan error (plan scripts receive no arguments). With the prologue, a cmdlet error ends the script with exit code 1 instead of being written to stderr while the script exits 0.
 - **SH-18.** `$PSNativeCommandUseErrorActionPreference` is not set: a failing native program doesn't stop a PowerShell script, matching "no `-e`" in bash.
 - **SH-19.** The exact invocation, including the prologue, is determined statically, so implementations can show it before a run.
-- **SH-20.** The exit code of `pwsh -File` and `powershell -File` for a script that ends without `exit` after a failing native command is *provisional — verify in spike*; the spec will state it.
+- **SH-20.** The exit code of `pwsh -File` and `powershell -File` for a script that ends without `exit` after a failing native command is *provisional — verify in spike*; until then, plans that need a defined exit code end with an explicit `exit`.
 
 ### 2.3 Choosing the shell
 
@@ -102,7 +104,7 @@ These describe how values that reach a shell through the environment can still c
 - **PowerShell argument passing.** PowerShell 7.3 and later pass arguments to native programs as given (`$PSNativeCommandArgumentPassing`); Windows PowerShell 5.1 re-quotes them and mishandles empty strings and embedded double quotes. Prefer `exec` for native programs with variable arguments.
 - **`.cmd` shims from PowerShell.** `npm`, `npx`, `pnpm`, `yarn` and other `.cmd`/`.bat` files re-parse their arguments in cmd.exe, so a variable argument is exposed to `%X%` expansion and cmd metacharacters. The safe alternative is an `exec` leaf that runs the package's JavaScript entry point with `node` ([ADR 0006](../adr/0006-shims-and-license.md)).
 - **Argument injection.** A value starting with `-` is read as an option by most programs. Put `--` before item values, captures and inputs passed as arguments, where the program supports it.
-- **Dynamic code.** Running a variable as code (`eval`, `source`, `.`, `sh -c "$X"`, `iex`, `Invoke-Expression`, a variable in command position) is dynamic code; implementations may flag it for review (§7).
+- **Dynamic code.** Running a variable as code (`eval`, `source`, `.`, `sh -c "$X"`, `iex`, `Invoke-Expression`, a variable in command position) is dynamic code. So is passing a `set` template's result to `bash -c`, `python -c` or `node -e` in an `exec` leaf: that is string interpolation into code (VA-57); implementations may flag it for review (§7).
 
 ## 7. Script analysis
 

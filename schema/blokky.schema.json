@@ -39,10 +39,17 @@
         { "type": "string", "pattern": "^[1-9][0-9]{0,9}$" }
       ]
     },
+    "exitCode": {
+      "description": "An exit code, 0 to 4294967295 (Windows exit codes are unsigned 32-bit values).",
+      "anyOf": [
+        { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+        { "type": "string", "pattern": "^(0|[1-9][0-9]{0,9})$" }
+      ]
+    },
     "exitCodes": {
       "type": "array",
       "minItems": 1,
-      "items": { "$ref": "#/$defs/int" }
+      "items": { "$ref": "#/$defs/exitCode" }
     },
     "decimal": {
       "anyOf": [
@@ -282,6 +289,14 @@
         { "required": ["lines"] },
         { "required": ["matrix"] }
       ],
+      "dependentRequired": {
+        "fields": ["items"],
+        "keep_blank": ["lines"],
+        "allow_empty": ["glob"]
+      },
+      "if": { "required": ["matrix"] },
+      "then": { "not": { "required": ["as"] } },
+      "else": { "required": ["as"] },
       "additionalProperties": false
     },
     "mount": {
@@ -325,8 +340,90 @@
       ],
       "additionalProperties": false
     },
-    "nodeProps": {
-      "description": "Every key a node may carry. The kind x modifier validity matrix is in spec/reference.md section 7.",
+    "kindChoice": {
+      "description": "Exactly one kind per node.",
+      "oneOf": [
+        { "required": ["exec"] },
+        { "required": ["script"] },
+        { "required": ["do"] },
+        { "required": ["all"] },
+        { "required": ["any"] },
+        { "required": ["race"] },
+        { "required": ["if"] },
+        { "required": ["sleep"] },
+        { "required": ["log"] },
+        { "required": ["fail"] },
+        { "required": ["assert"] },
+        { "required": ["set"] },
+        { "required": ["return"] }
+      ]
+    },
+    "forSettings": {
+      "description": "On a node with for, concurrency and fail_fast belong inside for: (reference.md section 7, RF-31).",
+      "if": { "required": ["for"] },
+      "then": {
+        "not": {
+          "anyOf": [
+            { "required": ["concurrency"] },
+            { "required": ["fail_fast"] }
+          ]
+        }
+      }
+    },
+    "leafKind": { "anyOf": [ { "required": ["exec"] }, { "required": ["script"] } ] },
+    "noProcessKind": { "anyOf": [ { "required": ["sleep"] }, { "required": ["log"] }, { "required": ["fail"] }, { "required": ["set"] }, { "required": ["return"] } ] },
+    "nodeRules": {
+      "description": "Validity rules the schema expresses (reference.md sections 5.2 and 7; RF-3 to RF-5, RF-12, RF-28, RF-30 to RF-33).",
+      "dependentSchemas": {
+        "stdin": { "$ref": "#/$defs/leafKind" },
+        "ok_exit": { "$ref": "#/$defs/leafKind" },
+        "stderr": { "$ref": "#/$defs/leafKind" },
+        "encoding": { "$ref": "#/$defs/leafKind" },
+        "keep_descendants": { "$ref": "#/$defs/leafKind" },
+        "capture": { "$ref": "#/$defs/leafKind" },
+        "capture_file": { "$ref": "#/$defs/leafKind" },
+        "secret": { "$ref": "#/$defs/leafKind" },
+        "timeout": { "not": { "$ref": "#/$defs/noProcessKind" } },
+        "finally": { "not": { "$ref": "#/$defs/noProcessKind" } },
+        "finally_timeout": { "not": { "$ref": "#/$defs/noProcessKind" } },
+        "ignore_errors": { "not": { "$ref": "#/$defs/noProcessKind" } },
+        "lock": { "not": { "$ref": "#/$defs/noProcessKind" } },
+        "tempdir": { "not": { "$ref": "#/$defs/noProcessKind" } },
+        "cwd": { "not": { "$ref": "#/$defs/noProcessKind" } },
+        "env": { "not": { "$ref": "#/$defs/noProcessKind" } },
+        "export": { "not": { "$ref": "#/$defs/noProcessKind" } },
+        "container": { "not": { "$ref": "#/$defs/noProcessKind" } },
+        "services": { "not": { "$ref": "#/$defs/noProcessKind" } },
+        "retry": { "not": { "$ref": "#/$defs/noProcessKind" } },
+        "while": { "allOf": [ { "not": { "$ref": "#/$defs/noProcessKind" } }, { "anyOf": [ { "required": ["max"] }, { "required": ["timeout"] } ] } ] },
+        "until": { "allOf": [ { "not": { "$ref": "#/$defs/noProcessKind" } }, { "anyOf": [ { "required": ["max"] }, { "required": ["timeout"] } ] } ] },
+        "for": { "not": { "anyOf": [ { "required": ["sleep"] }, { "required": ["fail"] }, { "required": ["set"] }, { "required": ["return"] } ] } },
+        "attempt_timeout": { "anyOf": [ { "required": ["retry"] }, { "required": ["while"] }, { "required": ["until"] }, { "required": ["for"] } ] },
+        "max": { "anyOf": [ { "required": ["retry"] }, { "required": ["while"] }, { "required": ["until"] } ] },
+        "every": { "anyOf": [ { "required": ["retry"] }, { "required": ["while"] }, { "required": ["until"] } ] },
+        "index": { "anyOf": [ { "required": ["retry"] }, { "required": ["while"] }, { "required": ["until"] } ] },
+        "backoff": { "required": ["retry"] },
+        "jitter": { "required": ["retry"] },
+        "on_body_failure": { "anyOf": [ { "required": ["while"] }, { "required": ["until"] } ] },
+        "carry": { "anyOf": [ { "required": ["while"] }, { "required": ["until"] } ] },
+        "collect": { "anyOf": [ { "required": ["for"] }, { "required": ["while"] }, { "required": ["until"] } ] },
+        "concurrency": { "anyOf": [ { "required": ["all"] }, { "required": ["any"] } ] },
+        "fail_fast": { "anyOf": [ { "required": ["do"] }, { "required": ["all"] } ] },
+        "code": { "anyOf": [ { "required": ["fail"] }, { "required": ["assert"] } ] }
+      },
+      "dependentRequired": {
+        "shell": ["script"],
+        "then": ["if"],
+        "else": ["if"],
+        "if": ["then"],
+        "level": ["log"],
+        "message": ["assert"],
+        "finally_timeout": ["finally"]
+      }
+    },
+    "node": {
+      "description": "A node. Every key a node may carry is listed here, so an error is reported at its own key; the validity rules are in nodeRules.",
+      "type": "object",
       "properties": {
         "exec": { "$ref": "#/$defs/exec" },
         "script": { "type": "string", "minLength": 1 },
@@ -483,46 +580,13 @@
           "propertyNames": { "$ref": "#/$defs/varName" },
           "additionalProperties": { "$ref": "#/$defs/varName" }
         }
-      }
-    },
-    "kindChoice": {
-      "description": "Exactly one kind per node.",
-      "oneOf": [
-        { "required": ["exec"] },
-        { "required": ["script"] },
-        { "required": ["do"] },
-        { "required": ["all"] },
-        { "required": ["any"] },
-        { "required": ["race"] },
-        { "required": ["if"] },
-        { "required": ["sleep"] },
-        { "required": ["log"] },
-        { "required": ["fail"] },
-        { "required": ["assert"] },
-        { "required": ["set"] },
-        { "required": ["return"] }
-      ]
-    },
-    "forSettings": {
-      "description": "On a node with for, concurrency and fail_fast belong inside for: (reference.md section 7, RF-31).",
-      "if": { "required": ["for"] },
-      "then": {
-        "not": {
-          "anyOf": [
-            { "required": ["concurrency"] },
-            { "required": ["fail_fast"] }
-          ]
-        }
-      }
-    },
-    "node": {
-      "type": "object",
+      },
+      "additionalProperties": false,
       "allOf": [
-        { "$ref": "#/$defs/nodeProps" },
         { "$ref": "#/$defs/kindChoice" },
-        { "$ref": "#/$defs/forSettings" }
-      ],
-      "unevaluatedProperties": false
+        { "$ref": "#/$defs/forSettings" },
+        { "$ref": "#/$defs/nodeRules" }
+      ]
     },
     "input": {
       "type": "object",
@@ -537,12 +601,8 @@
       "additionalProperties": false
     },
     "root": {
+      "description": "The root mapping: the plan-only keys plus the root node's keys.",
       "type": "object",
-      "allOf": [
-        { "$ref": "#/$defs/nodeProps" },
-        { "$ref": "#/$defs/kindChoice" },
-        { "$ref": "#/$defs/forSettings" }
-      ],
       "properties": {
         "blokky": { "$ref": "#/$defs/specVersion" },
         "inputs": {
@@ -561,10 +621,171 @@
             "leaf_timeout": { "$ref": "#/$defs/duration" }
           },
           "additionalProperties": false
+        },
+        "exec": { "$ref": "#/$defs/exec" },
+        "script": { "type": "string", "minLength": 1 },
+        "do": { "$ref": "#/$defs/nodeList" },
+        "all": { "$ref": "#/$defs/nodeList" },
+        "any": { "$ref": "#/$defs/nodeList" },
+        "race": { "$ref": "#/$defs/nodeList" },
+        "if": { "$ref": "#/$defs/condition" },
+        "sleep": { "$ref": "#/$defs/duration" },
+        "log": { "$ref": "#/$defs/scalar" },
+        "fail": { "$ref": "#/$defs/scalar" },
+        "assert": { "$ref": "#/$defs/condition" },
+        "set": { "$ref": "#/$defs/setMap" },
+        "return": { "$ref": "#/$defs/scalar" },
+
+        "shell": { "$ref": "#/$defs/shell" },
+        "then": { "$ref": "#/$defs/nodeList" },
+        "else": { "$ref": "#/$defs/nodeList" },
+        "level": { "enum": ["debug", "info", "warn"] },
+        "message": { "$ref": "#/$defs/scalar" },
+        "code": { "$ref": "#/$defs/userCode" },
+        "concurrency": { "$ref": "#/$defs/posInt" },
+        "fail_fast": { "$ref": "#/$defs/bool" },
+
+        "stdin": { "$ref": "#/$defs/stdin" },
+        "ok_exit": { "$ref": "#/$defs/exitCodes" },
+        "stderr": { "const": "merge" },
+        "encoding": { "enum": ["utf-8", "utf-16le", "utf-16be", "latin1"] },
+        "keep_descendants": {
+          "anyOf": [
+            { "$ref": "#/$defs/bool" },
+            { "const": "detach" }
+          ]
+        },
+        "capture": {
+          "anyOf": [
+            { "$ref": "#/$defs/varName" },
+            {
+              "type": "object",
+              "minProperties": 1,
+              "propertyNames": { "$ref": "#/$defs/varName" },
+              "additionalProperties": { "$ref": "#/$defs/jsonPath" }
+            }
+          ]
+        },
+        "capture_file": { "$ref": "#/$defs/varName" },
+        "secret": { "$ref": "#/$defs/bool" },
+
+        "name": { "$ref": "#/$defs/scalar" },
+        "when": { "$ref": "#/$defs/condition" },
+        "timeout": { "$ref": "#/$defs/duration" },
+        "lock": {
+          "anyOf": [
+            { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+            {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+                "wait": { "$ref": "#/$defs/duration" }
+              },
+              "required": ["name"],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "tempdir": {
+          "anyOf": [
+            { "$ref": "#/$defs/trueOnly" },
+            {
+              "type": "object",
+              "minProperties": 1,
+              "properties": {
+                "as": { "$ref": "#/$defs/varName" },
+                "prefix": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,32}$" },
+                "remove": {
+                  "anyOf": [
+                    { "$ref": "#/$defs/bool" },
+                    { "const": "on_success" }
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "cwd": { "$ref": "#/$defs/pathValue" },
+        "env": { "$ref": "#/$defs/envMap" },
+        "export": { "$ref": "#/$defs/nameList" },
+        "container": { "$ref": "#/$defs/container" },
+        "services": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/service" } },
+        "finally": { "$ref": "#/$defs/nodeList" },
+        "finally_timeout": { "$ref": "#/$defs/duration" },
+        "ignore_errors": { "$ref": "#/$defs/bool" },
+
+        "retry": {
+          "anyOf": [
+            { "$ref": "#/$defs/trueOnly" },
+            { "$ref": "#/$defs/condition" }
+          ]
+        },
+        "while": { "$ref": "#/$defs/condition" },
+        "until": { "$ref": "#/$defs/condition" },
+        "for": { "$ref": "#/$defs/forSpec" },
+        "attempt_timeout": { "$ref": "#/$defs/duration" },
+        "max": { "$ref": "#/$defs/posInt" },
+        "every": { "$ref": "#/$defs/duration" },
+        "backoff": {
+          "type": "object",
+          "properties": {
+            "factor": { "$ref": "#/$defs/decimal" },
+            "max": { "$ref": "#/$defs/duration" }
+          },
+          "required": ["factor"],
+          "additionalProperties": false
+        },
+        "jitter": { "$ref": "#/$defs/decimal" },
+        "on_body_failure": { "enum": ["stop", "continue"] },
+        "index": {
+          "anyOf": [
+            { "$ref": "#/$defs/varName" },
+            {
+              "type": "object",
+              "properties": {
+                "as": { "$ref": "#/$defs/varName" },
+                "start": { "$ref": "#/$defs/int" }
+              },
+              "required": ["as"],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "carry": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/varName" },
+          "additionalProperties": {
+            "anyOf": [
+              { "$ref": "#/$defs/varName" },
+              {
+                "type": "object",
+                "properties": {
+                  "from": { "$ref": "#/$defs/varName" },
+                  "initial": { "$ref": "#/$defs/scalar" }
+                },
+                "required": ["from"],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "collect": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/varName" },
+          "additionalProperties": { "$ref": "#/$defs/varName" }
         }
       },
+      "additionalProperties": false,
       "required": ["blokky"],
-      "unevaluatedProperties": false
+      "allOf": [
+        { "$ref": "#/$defs/kindChoice" },
+        { "$ref": "#/$defs/forSettings" },
+        { "$ref": "#/$defs/nodeRules" },
+        { "not": { "required": ["ignore_errors"] } }
+      ]
     }
   }
 }

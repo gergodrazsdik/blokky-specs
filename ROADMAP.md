@@ -10,7 +10,7 @@ The spec describes the **whole language 1.0**, with every planned feature; it ha
 2. **`1.0.0-draft.2`:** `set` and `vars` ([ADR 0015](adr/0015-set-and-vars.md)). *(tagged 2026-11-06)*
 3. **`1.0.0-draft.3`:** fixes found while writing the examples, and the `command` subject ([ADR 0016](adr/0016-fixes-from-examples.md)). *(tagged 2026-11-06)*
 4. **Example suite** covering every feature *(done 2026-11-06: [examples](examples/README.md))*, then a **review** by the maintainer and an agent council, which also asks whether each feature earns its place *(done 2026-11-07)*. Accepted changes produce further drafts (`1.0.0-draft.N`).
-5. **`1.0.0-draft.4`:** the review's decisions: features ([ADR 0017](adr/0017-review-features.md)), semantics ([ADR 0018](adr/0018-review-semantics.md)) and corrections. *(in progress)*
+5. **`1.0.0-draft.4`:** the review's decisions: features ([ADR 0017](adr/0017-review-features.md)), semantics ([ADR 0018](adr/0018-review-semantics.md)) and corrections ([ADR 0019](adr/0019-review-corrections.md)). *(in progress)*
 6. **Conformance suite** for the features that survive the review.
 7. **Refinement during the runtime implementation:** decisions the runtime can't confirm are revised in further drafts.
 8. **`1.0.0`** once the runtime has validated the draft.

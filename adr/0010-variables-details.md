@@ -37,3 +37,5 @@ All answers follow the recommendation, except F-0006, which was asked as an open
 
 - Applied in: `spec/execution-model.md` EM-54; `spec/variables.md` VA-21, VA-23, VA-51, VA-52.
 - Tracker: F-0006, T-0018.
+
+Note (2026-11-07): EM-54 moved to blokky-cli with the run-budget rules; its ID isn't reused in the spec.

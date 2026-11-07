@@ -93,7 +93,7 @@ Each of these is a plan error:
 |---|---|
 | `register` | `capture` |
 | `loop`, `with_items` | `for: { each: [...], as: ITEM }` |
-| `retries` | `retry: true` plus `max: N` |
+| `retries` | `retry: true` plus `max: N+1` (`max` counts attempts, including the first) |
 | `steps`, `tasks` | `do` |
 | `run` | `script` (with `shell`) or `exec` |
 | `continue-on-error` | `ignore_errors` |
@@ -105,7 +105,8 @@ Each of these is a plan error:
 | `pattern`, `regex` (in an input) | `matches` |
 | `desc`, `help` (in an input) | `description` |
 | `value` (in an input) | `default` |
-| `params`, `parameters`, `args`, `arguments`, `vars`, `variables` (at the root) | `inputs` |
+| `params`, `parameters`, `args`, `arguments` (at the root) | `inputs` |
+| `variables`, `constants` (at the root) | `vars` |
 
 **SY-31.** A keyword of a feature the implementation doesn't support yet is not unknown: it is a plan error (`BK_PLAN_NOT_SUPPORTED`) that names the feature.
 
@@ -225,6 +226,8 @@ How values are supplied, the value rules and the input error codes are in [varia
 
 **SY-55.** **Decimals** (`backoff.factor`, `jitter`): `^(0|[1-9][0-9]*)(\.[0-9]+)?$`, no sign, no exponent, invariant culture. Each field states its range.
 
+**SY-96.** **Exit codes** (`ok_exit`, probe `true_exit` and `false_exit`) use the integer grammar with a range of 0 to 4 294 967 295, because Windows exit codes are unsigned 32-bit values. On Unix only 0–255 can occur; larger values are valid (a plan may run on Windows too) and MAY get a warning.
+
 ### 6.5 Durations
 
 ([ADR 0007](../adr/0007-syntax-details.md))
@@ -298,9 +301,9 @@ How values are supplied, the value rules and the input error codes are in [varia
 | `stdin: { file: P }` | The content of host file `P` (a literal path or `{ var: X }`). | `stdin`. |
 
 - **SY-78.** Any `var` or `from_env` reference MAY carry `secret: true`: `{ from_env: GH_TOKEN, secret: true }`. A literal can't be marked secret.
-- **SY-79.** A reference replaces the **whole** value. There is no string concatenation; a path is built by nesting relative `cwd` values (a relative child `cwd` resolves against the parent's cwd).
+- **SY-79.** A reference replaces the **whole** value. Executed fields don't concatenate: to build a string such as `--name=${X}` or `page=${N}`, bind it with a `set` template (`set: { ARG: '--name=${X}' }`) and pass `{ var: ARG }`. A path is built by nesting relative `cwd` values (a relative child `cwd` resolves against the parent's cwd).
 - **SY-80.** argv[0] of an `exec` array MUST be a literal; a reference there is a plan error.
-- **SY-81.** Plan variables reach processes only through `env:`, `export:` and `exec` array elements; there is no other way.
+- **SY-81.** Plan variables reach processes only through four routes: `env:`, `export:`, `exec` array elements and `stdin`. A `{ var: X }` in `cwd`, `stdin.file`, `path:` or `mounts[].host` chooses a location; it doesn't pass the value to the process.
 
 ### 7.3 Interpolation in display strings and templates
 
@@ -311,6 +314,7 @@ How values are supplied, the value rules and the input error codes are in [varia
 - **SY-85.** A `${X}` whose variable can't be bound at that point is a plan error; one that might be undefined MAY get a warning ([variables.md](variables.md), VA-38); at run time an undefined variable is an error of the node.
 - **SY-86.** Non-scalar values (multi-field captures of objects or arrays) render as compact JSON; a `capture_file` variable renders as its path.
 - **SY-87.** Secret values are masked in the rendered text.
+- **SY-98.** Rendered text is display-sanitized like error messages: control, bidirectional and zero-width characters from variable values are shown escaped, so a captured value can't rewrite what a reviewer sees. This is hygiene, not a control; rendered text and captured values can hold untrusted data and are never instructions.
 
 ### 7.4 Per-field table
 
@@ -358,7 +362,7 @@ How values are supplied, the value rules and the input error codes are in [varia
 | Field | Type | Form |
 |---|---|---|
 | `stdin` | string, `{ var }` or `{ file }` | R |
-| `ok_exit` | list of integers | L |
+| `ok_exit` | list of exit codes (SY-96) | L |
 | `stderr` | `merge` | L |
 | `encoding` | encoding name | L |
 | `keep_descendants` | `true`, `false` or `detach` | L |
@@ -436,7 +440,7 @@ How values are supplied, the value rules and the input error codes are in [varia
 | `probe` | probe mapping | see below |
 | `probe.exec`, `probe.script`, `probe.shell`, `probe.env`, `probe.export` | as for leaves | as for leaves |
 | `probe.timeout` | duration | L |
-| `probe.true_exit`, `probe.false_exit` | list of integers | L |
+| `probe.true_exit`, `probe.false_exit` | list of exit codes (SY-96) | L |
 | `probe.timeout_result` | boolean | L |
 | operator values (`equals`, `in`, `contains`, `matches`, `gt`, …) | string, list of strings, regex or number | L |
 | `json` | JSON path | L |
@@ -460,6 +464,20 @@ How values are supplied, the value rules and the input error codes are in [varia
 
 **SY-90.** Plans and examples SHOULD use: plain scalars only for simple `exec` strings; `script:` text always as a `|` or `|-` block scalar; regexes always single-quoted; block mappings for non-trivial probes.
 
+**SY-97.** Where the language offers several spellings, plans and examples SHOULD use the canonical one:
+
+| Intent | Canonical form | Not |
+|---|---|---|
+| Run a program with a static argv that needs no quoting | `exec: dotnet build -c Release` (string form) | — |
+| Run a program with variables or quoting | `exec: [git, commit, -m, 'fix: typo']`, `{ var: X }` elements | `${X}` in a string |
+| Shell text | `script: \|` block scalar with `shell:` | `exec: [bash, -c, …]` |
+| Build a string from variables | a `set` template, then `{ var: NAME }` | `exec: [echo, …]` plus `capture` |
+| Skip a node | `when:` | `if` without `else` |
+| A guard on an optional environment variable | `{ env: NAME, defined: true }` before comparing it | comparing an unset variable |
+| Is a program installed? | `{ command: NAME, exists: true }` | a probe running `command -v` |
+| Wait or poll until something holds | `until` (with `result:` for output) | `retry: true` with a large `max` |
+| Retry a failure | `retry: true` and `max` (attempts, first included) | `until` |
+
 ## 9. Targeted errors
 
 **SY-91.** Each of these plan errors names the problem and includes a corrected snippet. Codes are assigned in [errors.md](errors.md).
@@ -469,8 +487,8 @@ How values are supplied, the value rules and the input error codes are in [varia
 | A mapping or a single node where a body list is expected (`do: { exec: … }`) | Prefix each node with a dash (`- exec: …`). |
 | A string condition (`if: "$X == 1"`) | `if: { var: X, equals: '1' }` |
 | GitHub-Actions-style `if:` next to another kind (`exec: …` plus `if: …`) | Use `when:` for a guard. |
-| `${X}` in a literal field or an `exec` string | Use `{ var: X }` where references are allowed, nest a relative `cwd`, or `"$X"` in shell text with `export: [X]`. |
-| `retry: 3` | `retry: true` plus `max: 3` |
+| `${X}` in a literal field or an `exec` string | Build the string with a `set` template (`set: { ARG: '--name=${X}' }`) and pass `{ var: ARG }`; for a whole value use `{ var: X }`; for a path, nest a relative `cwd`; in shell text, `"$X"` with `export: [X]`. |
+| `retry: 3` | `retry: true` plus `max: 4` (`max` counts attempts, including the first) |
 | A bare number for a duration (`timeout: 30`) | `timeout: 30s` |
 | A mapping as the value of `exec:`/`script:` (`exec: { cmd: …, timeout: 5m }`) | Move `timeout` (and other options) to the node level. |
 | `not: { var: X, equals: a }` | `{ var: X, not_equals: a }` |
