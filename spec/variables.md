@@ -4,7 +4,7 @@ Status: **draft** (`1.0.0-draft`, not yet finalized)
 
 This document is normative for plan variables: names, the kinds of bindings, plan inputs and their values, captures, scope and binding rules, how variables reach processes, the environment, outputs and secrets. How variable references are *written* (forms, the per-field table, interpolation syntax) is in [syntax.md §7](syntax.md#7-values-literals-references-and-interpolation). Normative keywords are used as defined in [syntax.md §1](syntax.md#1-conventions). Rules carry IDs (`VA-n`) for conformance cases.
 
-Where a rule here restates a rule of [reference.md §8](reference.md#8-rules-beyond-the-schema), a plan error reports the `RF-n` rule ([errors.md §4](errors.md#4-plan-errors)).
+Where a rule here restates a rule of [reference.md §8](reference.md#8-rules-beyond-the-schema), a plan error reports the `RF-n` rule; where it restates only a grammar rule of [syntax.md](syntax.md), it reports that `SY-n` rule ([errors.md §4](errors.md#4-plan-errors)).
 
 ## 1. Two namespaces
 
@@ -14,9 +14,9 @@ Where a rule here restates a rule of [reference.md §8](reference.md#8-rules-bey
 
 ## 2. Names
 
-- **VA-4.** Plan variable names match `^[A-Z][A-Z0-9_]*$`. Names starting with `BLOKKY_` are reserved and can't be bound by a plan.
+- **VA-4.** Plan variable names match `^[A-Z][A-Z0-9_]*$`. Names starting with `BLOKKY_` are reserved and can't be bound by a plan. A violation is reported as SY-52 ([syntax.md](syntax.md) SY-3).
 - **VA-5.** Derived names count as declarations for every collision check: `<AS>_INDEX` for a `for` with `as: AS`, `MATRIX_INDEX` and the matrix keys for `matrix`.
-- **VA-6.** Environment variable names match `^[A-Za-z_][A-Za-z0-9_]*$`. On Windows they are compared case-insensitively, including for collisions between `env` and `export` names.
+- **VA-6.** Environment variable names match `^[A-Za-z_][A-Za-z0-9_]*$`. On Windows they are compared case-insensitively, including for collisions between `env` and `export` names. A name that doesn't match is reported as SY-52 ([syntax.md](syntax.md) SY-3).
 
 ## 3. Kinds of bindings
 
@@ -155,7 +155,7 @@ Static views of a plan (for review, before a run) MAY accept a missing required 
 ### 7.1 A leaf's environment
 
 - **VA-39.** A leaf's environment is Blokky's own environment, overlaid by the `env` and `export` mappings of every enclosing node from the root down (inner wins), then by the variables Blokky sets (§7.4). `BASH_ENV` and `ENV` are then removed.
-- **VA-40.** `{ from_env: NAME }` reads the environment the run started with. Because that is known before anything runs, `from_env` values are treated like inputs: they are resolved in the validation phase, and static views show each value next to the inputs (masked when the reference is secret), or that it is unset. An unset `NAME` fails with `BK_FROM_ENV_UNSET` where it is used: in validation for `vars`, which bind before anything runs (reported with the plan errors, at the entry), and otherwise when the node that uses it runs, so a reference guarded by `when: { env: NAME, defined: true }` stays valid ([ADR 0018](../adr/0018-review-semantics.md)).
+- **VA-40.** `{ from_env: NAME }` reads the environment the run started with. Because that is known before anything runs, `from_env` values are treated like inputs: they are resolved in the validation phase, and static views show each value next to the inputs (masked when the reference is secret), or that it is unset. An unset `NAME` fails with `BK_FROM_ENV_UNSET` where it is used: in validation for `vars`, which bind before anything runs (reported with the plan errors, at the environment variable name, [syntax.md](syntax.md) SY-1), and otherwise when the node that uses it runs, so a reference guarded by `when: { env: NAME, defined: true }` stays valid ([ADR 0018](../adr/0018-review-semantics.md)).
 
 ### 7.2 Forbidden and reserved names
 

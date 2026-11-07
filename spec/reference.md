@@ -296,7 +296,7 @@ There is no implicit `timeout` on groups or the root; `defaults.leaf_timeout` se
 
 `tempdir: true` or `tempdir: { as: WORK, prefix: build, remove: on_success }`.
 
-- Creates a fresh directory (mode 0700, unpredictable name, optional `prefix`) under the per-user temp root, **once per node** (not per attempt; nest `retry` inside to get a fresh dir per attempt).
+- Creates a fresh directory (mode 0700, unpredictable name that starts with the optional `prefix`) under the per-user temp root, **once per node** (not per attempt; nest `retry` inside to get a fresh dir per attempt).
 - The directory **becomes the node's cwd**. A relative `cwd` on the same node resolves inside it; an absolute `cwd` together with `tempdir` is a plan error.
 - `as` binds the directory's absolute path to a variable visible inside the node.
 - **`remove`:** `true` deletes the directory at node end, after `finally`; `on_success` deletes it only if the node succeeded, so a failure can be inspected. Removal never follows symbolic links. `false`, the default, keeps the directory, and removing it later is the implementation's business (for blokky-cli: `blokky clean`).
@@ -557,7 +557,7 @@ Implementations MUST enforce these as plan errors (unless noted), with `BK_PLAN_
 - **RF-6.** Modifiers outside repetition (`when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`, `container`, `services`) don't reference variables the node itself introduces (`as`, `tempdir.as`, `index`, `carry`, its own captures): "move it into the body".
 - **RF-7.** Shadowing: no variable name is bound twice in nested scopes, including by `index` and `carry`; inputs collide with every other binding.
 - **RF-8.** Two children of an `all` don't bind the same name anywhere in their subtrees, except names scoped to a loop iteration, which never reach the `all`'s scope.
-- **RF-9.** Inputs and variables never reach literal fields; argv[0] of an `exec` array is a literal.
+- **RF-9.** Inputs and variables never reach literal fields; argv[0] of an `exec` array is a literal. A reference in a literal field (`timeout: { var: X }`) is RF-9 alone, not a type mismatch.
 - **RF-10.** `env` doesn't set a forbidden key; `export` doesn't name a reserved environment name; no name is in both `env` and `export` on one node.
 - **RF-11.** An absolute `cwd` is not combined with `tempdir` on one node.
 - **RF-12.** Captures (`capture`, `capture_file`, `secret`) only on `exec` and `script` nodes. *(schema)*
@@ -570,8 +570,8 @@ Implementations MUST enforce these as plan errors (unless noted), with `BK_PLAN_
 - **RF-19.** A secret marker is only on references, never on literals; a literal marked secret (SY-91) is reported under this rule, not as an unknown key.
 - **RF-20.** An input's `default` satisfies its constraint; at most one of `in`/`matches`.
 - **RF-21.** Empty lists only in fields that allow them (`mounts`).
-- **RF-22.** A regex stays within the portable subset ([syntax.md §6.7](syntax.md#67-regular-expressions)).
-- **RF-23.** A reference (`${X}`, `{ var: X }`, a `var:` subject, an `outputs` entry) names a variable that some binding can provide before it: a syntactic scope check over the plan. A reference with no possible binding is a plan error; whether a possible binding actually happened is checked at run time ([variables.md §6](variables.md#6-scope-and-binding)).
+- **RF-22.** A regex stays within the portable subset ([syntax.md §6.7](syntax.md#67-regular-expressions)); a regex that doesn't compile is outside the subset too.
+- **RF-23.** A reference (`${X}`, `{ var: X }`, a `var:` subject, an `outputs` entry) names a variable that some binding can provide before it: a syntactic scope check over the plan. A reference with no possible binding is a plan error; whether a possible binding actually happened is checked at run time ([variables.md §6](variables.md#6-scope-and-binding)). RF-23 is reported only when no more specific rule applies: RF-6, RF-16 and RF-27 win over it ([errors.md §4](errors.md#4-plan-errors)).
 - **RF-24.** Service names are present and unique within a node.
 - **RF-25.** `fields` only with `items`; `keep_blank` only with `lines`; `allow_empty` only with `glob`. *(schema)*
 - **RF-26.** A name isn't bound twice: not by two sequential siblings, not by `set` for a bound name, not by `vars` for an input or another `vars` entry. Two sequential loops may bind the same loop variable, because each binds it in its own iteration scope.

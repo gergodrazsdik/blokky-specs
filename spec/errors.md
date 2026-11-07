@@ -6,7 +6,7 @@ This document is the catalogue of the built-in error codes of the language: plan
 
 ## 1. Codes
 
-- **ER-1.** Built-in codes start with the reserved prefix `BK_` and match `^BK_[A-Z][A-Z0-9_]*$`. User codes (from `fail` and `assert`) match `^[A-Z][A-Z0-9_]*$` and MUST NOT start with `BK_`.
+- **ER-1.** Built-in codes start with the reserved prefix `BK_` and match `^BK_[A-Z][A-Z0-9_]*$`. User codes (from `fail` and `assert`) match `^[A-Z][A-Z0-9_]*$` and MUST NOT start with `BK_`; a plan that breaks this is reported as SY-52 ([syntax.md](syntax.md) SY-3).
 - **ER-2.** Codes are a contract. Within a major spec version a code is never renamed, removed or given a different meaning; new codes MAY be added in any release. Consumers MUST treat an unknown code as a generic failure of its kind.
 - **ER-3.** Every error carries a code, a human-readable message (masked, display-sanitized) and, where useful, a `detail` object with machine-readable fields listed below, nested `causes` and `context`. Messages are not a contract; codes and `detail` fields are.
 
@@ -40,7 +40,14 @@ Plan errors carry a line and column. `detail.rule` is the ID of the rule that wa
 - **`BK_PLAN_VALUE`**: anything one value decides alone: its grammar or type, an empty value or list, a regex outside the subset or that doesn't compile, a reserved prefix (`BLOKKY_`, a `BK_` user code). `detail.rule` names the rule.
 - **`BK_PLAN_INVALID`**: a language key in the wrong place, and every rule relating keys, values or scopes. `detail.rule` names the rule.
 
-One mistake is one error with one rule. The [reference.md §8](reference.md#8-rules-beyond-the-schema) rule is canonical: a rule elsewhere that restates it is reported as the `RF-n` rule. Where §8 rules overlap, the more specific one wins: RF-4, RF-12, RF-28, RF-30, RF-31 and RF-32 over RF-3; RF-7 over RF-26 when an input or an enclosing scope is involved; RF-9 over RF-27 for `${…}` in a literal field; RF-27 over RF-23 for a template outside `set` and `vars`. A `{ var: X }` in a literal field is RF-9 alone. A targeted error is reported as SY-91 rather than CO-4, and a unary operator's value as SY-53 rather than CO-8; a probe with both or neither of `exec:` and `script:`, or with `shell:` but no `script:`, is `BK_PLAN_INVALID` with rule CO-26; a node used as a condition is `BK_PLAN_INVALID` at its kind key ([ADR 0023](../adr/0023-wave-c-gaps.md)).
+One mistake is one error with one rule ([ADR 0025](../adr/0025-open-points.md)):
+
+- The [reference.md §8](reference.md#8-rules-beyond-the-schema) rule is canonical: a rule elsewhere that restates it is reported as the `RF-n` rule.
+- When no `RF-n` rule applies, the grammar or structure rule of [syntax.md](syntax.md) is reported: SY-52 for names, SY-53 for booleans, SY-54 for integers, SY-56 and SY-57 for durations, SY-20 for empty values, and so on. A rule elsewhere that restates it is reported as that `SY-n` rule: VA-4, VA-6, ER-1 and SY-42 as SY-52; SY-24 and CO-8 as SY-53; SY-25 as the grammar's rule; SY-41 as SY-20.
+- A targeted error (SY-91) changes the message, not the rule: it carries the code and rule of the generic error it replaces. A string condition is reported as CO-4.
+- Where §8 rules overlap, the more specific one wins: RF-4, RF-12, RF-28, RF-30, RF-31 and RF-32 over RF-3; RF-7 over RF-26 when an input or an enclosing scope is involved; RF-9 over RF-27 for `${…}` in a literal field; RF-6, RF-16 and RF-27 over RF-23, which is reported only when no more specific rule applies.
+- A reference in a literal field (`{ var: X }`, as in `timeout: { var: X }`) is `BK_PLAN_INVALID` with RF-9 alone. A regex that doesn't compile is `BK_PLAN_VALUE` with RF-22. A root that is a list is `BK_PLAN_VALUE` with SY-32. A value of the wrong type for its field (a mapping where a list or scalar belongs, a scalar where a condition belongs, as in `retry: 3`) is `BK_PLAN_VALUE` with SY-88, the per-field table, unless a more specific rule names the mistake. `secret:` on an input is `BK_PLAN_UNKNOWN_KEY` with the targeted message (SY-48, SY-91).
+- A probe with both or neither of `exec:` and `script:`, or with `shell:` but no `script:`, is `BK_PLAN_INVALID` with rule CO-26; a node used as a condition is `BK_PLAN_INVALID` at its kind key ([ADR 0023](../adr/0023-wave-c-gaps.md)).
 
 | Code | Meaning |
 |---|---|

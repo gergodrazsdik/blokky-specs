@@ -145,7 +145,7 @@ An implementation can stop a whole run from outside the plan, for example when a
 - **EM-55.** Every running node is cancelled (§6) with `BK_CANCELLED` and `detail.reason` naming the cause; leaves carry `killed_by` with the cause. Nodes that haven't started never start.
 - **EM-56.** `finally` lists still run, but the implementation MAY shorten their `finally_timeout` and the grace period, down to zero, so the run ends in time.
 - **EM-36.** `ignore_errors` never hides an external stop, an ancestor's timeout or an ancestor's cancellation.
-- **EM-57.** The run ends with a run result whose status is `stopped`, with the cause ([results.md](results.md)). The run's error is the root's `BK_CANCELLED`, whose `detail.reason` names the cause ([ADR 0024](../adr/0024-wave-d-gaps.md)).
+- **EM-57.** The run ends with a run result whose status is `stopped`, with the cause ([results.md](results.md)). The run's error is the root's error. When the stop interrupted unfinished work, that is the root's `BK_CANCELLED`, whose `detail.reason` names the cause ([ADR 0024](../adr/0024-wave-d-gaps.md)). When the body had already failed before the stop arrived (for example, the stop came during `finally`), the root keeps the body's error (EM-51) and the run's status is still `stopped` ([ADR 0025](../adr/0025-open-points.md)).
 
 ## 8. Status
 
