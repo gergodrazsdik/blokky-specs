@@ -1,5 +1,5 @@
 title: Integers with a leading zero, a sign or an exponent are errors at the value
-rules: [SY-3, SY-25]
+rules: [SY-3, SY-25, SY-54]
 features: [do, exec, retry]
 plan: |
   blokky: 1.0
@@ -15,7 +15,7 @@ plan: |
       exec: [blokky-testkit, exit, '0']
 expect:
   plan_errors:
-    - { code: BK_PLAN_VALUE, line: 4, column: 10 }
-    - { code: BK_PLAN_VALUE, line: 7, column: 10 }
-    - { code: BK_PLAN_VALUE, line: 10, column: 10 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-54 }, line: 4, column: 10 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-54 }, line: 7, column: 10 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-54 }, line: 10, column: 10 }
   exhaustive: true

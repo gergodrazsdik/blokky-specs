@@ -13,4 +13,5 @@ expect:
       detail: { rule: SY-20 }
       line: 3      # a missing value is located at its key (SY-1)
       column: 3
-notes: SY-41 says `NAME:` with no value is an empty value, SY-20's rule.
+  exhaustive: true
+notes: SY-41 says `NAME:` with no value is an empty value, reported as SY-20 (SY-3).

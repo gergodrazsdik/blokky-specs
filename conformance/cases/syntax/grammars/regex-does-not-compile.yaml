@@ -9,7 +9,7 @@ plan: |
   when: { var: BRANCH, matches: '[a-' }
   exec: [blokky-testkit, exit, '0']
 inputs: [BRANCH=main]
-notes: A pattern that doesn't parse in the subset's grammar is outside the subset, so RF-22 is the rule.
+notes: A pattern that doesn't parse in the subset's grammar is outside the subset, so RF-22 is the rule (ADR 0025).
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE   # "a regex that doesn't compile" (errors.md §4)
@@ -20,3 +20,4 @@ expect:
       detail: { rule: RF-22 }
       line: 5
       column: 31
+  exhaustive: true

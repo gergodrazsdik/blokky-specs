@@ -13,7 +13,8 @@ expect:
       detail: { rule: RF-9 }
       line: 4
       column: 10
+  exhaustive: true
 notes: >-
   timeout is L in the per-field table (SY-88), so it never accepts a
-  reference (SY-76, SY-77). Not exhaustive: an implementation may also report
-  the mapping as a value that isn't a duration (BK_PLAN_VALUE).
+  reference (SY-76, SY-77). It is RF-9 alone, not also a value that isn't a
+  duration (ADR 0025).

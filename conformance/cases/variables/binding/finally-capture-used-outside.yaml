@@ -15,3 +15,4 @@ expect:
       detail: { rule: RF-16 }
       line: 7
       column: 10
+  exhaustive: true   # RF-6, RF-16 and RF-27 win over RF-23 (ADR 0025)

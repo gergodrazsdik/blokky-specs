@@ -10,10 +10,11 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE
-      detail: { rule: SY-91 }
+      detail: { rule: CO-4 }
       line: 5
       column: 7
   exhaustive: true
 notes: >-
-  CO-4 names the mistake, and since SY-91 has a targeted error for a mapping
-  where a body list is expected, it is reported as SY-91 (CO-4, SY-3).
+  CO-4 names the mistake. SY-91's targeted error for a mapping where a body
+  list is expected changes the message, not the rule, so it is reported as
+  CO-4 (SY-3, ADR 0025).

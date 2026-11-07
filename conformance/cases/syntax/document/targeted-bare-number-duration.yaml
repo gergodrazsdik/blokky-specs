@@ -8,6 +8,7 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE
+      detail: { rule: SY-57 }   # SY-91 changes the message, not the rule (SY-3)
       line: 2
       column: 10
   exhaustive: true

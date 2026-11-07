@@ -1,5 +1,5 @@
 title: A user error code can't start with the reserved BK_ prefix
-rules: [ER-1]
+rules: [ER-1, SY-52]
 features: [fail]
 plan: |
   blokky: 1.0
@@ -8,7 +8,7 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE   # a reserved prefix (errors.md §4)
-      detail: { rule: { $one_of: [ER-1, SY-52] } }
+      detail: { rule: SY-52 }   # SY-52's user-code row; ER-1 restates it (SY-3)
       line: 3
       column: 7
   exhaustive: true

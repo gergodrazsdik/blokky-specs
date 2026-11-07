@@ -8,7 +8,7 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE   # a reserved prefix (errors.md §4)
-      detail: { rule: { $one_of: [VA-4, SY-52] } }
+      detail: { rule: SY-52 }   # SY-52's variable-name row; VA-4 restates it (SY-3)
       line: 3
       column: 10
   exhaustive: true

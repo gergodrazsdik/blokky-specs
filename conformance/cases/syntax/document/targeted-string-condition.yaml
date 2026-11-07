@@ -1,5 +1,5 @@
 title: A string condition is one targeted value error at its opening quote
-rules: [SY-1, SY-3, SY-91]
+rules: [SY-1, SY-3, SY-91, CO-4]
 features: [vars, if, exec]
 plan: |
   blokky: 1.0
@@ -11,7 +11,7 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE
-      detail: { rule: SY-91 }
+      detail: { rule: CO-4 }   # SY-91 changes the message, not the rule (SY-3)
       line: 4
       column: 5
   exhaustive: true
