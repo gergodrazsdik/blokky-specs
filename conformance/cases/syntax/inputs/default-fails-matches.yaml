@@ -1,0 +1,17 @@
+title: An input default that the matches regex doesn't find is a plan error
+rules: [SY-46, RF-20]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    TAG:
+      default: release-2
+      matches: '^v[0-9]+$'
+  log: tagging
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-20 }
+      line: 4
+      column: 14
+  exhaustive: true

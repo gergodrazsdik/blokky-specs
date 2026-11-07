@@ -1,0 +1,14 @@
+title: A string built by a set template reaches argv as one whole-value reference
+rules: [SY-79, SY-82, SY-83]
+features: [vars, do, set, exec, interpolation]
+plan: |
+  blokky: 1.0
+  vars:
+    NAME: world
+  do:
+    - set: { ARG: '--name=${NAME}' }
+    - exec: [blokky-testkit, argv, { var: ARG }]
+expect:
+  status: succeeded
+  invocations:
+    - { argv: [argv, --name=world] }

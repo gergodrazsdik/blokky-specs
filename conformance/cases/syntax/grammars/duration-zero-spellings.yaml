@@ -1,0 +1,16 @@
+title: Zero is written only 0s, even in fields that allow zero
+rules: [SY-58]
+features: [do, sleep]
+plan: |
+  blokky: 1.0
+  do:
+    - sleep: 0ms
+    - sleep: 0m0s
+    - sleep: 0h
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-58 }, line: 3, column: 12 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-58 }, line: 4, column: 12 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-58 }, line: 5, column: 12 }
+  exhaustive: true
+notes: Zero parts inside a non-zero duration are fine (1h0m, in duration-valid-forms).

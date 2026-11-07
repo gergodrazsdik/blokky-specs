@@ -1,0 +1,16 @@
+title: An input has no required key; required is derived from the missing default
+rules: [SY-44]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH:
+      description: Branch to build
+      required: true
+  log: building
+inputs: [BRANCH=main]
+expect:
+  plan_errors:
+    - code: BK_PLAN_UNKNOWN_KEY
+      line: 5
+      column: 5

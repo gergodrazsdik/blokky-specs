@@ -1,0 +1,19 @@
+title: A control character from a variable's value is shown escaped in rendered text
+rules: [SY-98]
+features: [do, exec, capture, log, interpolation]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, print, --out-hex, '611b5b326a62']
+      capture: VALUE
+    - log: 'v=${VALUE}'
+expect:
+  status: succeeded
+  nodes:
+    /do/1:
+      messages:
+        - { text: 'v=a\u001B[2jb' }
+notes: >-
+  The captured value is a, ESC, [2j, b: an ANSI clear-screen sequence. ESC
+  is shown as \u001B (uppercase hex, SY-98); the expected text holds a
+  literal backslash.

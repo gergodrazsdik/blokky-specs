@@ -1,0 +1,17 @@
+title: An input default outside its in list is a plan error
+rules: [SY-46, RF-20]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    ENVIRONMENT:
+      default: prod
+      in: [staging, production]
+  log: deploying
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-20 }
+      line: 4      # the default's value is what is wrong (SY-1)
+      column: 14
+  exhaustive: true

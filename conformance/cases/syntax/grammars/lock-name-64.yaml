@@ -1,0 +1,9 @@
+title: A lock name of 64 characters is valid
+rules: [SY-52]
+features: [lock, exec]
+plan: |
+  blokky: 1.0
+  lock: conf-lock-name-64.abcdefghijklmnopqrstuvwxyz0123456789_-abcdefgh
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded

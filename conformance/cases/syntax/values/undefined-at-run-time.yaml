@@ -1,0 +1,22 @@
+title: A ${X} whose binding might not happen passes validation and fails the node when it didn't
+rules: [SY-85]
+features: [vars, do, if, cond-var, set, log, interpolation]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: b
+  do:
+    - if: { var: MODE, equals: a }
+      then:
+        - set: { PICKED: first }
+      else:
+        - log: nothing picked
+    - log: 'picked ${PICKED}'
+expect:
+  status: failed
+  error: { code: BK_UNDEFINED_VARIABLE, node: /do/1, detail: { name: PICKED } }
+  nodes:
+    /do/1:
+      status: failed
+      error: { code: BK_UNDEFINED_VARIABLE, detail: { name: PICKED } }
+notes: PICKED is possibly bound (VA-31), so the scope check accepts it (VA-38); it MAY get a warning.

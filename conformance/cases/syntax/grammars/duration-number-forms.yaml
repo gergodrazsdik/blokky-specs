@@ -1,0 +1,18 @@
+title: Duration integers have no fraction, no leading zero and no sign
+rules: [SY-57]
+features: [do, timeout, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - timeout: 1.5s
+      exec: [blokky-testkit, exit, '0']
+    - timeout: 05s
+      exec: [blokky-testkit, exit, '0']
+    - timeout: +5s
+      exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-57 }, line: 3, column: 14 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-57 }, line: 5, column: 14 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-57 }, line: 7, column: 14 }
+  exhaustive: true

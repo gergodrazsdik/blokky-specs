@@ -1,0 +1,21 @@
+title: An input default is a string as written, never a number
+rules: [SY-43]
+features: [inputs, outputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    VERSION:
+      default: 1.10
+    BUILD:
+      default: 007
+  outputs: [VERSION, BUILD]
+  log: release
+expect:
+  status: succeeded
+  outputs:
+    VERSION: '1.10'
+    BUILD: '007'
+notes: >-
+  Read as numbers, the defaults would become 1.1 and 7. CF-30 equates an
+  integer with its decimal string, so the expectations are written as
+  strings that no integer matches.

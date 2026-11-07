@@ -1,0 +1,15 @@
+title: ${X} never reads the process environment; an unbindable name is a plan error
+rules: [SY-83, SY-85, RF-23]
+features: [log, interpolation]
+env:
+  HOME_DIR: /home/someone
+plan: |
+  blokky: 1.0
+  log: 'home is ${HOME_DIR}'
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-23 }
+      line: 2
+      column: 6    # the opening quote (SY-1)
+  exhaustive: true

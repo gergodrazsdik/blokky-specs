@@ -1,0 +1,17 @@
+title: An input has no type key
+rules: [SY-43]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    COUNT:
+      type: string
+      default: '3'
+  log: counting
+expect:
+  plan_errors:
+    - code: BK_PLAN_UNKNOWN_KEY
+      line: 4
+      column: 5
+  exhaustive: true
+notes: No synonym and no input key within edit distance 2 (SY-30); the suggestion isn't asserted because SY-91's targeted error replaces the generic one.

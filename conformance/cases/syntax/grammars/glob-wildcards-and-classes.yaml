@@ -1,0 +1,30 @@
+title: In a glob, * stays within one segment, ? is one character, and [a-b] and [!c] are classes
+rules: [SY-71]
+features: [do, for-glob, exec]
+files:
+  g/f1ad.md: match
+  g/f1bc.md: excluded by [!c]
+  g/f12ad.md: two characters for ?
+  g/f1cd.md: c isn't in [a-b]
+  s/x.md: one segment
+  s/sub/y.md: two segments
+plan: |
+  blokky: 1.0
+  do:
+    - for: { glob: 'g/f?[a-b][!c].md', as: FILE }
+      exec: [blokky-testkit, exit, '0']
+    - for: { glob: 's/*.md', as: FILE }
+      exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  nodes:
+    /do/0:
+      repetition:
+        count: 1
+        entries:
+          - { item: { $regex: '(^|/)g/f1ad\.md$' } }
+    /do/1:
+      repetition:
+        count: 1
+        entries:
+          - { item: { $regex: '(^|/)s/x\.md$' } }

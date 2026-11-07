@@ -1,0 +1,19 @@
+title: An input description must not contain an interpolation
+rules: [SY-49, RF-9]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    ENVIRONMENT:
+      default: staging
+    BRANCH:
+      description: Branch to deploy to ${ENVIRONMENT}
+  log: deploying
+inputs: [BRANCH=main]
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-9 }   # SY-49 restates it for descriptions
+      line: 6
+      column: 18
+  exhaustive: true

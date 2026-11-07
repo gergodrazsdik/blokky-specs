@@ -1,0 +1,14 @@
+title: A lock name of 65 characters is a plan error
+rules: [SY-52]
+features: [lock, exec]
+plan: |
+  blokky: 1.0
+  lock: conf-lock-name-65.abcdefghijklmnopqrstuvwxyz0123456789_-abcdefghi
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: SY-52 }
+      line: 2
+      column: 7
+  exhaustive: true

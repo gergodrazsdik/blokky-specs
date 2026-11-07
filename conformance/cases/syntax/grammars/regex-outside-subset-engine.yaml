@@ -1,0 +1,27 @@
+title: Lookaround, backreferences, atomic groups and possessive quantifiers are outside the regex subset
+rules: [SY-62, RF-22]
+features: [vars, do, when, cond-var, exec]
+plan: |
+  blokky: 1.0
+  vars:
+    X: aab
+  do:
+    - when: { var: X, matches: 'a(?=b)' }
+      exec: [blokky-testkit, exit, '0']
+    - when: { var: X, matches: '(?<!b)a' }
+      exec: [blokky-testkit, exit, '0']
+    - when: { var: X, matches: '(a)\1' }
+      exec: [blokky-testkit, exit, '0']
+    - when: { var: X, matches: '(?>a+)b' }
+      exec: [blokky-testkit, exit, '0']
+    - when: { var: X, matches: 'a++b' }
+      exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-22 }, line: 5, column: 30 }
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-22 }, line: 7, column: 30 }
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-22 }, line: 9, column: 30 }
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-22 }, line: 11, column: 30 }
+    - { code: BK_PLAN_VALUE, detail: { rule: RF-22 }, line: 13, column: 30 }
+  exhaustive: true
+notes: RF-22 is a BK_PLAN_VALUE rule (errors.md §4); columns point at the opening quote (SY-1).

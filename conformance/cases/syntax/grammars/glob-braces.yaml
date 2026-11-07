@@ -1,0 +1,18 @@
+title: An unescaped brace in a glob is a plan error; an escaped one is a literal character
+rules: [SY-73]
+features: [do, for-glob, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - for: { glob: 'src/*.{cs,fs}', as: FILE }
+      exec: [blokky-testkit, exit, '0']
+    - for: { glob: 'src/a}.md', as: FILE }
+      exec: [blokky-testkit, exit, '0']
+    - for: { glob: 'src/\{a\}.md', as: FILE, allow_empty: true }
+      exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-73 }, line: 3, column: 18 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-73 }, line: 5, column: 18 }
+  exhaustive: true
+notes: The third pattern escapes both braces (SY-73), so it is valid and reports nothing.

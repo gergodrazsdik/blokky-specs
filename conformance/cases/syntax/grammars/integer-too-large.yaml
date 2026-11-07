@@ -1,0 +1,15 @@
+title: An integer above 2147483647 is a plan error
+rules: [SY-54]
+features: [retry, exec]
+plan: |
+  blokky: 1.0
+  retry: true
+  max: 2147483648
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: SY-54 }
+      line: 3
+      column: 6
+  exhaustive: true

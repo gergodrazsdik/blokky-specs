@@ -1,0 +1,15 @@
+title: A bare number is not a duration
+rules: [SY-57]
+features: [timeout, exec]
+plan: |
+  blokky: 1.0
+  timeout: 30
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: SY-57 }
+      line: 2
+      column: 10
+  exhaustive: true
+notes: SY-57 also asks for the fix-it timeout 30s; messages aren't matched (CF-3).

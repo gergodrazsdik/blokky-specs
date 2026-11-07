@@ -1,0 +1,16 @@
+title: An input default only needs to contain a match of an unanchored matches regex
+rules: [SY-40, SY-46]
+features: [inputs, outputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    TAG:
+      default: release-v2
+      matches: 'v[0-9]'
+  outputs: [TAG]
+  log: tagging
+expect:
+  status: succeeded
+  outputs:
+    TAG: release-v2
+notes: SY-40 defines matches as a search of the whole value, so the default satisfies the constraint (VA-16).

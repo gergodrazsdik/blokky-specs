@@ -1,0 +1,12 @@
+title: Decimals with and without a fraction are valid
+rules: [SY-55]
+features: [retry, backoff, jitter, exec]
+plan: |
+  blokky: 1.0
+  retry: true
+  max: 2
+  backoff: { factor: 1.5 }
+  jitter: 0.25
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded

@@ -1,0 +1,15 @@
+title: A duration above 168h is a plan error, however it is spelled
+rules: [SY-59]
+features: [do, timeout, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - timeout: 168h1s
+      exec: [blokky-testkit, exit, '0']
+    - timeout: 10081m
+      exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-59 }, line: 3, column: 14 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-59 }, line: 5, column: 14 }
+  exhaustive: true

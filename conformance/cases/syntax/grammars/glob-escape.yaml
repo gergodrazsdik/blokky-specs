@@ -1,0 +1,18 @@
+title: A backslash in a glob escapes the next character
+rules: [SY-73]
+features: [for-glob, exec]
+files:
+  e/a[1].md: literal brackets
+  e/a1.md: would match the class
+plan: |
+  blokky: 1.0
+  for: { glob: 'e/a\[1\].md', as: FILE }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  nodes:
+    /:
+      repetition:
+        count: 1
+        entries:
+          - { item: { $regex: '(^|/)e/a\[1\]\.md$' } }

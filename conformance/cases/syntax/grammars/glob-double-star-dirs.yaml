@@ -1,0 +1,24 @@
+title: '** as a whole segment matches zero or more directories, with / separators on every OS'
+rules: [SY-69, SY-70, SY-72]
+features: [for-glob, exec]
+files:
+  docs/README.md: readme
+  docs/a/b.md: b
+  docs/a/c/d.md: d
+  other/e.md: e
+plan: |
+  blokky: 1.0
+  for: { glob: 'docs/**/*.md', as: FILE }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  nodes:
+    /:
+      status: succeeded
+      repetition:
+        count: 3
+        entries:
+          $unordered:
+            - { item: { $regex: '(^|/)docs/README\.md$' } }
+            - { item: { $regex: '(^|/)docs/a/b\.md$' } }
+            - { item: { $regex: '(^|/)docs/a/c/d\.md$' } }

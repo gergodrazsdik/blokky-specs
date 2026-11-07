@@ -1,0 +1,20 @@
+title: An input's in list must not be empty
+rules: [SY-40, RF-21]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    ENVIRONMENT:
+      default: staging
+      in: []
+  log: deploying
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE   # an empty list (errors.md §4)
+      detail: { rule: RF-21 }
+      line: 5
+      column: 9
+notes: >-
+  SY-40 asks for a non-empty list; RF-21 allows empty lists only in mounts.
+  Not exhaustive: with no allowed values, an implementation may also report
+  the default as outside the constraint (RF-20).

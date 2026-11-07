@@ -1,0 +1,21 @@
+title: Duration units come in descending order, each at most once, without spaces
+rules: [SY-56]
+features: [do, timeout, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - timeout: 30m1h
+      exec: [blokky-testkit, exit, '0']
+    - timeout: 1m1m
+      exec: [blokky-testkit, exit, '0']
+    - timeout: 1m 30s
+      exec: [blokky-testkit, exit, '0']
+    - timeout: 10S
+      exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-56 }, line: 3, column: 14 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-56 }, line: 5, column: 14 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-56 }, line: 7, column: 14 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-56 }, line: 9, column: 14 }
+  exhaustive: true

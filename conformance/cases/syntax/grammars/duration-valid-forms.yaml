@@ -1,0 +1,17 @@
+title: Durations with one or several parts in descending order, 0s where allowed, and 168h are valid
+rules: [SY-56, SY-58, SY-59]
+features: [timeout, do, sleep, lock, exec]
+plan: |
+  blokky: 1.0
+  timeout: 168h
+  do:
+    - sleep: 0s
+    - sleep: 500ms
+    - lock: { name: conf-duration-valid-forms, wait: 0s }
+      timeout: 1h30m
+      exec: [blokky-testkit, exit, '0']
+    - timeout: 1m30s500ms
+      exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  duration: { $min: 500ms, $max: 10s }

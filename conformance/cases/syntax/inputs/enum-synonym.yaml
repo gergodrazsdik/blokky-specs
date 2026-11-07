@@ -1,0 +1,18 @@
+title: An enum key in an input is unknown, with in as the suggestion
+rules: [SY-40]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    ENVIRONMENT:
+      default: staging
+      enum: [staging, production]
+  log: deploying
+expect:
+  plan_errors:
+    - code: BK_PLAN_UNKNOWN_KEY
+      detail: { suggestion: in }   # synonym table, SY-30
+      line: 5
+      column: 5
+  exhaustive: true
+notes: SY-40 names the closed key set of an input; SY-30's synonym table maps enum to in.

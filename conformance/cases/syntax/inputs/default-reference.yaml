@@ -1,0 +1,17 @@
+title: An input default is literal; a reference there is a plan error
+rules: [SY-47]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH:
+      default: { from_env: GIT_BRANCH }
+  log: building
+env:
+  GIT_BRANCH: main
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE   # a mapping where the field's type is a string (errors.md §4)
+      detail: { rule: SY-47 }
+      line: 4
+      column: 14

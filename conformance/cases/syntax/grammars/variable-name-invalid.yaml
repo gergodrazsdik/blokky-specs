@@ -1,0 +1,20 @@
+title: Variable names in values must match the variable-name grammar
+rules: [SY-52]
+features: [do, exec, capture, for-each]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, print, --out, '1']
+      capture: build_id
+    - for: { each: [a, b], as: _ITEM }
+      exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: SY-52 }
+      line: 4
+      column: 14
+    - code: BK_PLAN_VALUE
+      detail: { rule: SY-52 }
+      line: 5
+      column: 30

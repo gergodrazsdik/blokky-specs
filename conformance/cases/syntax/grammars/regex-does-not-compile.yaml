@@ -1,0 +1,22 @@
+title: A regex that doesn't compile is a plan error, in an input and in a condition
+rules: [SY-61, RF-22]
+features: [inputs, when, cond-var, exec]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH:
+      matches: '(main'
+  when: { var: BRANCH, matches: '[a-' }
+  exec: [blokky-testkit, exit, '0']
+inputs: [BRANCH=main]
+notes: A pattern that doesn't parse in the subset's grammar is outside the subset, so RF-22 is the rule.
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE   # "a regex that doesn't compile" (errors.md §4)
+      detail: { rule: RF-22 }
+      line: 4
+      column: 14
+    - code: BK_PLAN_VALUE
+      detail: { rule: RF-22 }
+      line: 5
+      column: 31

@@ -1,0 +1,40 @@
+title: Whole-value references work in exec elements, env, stdin, cwd and vars, and only env, exec and stdin pass values to the process
+rules: [SY-77, SY-81, SY-88]
+features: [vars, from-env, outputs, do, exec, capture, env, stdin, cwd]
+env:
+  CASE_ORIGIN: from-the-environment
+files:
+  sub/marker.txt: in sub
+plan: |
+  blokky: 1.0
+  vars:
+    DIR: sub
+    WORD: hello
+    ORIGIN: { from_env: CASE_ORIGIN }
+  outputs: [ARGV, ENVS, STDIN, MARKER, ORIGIN]
+  do:
+    - exec: [blokky-testkit, argv, { var: WORD }]
+      capture: ARGV
+    - env:
+        GREETING: { var: WORD }
+        SOURCE: { from_env: CASE_ORIGIN }
+      exec: [blokky-testkit, env, GREETING, SOURCE, WORD, DIR]
+      capture: ENVS
+    - stdin: { var: WORD }
+      exec: [blokky-testkit, cat]
+      capture: STDIN
+    - cwd: { var: DIR }
+      exec: [blokky-testkit, read-file, marker.txt]
+      capture: MARKER
+expect:
+  status: succeeded
+  outputs:
+    ARGV: '["hello"]'
+    ENVS: '{"GREETING":"hello","SOURCE":"from-the-environment","WORD":null,"DIR":null}'
+    STDIN: hello
+    MARKER: in sub
+    ORIGIN: from-the-environment
+notes: >-
+  WORD and DIR are plan variables used by reference, so they are not in the
+  leaf's environment (SY-81). cwd { var: DIR } only chooses where the leaf
+  runs: read-file finds sub/marker.txt.

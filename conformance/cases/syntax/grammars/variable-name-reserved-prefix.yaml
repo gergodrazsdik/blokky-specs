@@ -1,0 +1,21 @@
+title: A plan can't bind a variable whose name starts with BLOKKY_
+rules: [SY-52]
+features: [do, exec, capture, set]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, print, --out, '1']
+      capture: BLOKKY_BUILD
+    - set: { BLOKKY_MODE: fast }
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE   # a reserved prefix (errors.md §4)
+      detail: { rule: SY-52 }
+      line: 4
+      column: 14
+    - code: BK_PLAN_VALUE
+      detail: { rule: SY-52 }
+      line: 5
+      column: 12
+  exhaustive: true
+notes: The prefix rule is in SY-52's variable-name row; VA-4 restates it.

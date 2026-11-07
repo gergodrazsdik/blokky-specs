@@ -1,0 +1,21 @@
+title: Decimals have digits after the point and no exponent
+rules: [SY-55]
+features: [retry, backoff, jitter, exec]
+plan: |
+  blokky: 1.0
+  retry: true
+  max: 2
+  backoff: { factor: 2. }
+  jitter: 5e-1
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: SY-55 }
+      line: 4
+      column: 20
+    - code: BK_PLAN_VALUE
+      detail: { rule: SY-55 }
+      line: 5
+      column: 9
+  exhaustive: true

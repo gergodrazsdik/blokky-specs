@@ -1,0 +1,22 @@
+title: An object value renders as compact JSON and a capture_file variable as its path
+rules: [SY-86]
+features: [do, exec, capture-fields, capture-file, log, interpolation]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, print, --out, '{ "obj": { "b": [1, 2] } }']
+      capture: { OBJ: .obj }
+    - exec: [blokky-testkit, print, --out, data]
+      capture_file: DATA
+    - log: 'obj ${OBJ}'
+    - log: 'file ${DATA}'
+expect:
+  status: succeeded
+  nodes:
+    /do/2:
+      messages:
+        - { text: 'obj {"b":[1,2]}' }
+    /do/3:
+      messages:
+        - { text: { $regex: '^file (/|[A-Za-z]:\\)\S' } }
+notes: The capture_file path is absolute (VA-25).

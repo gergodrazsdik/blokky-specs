@@ -1,0 +1,15 @@
+title: argv[0] of an exec array must be a literal
+rules: [SY-80, RF-9]
+features: [vars, exec]
+plan: |
+  blokky: 1.0
+  vars:
+    TOOL: blokky-testkit
+  exec: [{ var: TOOL }, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-9 }
+      line: 4
+      column: 8
+  exhaustive: true

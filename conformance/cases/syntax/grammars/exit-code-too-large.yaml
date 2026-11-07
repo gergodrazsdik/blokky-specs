@@ -1,0 +1,14 @@
+title: An exit code above 4294967295 is a plan error
+rules: [SY-96]
+features: [exec, ok-exit]
+plan: |
+  blokky: 1.0
+  ok_exit: [4294967296]
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: SY-96 }
+      line: 2
+      column: 11
+  exhaustive: true

@@ -1,0 +1,15 @@
+title: A unary condition operator accepts only true
+rules: [SY-53]
+features: [when, cond-command, exec]
+plan: |
+  blokky: 1.0
+  when: { command: blokky-testkit, exists: false }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: SY-53 }
+      line: 2
+      column: 42
+  exhaustive: true
+notes: The negation is the not_exists operator, not exists false.

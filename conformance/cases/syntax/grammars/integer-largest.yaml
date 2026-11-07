@@ -1,0 +1,12 @@
+title: The largest integer, 2147483647, is valid
+rules: [SY-54]
+features: [retry, exec]
+plan: |
+  blokky: 1.0
+  retry: true
+  max: 2147483647
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  nodes:
+    /: { status: succeeded, repetition: { count: 1, ended_by: success } }
