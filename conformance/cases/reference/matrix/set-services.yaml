@@ -1,7 +1,7 @@
 title: services on a set node is a plan error
 rules: [RF-3]
 spec: [reference.md§7]
-features: [do, services, set]
+features: [do, exec, services, set]
 plan: |
   blokky: 1.0
   do:

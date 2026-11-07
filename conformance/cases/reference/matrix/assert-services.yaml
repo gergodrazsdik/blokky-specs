@@ -1,7 +1,7 @@
 title: services on an assert node is valid
 rules: [RF-3]
 spec: [reference.md§7]
-features: [assert, cond-path, do, services]
+features: [assert, cond-path, do, exec, services]
 plan: |
   blokky: 1.0
   do:

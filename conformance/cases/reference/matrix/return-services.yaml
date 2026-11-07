@@ -1,7 +1,7 @@
 title: services on a return node is a plan error
 rules: [RF-3]
 spec: [reference.md§7]
-features: [do, return, services]
+features: [do, exec, return, services]
 plan: |
   blokky: 1.0
   do:

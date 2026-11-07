@@ -123,7 +123,7 @@ def modifier(key: str, stem: str) -> Frag:
                 "  - name: svc",
                 "    exec: [blokky-testkit, print, --out, ready, --hang]",
                 "    ready: { output: stdout, contains: ready }",
-                features=("services",),
+                features=("services", "exec"),
             )
         case "retry" | "while" | "until" | "for":
             return REPETITION[key]
@@ -338,9 +338,9 @@ def matrix_cases() -> list[Case]:
             text = f"attempt_timeout without repetition {on(kind)}"
             cases.append(invalid(f"{stem}-without-repetition", text, "RF-4", kind, [at], 0))
         elif cells["for"] == Y:
-            # log: `for` is valid but attempt_timeout isn't, which the schema doesn't enforce,
-            # so only the cell without repetition gets a case.
-            SKIPPED.append(f"{name}-attempt-timeout (with for)")
+            # log: `for` is valid but attempt_timeout isn't (RF-3), and without `for` it's RF-4.
+            text = f"attempt_timeout with for {on(kind)}"
+            cases.append(invalid(f"{name}-attempt-timeout", text, "RF-3", kind, [FOR, at], 1))
             text = f"attempt_timeout without repetition {on(kind)}"
             cases.append(invalid(f"{name}-attempt-timeout-without-repetition", text, "RF-4", kind, [at], 0))
         else:
@@ -380,6 +380,10 @@ def matrix_cases() -> list[Case]:
                 cases.append(valid(stem, text, "RF-32", kind, frags))
             else:
                 cases.append(invalid(stem, text, "RF-32", kind, frags, 0))
+    # collect with for on log: valid in §7, but a log binds no capture, so RF-30 always rejects it.
+    text = "collect with for on a log node"
+    frags = [FOR, SIBLING_FORMS["collect"]]
+    cases.append(invalid("log-collect", text, "RF-30", KINDS["log"], frags, 1))
     # finally_timeout without finally (RF-32): one kind suffices, the rule doesn't depend on it.
     text = "finally_timeout without finally on an exec node"
     cases.append(

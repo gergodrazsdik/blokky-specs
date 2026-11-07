@@ -1,7 +1,7 @@
 title: services on a fail node is a plan error
 rules: [RF-3]
 spec: [reference.md§7]
-features: [do, fail, services]
+features: [do, exec, fail, services]
 plan: |
   blokky: 1.0
   do:
