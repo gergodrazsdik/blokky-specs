@@ -82,7 +82,7 @@ Entering a node means applying each layer in this order; leaving it unwinds them
 
 ### 4.4 Completion
 
-- **EM-20.** A leaf **completes when its direct child process exits**. Output its descendants write after that is read for a bounded, implementation-defined time (for blokky-cli: `drain_timeout`, default 2s); if a descendant still holds the output open, the run result notes it.
+- **EM-20.** A leaf **completes when its direct child process exits**. Output its descendants write after that is read for a bounded, implementation-defined time of at least 1s (for blokky-cli: `drain_timeout`, default 2s); if a descendant still holds the output open, the run result notes it.
 - **EM-21.** At completion, the leaf's remaining process tree is stopped (graceful, then forced), unless the leaf sets `keep_descendants: true` or `detach`.
 - **EM-68.** **Order at completion.** When a leaf's direct child exits, these steps happen in this order ([ADR 0018](../adr/0018-review-semantics.md)):
   1. the leaf's duration ends;
@@ -153,7 +153,7 @@ An implementation can stop a whole run from outside the plan, for example when a
 |---|---|
 | `succeeded` | The node finished without failing. |
 | `failed` | The node failed. With `ignore_errors: true` it also carries `ignored: true`. |
-| `skipped` | The node didn't start: its `when` was false (`skip_reason: condition`), it was never reached because its parent ended early (`skip_reason: not_reached`), a `return` ended its sequence before it (`skip_reason: returned`), or a `host:` condition was false on this machine (`skip_reason: pruned`, CO-7). |
+| `skipped` | The node didn't start: its `when` was false (`skip_reason: condition`), it was never reached because its parent ended early (`skip_reason: not_reached`), a `return` ended its sequence before it (`skip_reason: returned`), a `host:` condition was false on this machine (`skip_reason: pruned`, CO-7), or it is in the branch of an `if` that didn't run (`skip_reason: not_taken`). |
 | `timed_out` | The node's **own** `timeout` or `attempt_timeout` fired. With `ignore_errors: true` it also carries `ignored: true`. |
 | `cancelled` | The node was running and was stopped from outside (§6, §7). |
 
@@ -176,7 +176,7 @@ An implementation can stop a whole run from outside the plan, for example when a
 ### 8.4 Error precedence
 
 - **EM-51.** If a node's body fails and its `finally` also fails, the body error is primary and the `finally` error is attached. A failing `finally` fails an otherwise successful node.
-- **EM-66.** **A failed group carries its child's error.** When a `do`, `all`, `if`, `for` iteration or other group fails because a child failed, the group's error is that child's error itself (same code, `detail` and `node`), not a wrapper. So `retry:` conditions and `result: error` see the real cause, at any nesting depth ([ADR 0016](../adr/0016-fixes-from-examples.md)).
+- **EM-66.** **A failed group carries its child's error.** When a `do`, `all`, `if`, `for` iteration or other group fails because a child failed, the group's error is that child's error itself (same code, `detail` and `node`), not a wrapper. Causes the group attaches (EM-51, EM-52) belong to the group's error only; the child's own recorded error is unchanged. So `retry:` conditions and `result: error` see the real cause, at any nesting depth ([ADR 0016](../adr/0016-fixes-from-examples.md)).
 - **EM-52.** When several children fail (`do` with `fail_fast: false`, `all`), the first failure in plan order is the group's error; the others are attached to it as causes. An `any` whose children all failed fails with `BK_ANY_ALL_FAILED` and every child error as a cause, in plan order.
 - **EM-53.** Repetition errors (`BK_RETRIES_EXHAUSTED`, `BK_LOOP_MAX_REACHED`, `BK_TIMEOUT_TOTAL`) nest the last attempt's error.
 

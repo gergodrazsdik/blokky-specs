@@ -312,7 +312,7 @@ How values are supplied, the value rules and the input error codes are in [varia
 - **SY-83.** `${X}` is replaced by the value of plan variable `X`; process environment variables are never interpolated.
 - **SY-84.** `$${` produces a literal `${`, in every field, so it is never the "`${` in a literal field" error.
 - **SY-85.** A `${X}` whose variable can't be bound at that point is a plan error; one that might be undefined MAY get a warning ([variables.md](variables.md), VA-38); at run time an undefined variable is an error of the node.
-- **SY-86.** Non-scalar values (multi-field captures of objects or arrays) render as compact JSON; a `capture_file` variable renders as its path.
+- **SY-86.** Non-scalar values (multi-field captures of objects or arrays) render as compact JSON; a `capture_file` variable renders as its path. **Compact JSON**, wherever this spec uses it, is RFC 8259 text with no insignificant whitespace, object members in input order, numbers as written, the short escapes (`\"`, `\\`, `\n`, `\r`, `\t`, `\b`, `\f`) where they exist, `\u00XX` for other control characters, and every other character as itself ([ADR 0022](../adr/0022-wave-b-gaps.md)).
 - **SY-87.** Secret values are masked in the rendered text.
 - **SY-98.** Rendered text is display-sanitized like error messages: control, bidirectional and zero-width characters from variable values are shown escaped as `\uXXXX` (uppercase hex; `\u{XXXXX}` above U+FFFF), so a captured value can't rewrite what a reviewer sees. This is hygiene, not a control; rendered text and captured values can hold untrusted data and are never instructions.
 

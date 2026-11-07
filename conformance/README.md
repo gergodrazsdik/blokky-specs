@@ -112,7 +112,7 @@ New ids are added with the language features they name, in the same spec release
 - **CF-19.** `env` values are added to the base environment (§8.2), replacing a variable of the same name. A value of `null` removes the variable from the base environment.
 - **CF-20.** `files` maps a path relative to the work directory to its content. A string value is the content as UTF-8 (no newline added). A mapping value has `text` or `base64`, plus optional `executable: true` (mode 0755 on Unix; ignored on Windows); `{ dir: true }` creates a directory. Parent directories are created as needed. Paths use `/` on every platform.
 - **CF-21.** `programs` maps an alias name to the testkit arguments it stands for: `programs: { git: [print, --out, 'git version 2.0'] }` puts an executable named `git` on `PATH` that behaves like `blokky-testkit print --out 'git version 2.0'` followed by its own arguments ([testkit-interface.md](testkit-interface.md), TK-6).
-- **CF-22.** `actions` is a list of `{ after: <duration>, stop: true }` or `{ after: <duration>, kill: true }` entries. `stop` stops the run from outside at that time (EM-55 to EM-57) with the means the adapter provides; cases with it list the `external-stop` feature, and assert on `status: stopped` and the nodes, not on `stop_cause`, which is implementation-defined. `kill` kills the implementation's process at once (SIGKILL, `TerminateProcess`), with no run result expected; cases with it list the `kill` feature and check what survives with `after_run`.
+- **CF-22.** `actions` is a list of `{ after: <duration>, stop: true }` or `{ after: <duration>, kill: true }` entries; `after` is in plan time (§5). `stop` stops the run from outside at that time (EM-55 to EM-57) with the means the adapter provides; cases with it list the `external-stop` feature, and assert on `status: stopped` and the nodes, not on `stop_cause`, which is implementation-defined. `kill` kills the implementation's process at once (SIGKILL, `TerminateProcess`), with no run result expected; cases with it list the `kill` feature and check what survives with `after_run`.
 - **CF-64.** `after_run` is a list of checks the runner makes, in order, after the case's run ended, in the same work directory and environment. An entry is a testkit invocation with its expected exit code, `{ argv: [alive, pids.txt], exit_code: 0 }` (nothing left running after a kill, EM-22), or a second plan with its own `inputs` and `expect`, `{ plan: '…', expect: { status: succeeded } }` (a plan taking the same lock with `wait: 0s`: a lock released by a killed run, EM-60). A failed check fails the case.
 
 ### 3.5 Expectations
@@ -151,18 +151,19 @@ The result document is the run result of results.md, written with these keys. Va
 
 | results.md | Key | Notes |
 |---|---|---|
-| run: status, stop cause, error, outputs | `status`, `stop_cause`, `error`, `outputs` | |
+| run: id, status, stop cause, error, outputs | `id`, `status`, `stop_cause`, `error`, `outputs` | |
 | run: inputs | `inputs` | `{ NAME: { value, source } }`, `source` is `supplied` or `default`. |
 | node: id, kind, name, status | `id`, `kind`, `name`, `status` | `name` is the raw template. |
-| node: ignored, skip reason | `ignored`, `skip_reason` | `skip_reason`: `condition`, `not_reached`, `returned` or `pruned`. |
+| node: ignored, skip reason | `ignored`, `skip_reason` | `skip_reason`: `condition`, `not_reached`, `returned`, `pruned` or `not_taken`. |
 | node: repetition | `repetition` | `{ count, ended_by, last_condition, entries: [{ index, name, item, status, error }] }`; `item` is a string, or a mapping for `matrix`. |
+| node: children | `children` | The children's path ids in plan order, so cases can assert plan order (RS-3, EM-13). |
 | node: finally | `finally_status` | The `finally` list's nodes have their own path ids. |
 | node: lock wait | `lock_wait` | A duration (§5). |
 | node: services | `services` | `[{ name, ready_after, ended, exit_code }]`; `ended` is `stopped`, `exited` or `never_ready`; `ready_after` is a duration from the node's start. |
 | node: messages | `messages` | `[{ text, level }]`, `text` rendered and masked. |
 | node: probes | `probes` | `[{ invocation, exit_code, result }]`. |
 | node: bindings | `bindings` | A list of names. |
-| leaf fields | `program`, `invocation`, `exit_code`, `signal`, `killed_by`, `descendants_held_output`, `survivors`, `user`, `container` | `invocation` is the masked argv; `signal` is a name (`SIGKILL`); `user` is `{ name, elevation }`. |
+| leaf fields | `program`, `invocation`, `exit_code`, `signal`, `killed_by`, `descendants_held_output`, `survivors`, `left_running`, `user`, `container` | `invocation` is the masked argv; `signal` is a name (`SIGKILL`); `user` is `{ name, elevation }`.; `left_running` is `[{ program, pid }]`. |
 | error: code, node, detail, causes, context | `code`, `node`, `detail`, `causes`, `context` | `message` is never matched (CF-3). |
 | durations (results.md §6) | `duration` | On the run and on every node. |
 
@@ -303,7 +304,7 @@ Implementations SHOULD let the runner replace the monotonic clock behind every l
 | `virtual` | a simulated clock that jumps to the next timer deadline whenever the run waits only for timers: no leaf, probe or service is running. While a process runs, it advances like `real`. | MAY |
 
 - **CF-39.** `clock` on a case lists the modes it is valid in; the default is `[real, scaled]`. `virtual` is opted into by cases whose waits don't involve processes (`sleep`, `every` and `backoff` delays between attempts of a `fail` or `assert`), which then run in no time. The runner uses the fastest mode that both the case and the adapter support, unless told otherwise; a case valid in no supported mode is skipped (`requirement: clock`).
-- **CF-40.** In `scaled` mode the adapter reports durations in plan time (measured time multiplied by *k*), so case bounds don't depend on *k*. Runners SHOULD NOT use *k* above 20: process start-up and pipe latency don't scale. A runner MAY choose *k* per OS (default 1 on Windows, where process start-up is slow), and cases that use `script` leaves or probes default to `clock: [real]`.
+- **CF-40.** In `scaled` mode the adapter reports durations in plan time (measured time multiplied by *k*), so case bounds don't depend on *k*. Runners SHOULD NOT use *k* above 20: process start-up and pipe latency don't scale. A runner MAY choose *k* per OS (default 1 on Windows, where process start-up is slow), and cases that use `script` leaves or probes, or the testkit's `spawn`, `actions` or `after_run`, default to `clock: [real]`: their correctness depends on processes having started.
 - **CF-41.** `jitter` (reference.md §5.3) draws from a random source that implementations MAY make seedable. The runner passes a seed when the adapter supports one; cases with `jitter` assert bounds only, never the drawn values.
 
 ### 5.2 Tolerances
@@ -357,6 +358,8 @@ Most modifiers can be combined on one node, and their order is fixed (EM-4). Tes
 | SY-97 | A style recommendation for plan authors (canonical forms). |
 | VA-15 | Transport-specific input checks are out of scope (CF-18). |
 | ER-2 | Code stability and how consumers treat unknown codes aren't observable in a run. |
+| RS-4 | Cases match mappings as subsets (CF-28), so extra recorded fields are never observed. |
+| VA-53 | Static views of a plan aren't part of the run result. |
 
 The list grows as cases are written.
 
@@ -373,7 +376,7 @@ A **runner** reads the cases, prepares each one, runs it through the adapter and
 ### 8.2 What the runner provides
 
 - **CF-56.** **A fresh work directory** per case, empty except for `files`, used as the run's cwd. Nothing in it is shared between cases.
-- **CF-57.** **The base environment:** `PATH` with the directory holding the testkit and the case's aliases first, then the directories the OS's shells need; the variables the OS needs to run processes (`HOME`, `TMPDIR`; on Windows `SystemRoot`, `PATHEXT`, `COMSPEC`, `USERPROFILE`, `TEMP`, `TMP`); `TESTKIT_LOG` (TK-5) and `TESTKIT_TIME_SCALE` (TK-2); then a **passthrough** list per requirement, configured in the runner (for `shells: [pwsh]` or `[powershell]`: the Windows profile variables and `DOTNET_ROOT` when pwsh is a .NET tool; for `container-engine`: the engine's variables such as `DOCKER_HOST`, `XDG_RUNTIME_DIR`); then the case's `env`. Nothing else is inherited from the runner's own environment. Cases that test environment semantics (VA-39 to VA-44, `from_env`) assert only on names they set themselves, so the passthrough doesn't make them nondeterministic.
+- **CF-57.** **The base environment:** `PATH` with the directory holding the testkit and the case's aliases first, then the directories the OS's shells need; the variables the OS needs to run processes (`HOME`, `TMPDIR`; on Windows `SystemRoot`, `PATHEXT`, `COMSPEC`, `USERPROFILE`, `TEMP`, `TMP`); `TESTKIT_LOG` (TK-5) and `TESTKIT_TIME_SCALE` (TK-2); then a **passthrough** list per requirement, configured in the runner (for `shells: [pwsh]` or `[powershell]`: the Windows profile variables and `DOTNET_ROOT` when pwsh is a .NET tool; for `container-engine`: the engine's variables such as `DOCKER_HOST`, `XDG_RUNTIME_DIR`); then the case's `env`. Nothing else is inherited from the runner's own environment. Cases that test environment semantics (VA-39 to VA-44, `from_env`) assert only on names they set themselves, so the passthrough doesn't make them nondeterministic. Conformance runs use the language's default bounds (`max_capture_bytes`, the drain bound and the others an implementation may make configurable).
 - **CF-58.** **The testkit** ([testkit-interface.md](testkit-interface.md)) as `blokky-testkit` on `PATH`, and an alias for each entry of `programs` (TK-6).
 - **CF-59.** **Isolation:** cases MAY run in parallel, except cases that share a port (CF-14). Lock names are unique per case (CF-14), so parallel cases don't contend.
 

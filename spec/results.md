@@ -15,6 +15,7 @@ This document defines the **run result**: the abstract outcome of a run that eve
 
 | Field | Meaning |
 |---|---|
+| id | The run id: unique and sortable, also exported to leaves as `BLOKKY_RUN_ID` (VA-44). |
 | plan | The plan's SHA-256 and the spec version from `blokky:`. |
 | inputs | Each input's value and its source (supplied, or `default`), in declaration order. |
 | status | `succeeded`, `failed` or `stopped` (EM-50). |
@@ -33,9 +34,9 @@ This document defines the **run result**: the abstract outcome of a run that eve
 | name | if set | The raw `name` template. |
 | status | all | `succeeded`, `failed`, `skipped`, `timed_out` or `cancelled` ([execution-model.md §8](execution-model.md#8-status)). |
 | ignored | failed nodes | Whether `ignore_errors` hid the failure from the parent. |
-| skip reason | skipped nodes | `condition`, `not_reached`, `returned`, or `pruned` (a `host:` condition was false, CO-7). |
+| skip reason | skipped nodes | `condition`, `not_reached`, `returned`, `pruned` (a `host:` condition was false, CO-7), or `not_taken` (the branch of an `if` that didn't run). |
 | error | failed, timed out, cancelled | The node's error (§5). |
-| repetition | `retry`, `while`, `until`, `for` | The number of attempts or iterations; what ended them (`ended_by`: `success` for `retry`, `condition` for `while`/`until`, `items` for `for`, or `max`, `timeout`, `failure`); the last condition result (`true`, `false`, `error`); and for each attempt or iteration its index, rendered name, item, status and error. |
+| repetition | `retry`, `while`, `until`, `for` | The number of attempts or iterations; what ended them (`ended_by`: `success` for `retry`, `condition` for `while`/`until`, `items` for `for`, or `max`, `timeout`, `failure`); the last condition result (`true`, `false`, `error`); and for each attempt or iteration its index, rendered name, item, status and error. Entries are listed in index order. |
 | children | groups, `if` | The children's results, in plan order. |
 | finally | nodes with `finally` | The `finally` list's results and its status. |
 | lock wait | nodes with `lock` | How long the node waited for its lock. |
@@ -49,7 +50,7 @@ This document defines the **run result**: the abstract outcome of a run that eve
 | Field | Meaning |
 |---|---|
 | program | The resolved absolute path of argv[0] or of the shell. |
-| invocation | The argv as run (masked), including the shell invocation for `script`. |
+| invocation | The argv as run (masked), including the shell invocation for `script`; element 0 is argv[0] as written (`program` holds the resolved path). |
 | cwd | The leaf's working directory (on the host; for a container leaf, also the container path). |
 | exit code | The exit code (an unsigned 32-bit value on Windows), if the process exited. |
 | signal | The terminating signal (Unix), if any. |
@@ -65,7 +66,7 @@ How much of a leaf's output the run result keeps (if any) is implementation-defi
 ## 4. Statuses and outcomes
 
 - **RS-5.** Node statuses and their propagation are defined in [execution-model.md §8](execution-model.md#8-status); the run status in EM-50.
-- **RS-6.** A node that never started has status `skipped` with its skip reason and no other result fields, except the probes its `when` ran (CO-31).
+- **RS-6.** A node that never started has its id, kind, name (if set), status `skipped` and skip reason, plus the probes its `when` ran (CO-31), and no other result fields: no duration, error or bindings.
 
 ## 5. Errors
 

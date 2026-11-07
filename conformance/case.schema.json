@@ -229,6 +229,7 @@
         "error": { "type": ["object", "null"] },
         "outputs": { "type": "object" },
         "inputs": { "type": "object" },
+        "id": { "type": ["string", "object"] },
         "nodes": {
           "type": "object",
           "propertyNames": { "pattern": "^/([a-z_]+/[0-9]+(/[a-z_]+/[0-9]+)*)?$" },
