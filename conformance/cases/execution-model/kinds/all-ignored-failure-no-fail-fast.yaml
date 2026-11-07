@@ -1,0 +1,25 @@
+title: An ignored failure in an all doesn't trigger fail_fast, and the all succeeds
+rules: [EM-45]
+spec: [reference.md§2.4, reference.md§4.11]
+features: [all, exec, ignore-errors]
+plan: |
+  blokky: 1.0
+  concurrency: 1
+  all:
+    - exec: [blokky-testkit, exit, '3']
+      ignore_errors: true
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { status: succeeded }
+    /all/0: { status: failed, ignored: true, error: { code: BK_EXIT } }
+    /all/1: { status: succeeded }
+  invocations:
+    - { argv: [exit, '3'] }
+    - { argv: [exit, '0'] }
+notes: >-
+  The parent treats an ignored failure as not failed (reference.md §4.11), so
+  the second child, which starts only after the first ends (concurrency 1),
+  still runs.

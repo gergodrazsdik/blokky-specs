@@ -1,0 +1,21 @@
+title: A race child skipped by its when doesn't take part; the remaining child decides
+rules: [EM-58]
+spec: [reference.md§2.6]
+features: [vars, race, exec, when, cond-var]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: slow
+  race:
+    - when: { var: MODE, equals: fast }
+      exec: [blokky-testkit, exit, '0']
+    - exec: [blokky-testkit, exit, '3']
+expect:
+  status: failed
+  error: { code: BK_EXIT, node: /race/1, detail: { exit_code: 3 } }
+  nodes:
+    /: { kind: race, status: failed }
+    /race/0: { status: skipped, skip_reason: condition }
+    /race/1: { status: failed, exit_code: 3 }
+  invocations:
+    - { argv: [exit, '3'] }

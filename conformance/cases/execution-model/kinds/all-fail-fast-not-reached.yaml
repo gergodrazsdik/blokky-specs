@@ -1,0 +1,21 @@
+title: Children of all that haven't started when a sibling fails are skipped as not_reached
+rules: [EM-10, EM-49]
+spec: [reference.md§2.4]
+features: [all, exec]
+plan: |
+  blokky: 1.0
+  concurrency: 1
+  all:
+    - exec: [blokky-testkit, exit, '3']
+    - exec: [blokky-testkit, exit, '0']
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  status: failed
+  error: { code: BK_EXIT, node: /all/0, detail: { exit_code: 3 } }
+  nodes:
+    /: { status: failed, error: { code: BK_EXIT, node: /all/0 } }
+    /all/0: { status: failed, exit_code: 3 }
+    /all/1: { status: skipped, skip_reason: not_reached }
+    /all/2: { status: skipped, skip_reason: not_reached }
+  invocations:
+    - { argv: [exit, '3'] }

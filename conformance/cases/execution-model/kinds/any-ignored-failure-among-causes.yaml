@@ -1,0 +1,23 @@
+title: When no alternative of an any succeeds, its ignored failures are among the causes
+rules: [EM-46, EM-52]
+features: [any, exec, ignore-errors]
+plan: |
+  blokky: 1.0
+  any:
+    - exec: [blokky-testkit, exit, '3']
+      ignore_errors: true
+    - exec: [blokky-testkit, exit, '4']
+expect:
+  status: failed
+  error:
+    code: BK_ANY_ALL_FAILED
+    node: /
+    causes:
+      - { code: BK_EXIT, node: /any/0, detail: { exit_code: 3 } }
+      - { code: BK_EXIT, node: /any/1, detail: { exit_code: 4 } }
+  nodes:
+    /any/0: { status: failed, ignored: true }
+    /any/1: { status: failed }
+  invocations:
+    - { argv: [exit, '3'] }
+    - { argv: [exit, '4'] }

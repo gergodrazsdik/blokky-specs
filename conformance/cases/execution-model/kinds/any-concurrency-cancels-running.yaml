@@ -1,0 +1,28 @@
+title: An any with concurrency 2 runs alternatives at once and cancels the running one when another succeeds
+rules: [EM-10, EM-43]
+spec: [reference.md§2.5]
+features: [any, exec]
+plan: |
+  blokky: 1.0
+  concurrency: 2
+  any:
+    - exec: [blokky-testkit, sleep, 1m, --exit, '3']
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { status: succeeded }
+    /any/0:
+      status: cancelled
+      killed_by: cancel
+      error: { code: BK_CANCELLED, node: /any/0 }
+    /any/1: { status: succeeded }
+  invocations:
+    $contains:
+      - { argv: [exit, '0'] }
+  duration: { $max: 20s }
+notes: >-
+  Only the second alternative can succeed, so the winner is determined. The
+  first is still sleeping when the second succeeds, so it is cancelled; the
+  duration bound shows the any didn't wait for it.

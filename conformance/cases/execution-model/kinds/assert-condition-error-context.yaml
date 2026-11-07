@@ -1,0 +1,19 @@
+title: A condition error in assert fails with the condition-error code and attaches the assertion's code as context
+rules: [CO-39]
+spec: [reference.md§2.11]
+features: [vars, assert, cond-var, cond-numeric]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    REPLICAS: three
+  assert: { var: REPLICAS, ge: '2' }
+  message: Need at least two replicas
+  code: TOO_FEW_REPLICAS
+expect:
+  status: failed
+  error:
+    code: BK_CONDITION_ERROR
+    node: /
+    detail: { reason: not_a_number }
+    context: { code: TOO_FEW_REPLICAS }

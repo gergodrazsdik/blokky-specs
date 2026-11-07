@@ -1,0 +1,28 @@
+title: When the body and the finally both fail, the body error is primary and the finally error is attached
+rules: [EM-51, EM-66]
+spec: [reference.md§4.10]
+features: [do, exec, finally]
+plan: |
+  blokky: 1.0
+  finally:
+    - exec: [blokky-testkit, exit, '4']
+  do:
+    - exec: [blokky-testkit, exit, '3']
+expect:
+  status: failed
+  error:
+    code: BK_EXIT
+    node: /do/0
+    detail: { exit_code: 3 }
+    causes:
+      - { code: BK_EXIT, node: /finally/0, detail: { exit_code: 4 } }
+  nodes:
+    /: { status: failed, finally_status: failed }
+    /do/0:
+      status: failed
+      exit_code: 3
+      error: { code: BK_EXIT, node: /do/0, causes: { $one_of: [{ $absent: true }, []] } }   # EM-66
+    /finally/0: { status: failed, exit_code: 4 }
+  invocations:
+    - { argv: [exit, '3'] }
+    - { argv: [exit, '4'] }

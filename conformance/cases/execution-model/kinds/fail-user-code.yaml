@@ -1,0 +1,22 @@
+title: fail with a code fails with that user code, which its parent group carries
+rules: [EM-66]
+spec: [reference.md§2.10]
+features: [do, fail, exec]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  do:
+    - fail: Deploys are frozen
+      code: DEPLOY_FROZEN
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  status: failed
+  error: { code: DEPLOY_FROZEN, node: /do/0 }
+  nodes:
+    /: { status: failed, error: { code: DEPLOY_FROZEN, node: /do/0 } }
+    /do/0:
+      status: failed
+      messages:
+        - { text: Deploys are frozen }
+    /do/1: { status: skipped, skip_reason: not_reached }
+  invocations: []

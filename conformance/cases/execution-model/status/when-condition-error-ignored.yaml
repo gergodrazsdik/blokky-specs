@@ -1,0 +1,24 @@
+title: ignore_errors on a node applies to a condition error in its own when
+rules: [EM-47, CO-41]
+features: [vars, do, exec, when, cond-var, cond-numeric, ignore-errors]
+plan: |
+  blokky: 1.0
+  vars:
+    COUNT: many
+  do:
+    - when: { var: COUNT, gt: '1' }
+      ignore_errors: true
+      exec: [blokky-testkit, print, --out, body]
+    - exec: [blokky-testkit, print, --out, next]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { status: succeeded }
+    /do/0:
+      status: failed
+      ignored: true
+      error: { code: BK_CONDITION_ERROR, node: /do/0, detail: { reason: not_a_number } }
+    /do/1: { status: succeeded }
+  invocations:
+    - { argv: [print, --out, next] }

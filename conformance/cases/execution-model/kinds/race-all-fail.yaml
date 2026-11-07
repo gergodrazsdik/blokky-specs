@@ -1,0 +1,21 @@
+title: A race whose children all fail fails with the deciding child's error
+rules: [EM-13, EM-58]
+spec: [reference.md§2.6]
+features: [race, exec]
+plan: |
+  blokky: 1.0
+  race:
+    - exec: [blokky-testkit, exit, '3']
+    - exec: [blokky-testkit, exit, '4']
+expect:
+  status: failed
+  error:
+    code: BK_EXIT
+    node: { $one_of: [/race/0, /race/1] }
+    detail: { exit_code: { $one_of: [3, 4] } }
+  nodes:
+    /: { status: failed, error: { code: BK_EXIT } }
+notes: >-
+  Either child may complete first and decide (EM-13); the race fails either
+  way, with the decider's error (not BK_ANY_ALL_FAILED). The loser may complete
+  or be cancelled, so its status isn't asserted.

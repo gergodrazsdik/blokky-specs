@@ -1,0 +1,22 @@
+title: A node whose when is false is skipped with skip_reason condition, and its siblings run
+rules: [EM-5]
+spec: [reference.md§4.2]
+features: [vars, do, exec, when, cond-var, finally]
+plan: |
+  blokky: 1.0
+  vars:
+    TARGET: staging
+  do:
+    - when: { var: TARGET, equals: prod }
+      finally:
+        - exec: [blokky-testkit, print, --out, cleanup]
+      exec: [blokky-testkit, print, --out, deploy]
+    - exec: [blokky-testkit, print, --out, done]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: skipped, skip_reason: condition }
+    /do/1: { status: succeeded }
+  invocations:
+    - { argv: [print, --out, done] }

@@ -1,0 +1,23 @@
+title: A condition error in when fails the node, which runs no finally, and stops its do
+rules: [EM-47]
+features: [vars, do, exec, when, cond-var, cond-numeric, finally]
+plan: |
+  blokky: 1.0
+  vars:
+    COUNT: many
+  do:
+    - when: { var: COUNT, gt: '1' }
+      finally:
+        - exec: [blokky-testkit, print, --out, cleanup]
+      exec: [blokky-testkit, print, --out, body]
+    - exec: [blokky-testkit, print, --out, next]
+expect:
+  status: failed
+  error:
+    code: BK_CONDITION_ERROR
+    node: /do/0
+    detail: { reason: not_a_number }
+  nodes:
+    /do/0: { status: failed, error: { code: BK_CONDITION_ERROR, node: /do/0 } }
+    /do/1: { status: skipped, skip_reason: not_reached }
+  invocations: []

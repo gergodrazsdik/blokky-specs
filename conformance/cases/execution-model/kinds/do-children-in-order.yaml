@@ -1,0 +1,22 @@
+title: Children of do start one at a time, in declaration order
+rules: [EM-9]
+spec: [reference.md§2.3]
+features: [do, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, print, --out, first]
+    - exec: [blokky-testkit, print, --out, second]
+    - exec: [blokky-testkit, print, --out, third]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { kind: do, status: succeeded, children: [/do/0, /do/1, /do/2] }
+    /do/0: { status: succeeded, exit_code: 0 }
+    /do/1: { status: succeeded, exit_code: 0 }
+    /do/2: { status: succeeded, exit_code: 0 }
+  invocations:
+    - { argv: [print, --out, first] }
+    - { argv: [print, --out, second] }
+    - { argv: [print, --out, third] }

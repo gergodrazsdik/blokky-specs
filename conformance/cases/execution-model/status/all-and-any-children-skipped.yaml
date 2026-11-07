@@ -1,0 +1,32 @@
+title: An all and an any whose children were all skipped succeed, and their finally lists run
+rules: [EM-44, EM-45]
+features: [vars, do, all, any, exec, when, cond-var, finally]
+plan: |
+  blokky: 1.0
+  vars:
+    TARGET: staging
+  do:
+    - finally:
+        - exec: [blokky-testkit, print, --out, all-cleanup]
+      all:
+        - when: { var: TARGET, equals: prod }
+          exec: [blokky-testkit, exit, '3']
+        - when: { var: TARGET, equals: test }
+          exec: [blokky-testkit, exit, '3']
+    - finally:
+        - exec: [blokky-testkit, print, --out, any-cleanup]
+      any:
+        - when: { var: TARGET, equals: prod }
+          exec: [blokky-testkit, exit, '3']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { kind: all, status: succeeded, finally_status: succeeded }
+    /do/0/all/0: { status: skipped, skip_reason: condition }
+    /do/0/all/1: { status: skipped, skip_reason: condition }
+    /do/1: { kind: any, status: succeeded, finally_status: succeeded }
+    /do/1/any/0: { status: skipped, skip_reason: condition }
+  invocations:
+    - { argv: [print, --out, all-cleanup] }
+    - { argv: [print, --out, any-cleanup] }

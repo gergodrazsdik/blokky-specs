@@ -1,0 +1,15 @@
+title: A run whose root is skipped by its when succeeds
+rules: [EM-50]
+features: [vars, exec, when, cond-var]
+plan: |
+  blokky: 1.0
+  vars:
+    TARGET: staging
+  when: { var: TARGET, equals: prod }
+  exec: [blokky-testkit, exit, '3']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { status: skipped, skip_reason: condition }
+  invocations: []

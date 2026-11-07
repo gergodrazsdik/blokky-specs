@@ -1,0 +1,20 @@
+title: An ignored failure doesn't win an any; the any moves on to the next alternative
+rules: [EM-46]
+spec: [reference.md§2.5]
+features: [any, exec, ignore-errors]
+plan: |
+  blokky: 1.0
+  any:
+    - exec: [blokky-testkit, exit, '3']
+      ignore_errors: true
+    - exec: [blokky-testkit, print, --out, fallback]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { status: succeeded }
+    /any/0: { status: failed, ignored: true }
+    /any/1: { status: succeeded }
+  invocations:
+    - { argv: [exit, '3'] }
+    - { argv: [print, --out, fallback] }

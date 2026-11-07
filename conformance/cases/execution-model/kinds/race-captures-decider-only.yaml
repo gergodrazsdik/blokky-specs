@@ -1,0 +1,20 @@
+title: Only the deciding race child's capture is bound, whichever child that is
+rules: [EM-59, VA-30]
+spec: [reference.md§2.6]
+features: [outputs, race, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [WINNER]
+  race:
+    - exec: [blokky-testkit, print, --out, a]
+      capture: WINNER
+    - exec: [blokky-testkit, print, --out, b]
+      capture: WINNER
+expect:
+  status: succeeded
+  error: null
+  outputs:
+    WINNER: { $one_of: [a, b] }
+notes: >-
+  Both children succeed, so the race succeeds whichever completes first; which
+  one decides isn't determined (EM-13), so the output is one of the two values.

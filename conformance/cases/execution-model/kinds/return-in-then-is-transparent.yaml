@@ -1,0 +1,21 @@
+title: A return inside then ends the sequence that contains the if
+rules: [EM-67]
+spec: [reference.md§2.13]
+features: [do, set, if, return, exec, cond-var]
+plan: |
+  blokky: 1.0
+  do:
+    - set: { CHANGED: '' }
+    - if: { var: CHANGED, empty: true }
+      then:
+        - return: Nothing changed
+    - exec: [blokky-testkit, print, --out, lint]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { status: succeeded }
+    /do/1: { kind: if, status: succeeded }
+    /do/1/then/0: { kind: return, status: succeeded }
+    /do/2: { status: skipped, skip_reason: returned }
+  invocations: []

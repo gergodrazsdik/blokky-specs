@@ -1,0 +1,28 @@
+title: An else-if is an if inside else; the first true condition's branch runs
+rules: [EM-48]
+spec: [reference.md§2.7]
+features: [vars, if, exec, cond-var]
+plan: |
+  blokky: 1.0
+  vars:
+    TARGET: staging
+  if: { var: TARGET, equals: prod }
+  then:
+    - exec: [blokky-testkit, print, --out, prod]
+  else:
+    - if: { var: TARGET, equals: staging }
+      then:
+        - exec: [blokky-testkit, print, --out, staging]
+      else:
+        - exec: [blokky-testkit, print, --out, other]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { status: succeeded }
+    /then/0: { status: skipped, skip_reason: not_taken }
+    /else/0: { kind: if, status: succeeded }
+    /else/0/then/0: { status: succeeded }
+    /else/0/else/0: { status: skipped, skip_reason: not_taken }
+  invocations:
+    - { argv: [print, --out, staging] }

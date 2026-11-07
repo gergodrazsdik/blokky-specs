@@ -1,0 +1,22 @@
+title: A false assert fails with its own code and records its rendered message
+spec: [reference.md§2.11]
+features: [vars, do, assert, cond-var, interpolation]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    BRANCH: main
+    RUN_ID: none
+  do:
+    - assert: { var: RUN_ID, matches: '^[0-9]+$' }
+      message: "No CI run found for branch ${BRANCH}"
+      code: CI_RUN_NOT_FOUND
+expect:
+  status: failed
+  error: { code: CI_RUN_NOT_FOUND, node: /do/0 }
+  nodes:
+    /do/0:
+      status: failed
+      error: { code: CI_RUN_NOT_FOUND, node: /do/0 }
+      messages:
+        - { text: No CI run found for branch main }

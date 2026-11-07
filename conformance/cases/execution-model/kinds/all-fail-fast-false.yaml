@@ -1,0 +1,32 @@
+title: An all with fail_fast false runs every child; the first failure in plan order is the error, the others are causes
+rules: [EM-52, EM-66]
+spec: [reference.md§2.4]
+features: [all, exec]
+plan: |
+  blokky: 1.0
+  fail_fast: false
+  all:
+    - exec: [blokky-testkit, exit, '3']
+    - exec: [blokky-testkit, exit, '0']
+    - exec: [blokky-testkit, exit, '5']
+expect:
+  status: failed
+  error:
+    code: BK_EXIT
+    node: /all/0
+    detail: { exit_code: 3 }
+    causes:
+      - { code: BK_EXIT, node: /all/2, detail: { exit_code: 5 } }
+  nodes:
+    /: { status: failed }
+    /all/0:
+      status: failed
+      exit_code: 3
+      error: { code: BK_EXIT, node: /all/0, causes: { $one_of: [{ $absent: true }, []] } }   # EM-66
+    /all/1: { status: succeeded, exit_code: 0 }
+    /all/2: { status: failed, exit_code: 5 }
+  invocations:
+    $unordered:
+      - { argv: [exit, '3'] }
+      - { argv: [exit, '0'] }
+      - { argv: [exit, '5'] }

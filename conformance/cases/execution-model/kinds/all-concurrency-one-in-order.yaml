@@ -1,0 +1,26 @@
+title: With concurrency 1, the children of all run one at a time in declaration order
+rules: [EM-10]
+spec: [reference.md§2.4]
+features: [all, exec]
+plan: |
+  blokky: 1.0
+  concurrency: 1
+  all:
+    - exec: [blokky-testkit, print, --out, a]
+    - exec: [blokky-testkit, print, --out, b]
+    - exec: [blokky-testkit, print, --out, c]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { kind: all, status: succeeded }
+    /all/0: { status: succeeded }
+    /all/1: { status: succeeded }
+    /all/2: { status: succeeded }
+  invocations:
+    - { argv: [print, --out, a] }
+    - { argv: [print, --out, b] }
+    - { argv: [print, --out, c] }
+notes: >-
+  At most one child runs at once and the next starts only when the slot frees,
+  in declaration order, so the invocation log is in plan order.

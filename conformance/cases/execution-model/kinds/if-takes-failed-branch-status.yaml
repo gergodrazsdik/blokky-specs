@@ -1,0 +1,22 @@
+title: An if whose branch fails is failed, with the branch child's error
+rules: [EM-48, EM-66]
+spec: [reference.md§2.7]
+features: [vars, if, exec, cond-var]
+plan: |
+  blokky: 1.0
+  vars:
+    TARGET: staging
+  if: { var: TARGET, equals: prod }
+  then:
+    - exec: [blokky-testkit, exit, '0']
+  else:
+    - exec: [blokky-testkit, exit, '3']
+expect:
+  status: failed
+  error: { code: BK_EXIT, node: /else/0, detail: { exit_code: 3 } }
+  nodes:
+    /: { status: failed, error: { code: BK_EXIT, node: /else/0 } }
+    /then/0: { status: skipped, skip_reason: not_taken }
+    /else/0: { status: failed, exit_code: 3 }
+  invocations:
+    - { argv: [exit, '3'] }

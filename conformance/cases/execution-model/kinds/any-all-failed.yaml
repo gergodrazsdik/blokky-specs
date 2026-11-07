@@ -1,0 +1,24 @@
+title: An any whose children all fail fails with BK_ANY_ALL_FAILED and every child error as a cause, in plan order
+rules: [EM-45, EM-52]
+spec: [reference.md§2.5]
+features: [any, exec]
+plan: |
+  blokky: 1.0
+  any:
+    - exec: [blokky-testkit, exit, '3']
+    - exec: [blokky-testkit, exit, '4']
+expect:
+  status: failed
+  error:
+    code: BK_ANY_ALL_FAILED
+    node: /
+    causes:
+      - { code: BK_EXIT, node: /any/0, detail: { exit_code: 3 } }
+      - { code: BK_EXIT, node: /any/1, detail: { exit_code: 4 } }
+  nodes:
+    /: { status: failed, error: { code: BK_ANY_ALL_FAILED, node: / } }
+    /any/0: { status: failed }
+    /any/1: { status: failed }
+  invocations:
+    - { argv: [exit, '3'] }
+    - { argv: [exit, '4'] }
