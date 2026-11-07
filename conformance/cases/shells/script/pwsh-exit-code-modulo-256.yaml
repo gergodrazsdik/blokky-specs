@@ -1,0 +1,22 @@
+title: A PowerShell exit code above 255 is reduced modulo 256 on Unix
+rules: [SH-20]
+features: [script, shell-pwsh, ok-exit]
+requires:
+  shells: [pwsh]
+  os: [linux, macos]
+clock: [real]
+plan: |
+  blokky: 1.0
+  shell: pwsh
+  script: |
+    exit 300
+  ok_exit: [44]
+expect:
+  status: succeeded
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 44
+notes: >-
+  300 mod 256 is 44. Unix-only: Windows exit codes are 32-bit, so there the
+  process exits with 300.

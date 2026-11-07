@@ -1,0 +1,35 @@
+title: A multi-line param block, and param after attributes in any case, are plan errors where the PowerShell prologue goes
+rules: [SH-17]
+features: [do, script, shell-pwsh]
+plan: |
+  blokky: 1.0
+  do:
+    - shell: pwsh
+      script: |
+        param
+        (
+          $Name
+        )
+        Write-Output $Name
+    - shell: pwsh
+      script: |
+        [CmdletBinding()] [OutputType([string])] Param()
+        Write-Output done
+    - shell: pwsh
+      script: |
+        [CmdletBinding()]
+        [OutputType([string])]
+        PARAM ()
+        Write-Output done
+expect:
+  plan_errors:
+    - { code: BK_PLAN_INVALID, detail: { rule: SH-17 }, line: 5, column: 7 }
+    - { code: BK_PLAN_INVALID, detail: { rule: SH-17 }, line: 12, column: 7 }
+    - { code: BK_PLAN_INVALID, detail: { rule: SH-17 }, line: 16, column: 7 }
+  exhaustive: true
+notes: >-
+  PowerShell allows the ( of a param block on the next line, attributes on
+  the same line as param, and keywords in any case; the check follows it.
+  Each error is at the block's first content line (SY-1). Nothing runs, so
+  pwsh doesn't need to be installed. Complements
+  script/pwsh-param-block-rejected.

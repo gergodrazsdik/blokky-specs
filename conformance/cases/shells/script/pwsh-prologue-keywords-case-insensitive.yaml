@@ -1,0 +1,30 @@
+title: The PowerShell prologue skips a using statement written in any case
+rules: [SH-17]
+features: [outputs, script, shell-pwsh, ok-exit, capture]
+requires:
+  shells: [pwsh]
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  shell: pwsh
+  script: |
+    USING namespace System.IO
+    Write-Output ([Path]::GetFileName('conf/a.txt'))
+    Get-Item -LiteralPath ./conf-missing-file
+    Write-Output after
+  ok_exit: [1]
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: a.txt
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 1
+notes: >-
+  PowerShell keywords are case-insensitive, so USING is a using statement and
+  the prologue goes on line 2. Put before it, the using statement would no
+  longer come first and the script wouldn't parse (no output, exit 1). The
+  cmdlet error stopping the script shows the prologue is there.

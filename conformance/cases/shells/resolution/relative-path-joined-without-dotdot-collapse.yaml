@@ -1,0 +1,27 @@
+title: A relative argv[0] path is joined to the cwd as written, so .. after a directory link is resolved by the OS
+rules: [SH-26]
+features: [outputs, do, exec, capture]
+requires:
+  os: [linux, macos]   # symlink is Unix-only (TK-22)
+  shells: [sh]
+clock: [real]
+files:
+  real/deep: { dir: true }
+  real/conf-tool: { text: "#!/bin/sh\necho physical\n", executable: true }
+  conf-tool: { text: "#!/bin/sh\necho lexical\n", executable: true }
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  do:
+    - exec: [blokky-testkit, symlink, real/deep, link]
+    - exec: [link/../conf-tool]
+      capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: physical
+notes: >-
+  link points at real/deep, so the OS resolves link/../conf-tool to
+  real/conf-tool. Collapsing link/.. lexically would give ./conf-tool in the
+  work directory, which prints lexical. The tools are sh scripts (#!/bin/sh)
+  because the testkit can't be copied by a case.

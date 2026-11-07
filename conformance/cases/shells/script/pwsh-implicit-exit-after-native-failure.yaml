@@ -1,0 +1,24 @@
+title: A PowerShell script that ends without exit after a failing native program exits 0
+rules: [SH-18, SH-20]
+features: [script, shell-pwsh]
+requires:
+  shells: [pwsh]
+clock: [real]
+plan: |
+  blokky: 1.0
+  shell: pwsh
+  script: |
+    blokky-testkit exit 3
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 0
+  invocations:
+    - { argv: [exit, '3'] }
+notes: >-
+  pwsh -File ends with 0 when the script ends without exit, whatever
+  $LASTEXITCODE is. Plans that want the native exit code end with
+  exit $LASTEXITCODE.

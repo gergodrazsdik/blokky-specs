@@ -1,0 +1,19 @@
+title: The line and paragraph separators U+2028 and U+2029 are rejected, in comments and in values
+rules: [SY-10, SY-12]
+features: [log]
+plan_base64: Ymxva2t5OiAxLjAKIyBh4oCoYgpsb2c6ICd44oCpeScK
+expect:
+  plan_errors:
+    - code: BK_PLAN_CHARACTER
+      detail: { codepoint: U+2028 }
+      line: 2
+      column: 4   # LINE SEPARATOR, in a comment
+    - code: BK_PLAN_CHARACTER
+      detail: { codepoint: U+2029 }
+      line: 3
+      column: 8   # PARAGRAPH SEPARATOR, in a quoted value
+  exhaustive: true
+notes: >-
+  The plan is "blokky: 1.0", "# a<U+2028>b" and "log: 'x<U+2029>y'". Neither
+  character is a line break for the plan (YAML 1.2), so both are on the line
+  where they are written; columns count code points.

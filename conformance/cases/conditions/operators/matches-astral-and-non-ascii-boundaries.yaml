@@ -1,0 +1,37 @@
+title: In matches, one . matches an astral character, and a non-ASCII letter is a non-word character for \b and \B
+rules: [CO-13, SY-61]
+spec: [syntax.md§6.7]
+features: [vars, do, when, log, cond-var]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    MIXED: 'aéb'
+    GRIN: '😀'
+  do:
+    - when: { var: MIXED, matches: '\B' }
+      log: every position in aéb is a word boundary
+    - when: { var: MIXED, matches: '^a\b.\bb$' }
+      log: boundaries on both sides of é
+    - when: { var: GRIN, matches: '^.$' }
+      log: one dot, one code point
+    - when: { var: GRIN, matches: '^..$' }
+      log: not two UTF-16 code units
+    - when: { var: GRIN, matches: '^\u{1F600}$' }
+      log: a code point escape above U+FFFF
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: skipped, skip_reason: condition }
+    /do/1: { status: succeeded }
+    /do/2: { status: succeeded }
+    /do/3: { status: skipped, skip_reason: condition }
+    /do/4: { status: succeeded }
+notes: >-
+  MIXED is a, U+00E9 (precomposed), b. With ASCII word characters, é is a
+  non-word character between two word characters, so the start, both inner
+  positions and the end are all boundaries and \B matches nowhere; a Unicode
+  \w would make the a-é position a non-boundary. GRIN is U+1F600, one code
+  point but two UTF-16 code units: an engine working on UTF-16 must not let
+  . match half of it.

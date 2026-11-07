@@ -1,0 +1,36 @@
+title: Top-level named blocks (begin, process, end, clean, dynamicparam) in a PowerShell script are plan errors
+rules: [SH-17]
+features: [do, script, shell-pwsh]
+plan: |
+  blokky: 1.0
+  do:
+    - shell: pwsh
+      script: |
+        begin { Write-Output a }
+    - shell: pwsh
+      script: |
+        process { Write-Output a }
+    - shell: pwsh
+      script: |
+        END { Write-Output a }
+    - shell: pwsh
+      script: |
+        clean { Write-Output a }
+    - shell: pwsh
+      script: |
+        dynamicparam { }
+        end { Write-Output a }
+expect:
+  plan_errors:
+    - { code: BK_PLAN_INVALID, detail: { rule: SH-17 }, line: 5, column: 7 }
+    - { code: BK_PLAN_INVALID, detail: { rule: SH-17 }, line: 8, column: 7 }
+    - { code: BK_PLAN_INVALID, detail: { rule: SH-17 }, line: 11, column: 7 }
+    - { code: BK_PLAN_INVALID, detail: { rule: SH-17 }, line: 14, column: 7 }
+    - { code: BK_PLAN_INVALID, detail: { rule: SH-17 }, line: 17, column: 7 }
+  exhaustive: true
+notes: >-
+  The prologue is a statement, and a script whose body is named blocks can't
+  have a statement before them, so the prologue has no valid place. Keywords
+  are matched case-insensitively (END). Each error is at the block's first
+  content line (SY-1). Nothing runs, so pwsh doesn't need to be installed.
+  detail.rule SH-17 is provisional: ADR 0027 may name another rule.

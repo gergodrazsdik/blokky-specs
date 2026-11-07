@@ -1,0 +1,15 @@
+title: The byte offset of invalid UTF-8 counts from the first raw byte, a leading BOM included
+rules: [SY-5, SY-7]
+features: [log]
+plan_base64: 77u/Ymxva2t5OiAxLjAKbG9nOiBhYmP/Cg==
+expect:
+  plan_errors:
+    - code: BK_PLAN_ENCODING
+      detail: { offset: 23 }
+      line: 2
+      column: 9   # 0xFF after 'log: abc'
+  exhaustive: true
+notes: >-
+  The same plan as syntax/text/invalid-utf8-rejected (offset 20) behind a
+  three-byte UTF-8 BOM. The offset is 0-based in the raw bytes, so the BOM
+  adds 3; it doesn't change the line or column.

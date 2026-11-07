@@ -23,4 +23,4 @@ expect:
       exit_code: 0
   invocations:
     - { argv: [exit, '3'] }
-notes: The script ends with an explicit exit, as SH-20 asks until the implicit exit code is settled.
+notes: The script ends with an explicit exit; pwsh-implicit-exit-after-native-failure covers the implicit exit code (SH-20).

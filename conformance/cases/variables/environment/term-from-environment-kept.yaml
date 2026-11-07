@@ -1,0 +1,14 @@
+title: A TERM in the run's environment is kept, and NO_COLOR=1 is still set
+rules: [VA-44]
+features: [outputs, exec, capture]
+env:
+  TERM: xterm
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  exec: [blokky-testkit, env, NO_COLOR, TERM]
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: '{"NO_COLOR":"1","TERM":"xterm"}'
