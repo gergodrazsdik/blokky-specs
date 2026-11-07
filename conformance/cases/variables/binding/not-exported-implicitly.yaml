@@ -1,0 +1,15 @@
+title: A plan variable doesn't reach a process's environment unless it is passed
+rules: [VA-1]
+features: [do, set, exec, capture, outputs]
+plan: |
+  blokky: 1.0
+  outputs: [OUT]
+  do:
+    - set: { CONF_A: x }
+    - exec: [blokky-testkit, env, CONF_A]
+      capture: OUT
+expect:
+  status: succeeded
+  outputs:
+    OUT: '{"CONF_A":null}'
+notes: CONF_A isn't in the base environment (CF-57).

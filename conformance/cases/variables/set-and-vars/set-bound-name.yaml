@@ -1,0 +1,14 @@
+title: set can't bind a name that is already bound
+rules: [VA-36, RF-26]
+features: [do, set]
+plan: |
+  blokky: 1.0
+  do:
+    - set: { A: x }
+    - set: { A: y }
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-26 }
+      line: 4
+      column: 12

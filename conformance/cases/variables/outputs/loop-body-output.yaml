@@ -1,0 +1,16 @@
+title: A variable bound only inside a loop body can't be an output
+rules: [VA-48, RF-15, SY-39]
+features: [outputs, for-each, do, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [V]
+  for: { each: [a, b], as: ITEM }
+  do:
+    - exec: [blokky-testkit, print, --out, { var: ITEM }]
+      capture: V
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-15 }
+      line: 2
+      column: 11

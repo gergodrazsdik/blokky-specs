@@ -1,0 +1,19 @@
+title: An any child can't capture an input's name either
+rules: [VA-9, VA-30, RF-7]
+features: [inputs, any, exec, capture]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH:
+      default: main
+  any:
+    - exec: [blokky-testkit, print, --out, dev]
+      capture: BRANCH
+    - exec: [blokky-testkit, print, --out, other]
+      capture: OTHER
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-7 }
+      line: 7
+      column: 14

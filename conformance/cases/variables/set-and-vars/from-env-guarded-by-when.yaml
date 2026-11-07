@@ -1,0 +1,17 @@
+title: A from_env reference guarded by an env defined check is valid when the variable is unset
+rules: [VA-40]
+features: [do, set, from-env, when, cond-env, log]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  do:
+    - when: { env: CONF_UNSET, defined: true }
+      set: { T: { from_env: CONF_UNSET } }
+    - log: after
+env:
+  CONF_UNSET: null
+expect:
+  status: succeeded
+  nodes:
+    /do/0: { status: skipped, skip_reason: condition }
+    /do/1: { status: succeeded }

@@ -1,0 +1,13 @@
+title: A capture name outside the variable-name grammar is a plan error
+rules: [VA-4, SY-52]
+features: [exec, capture]
+plan: |
+  blokky: 1.0
+  exec: [blokky-testkit, print, --out, x]
+  capture: run_id
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      line: 3
+      column: 10
+  exhaustive: true

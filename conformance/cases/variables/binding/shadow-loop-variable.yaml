@@ -1,0 +1,16 @@
+title: A for variable can't shadow a name bound in an enclosing scope
+rules: [VA-36, RF-7]
+features: [do, exec, capture, for-each, log, interpolation]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, print, --out, x]
+      capture: ITEM
+    - for: { each: [a, b], as: ITEM }
+      log: "item ${ITEM}"
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-7 }
+      line: 5
+      column: 30

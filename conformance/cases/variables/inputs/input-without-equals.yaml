@@ -1,0 +1,15 @@
+title: An input without '=' is a syntax error
+spec: [variables.md§4.3]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH:
+      default: main
+  log: building
+inputs: [BRANCH]
+expect:
+  input_errors:
+    - { code: BK_INPUT_SYNTAX }
+  exhaustive: true
+notes: CF-18 passes a string without '=' unsplit. BRANCH has a default, so nothing is missing.

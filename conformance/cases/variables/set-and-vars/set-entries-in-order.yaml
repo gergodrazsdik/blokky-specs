@@ -1,0 +1,14 @@
+title: set entries bind in order, so a later entry uses an earlier one
+rules: [VA-56, VA-60]
+features: [set, outputs, interpolation]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  outputs: [B]
+  set:
+    A: x
+    B: '${A}-y'
+expect:
+  status: succeeded
+  outputs:
+    B: x-y

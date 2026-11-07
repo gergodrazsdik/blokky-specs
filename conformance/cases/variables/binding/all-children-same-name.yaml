@@ -1,0 +1,16 @@
+title: Two all children can't bind the same name anywhere in their subtrees
+rules: [VA-29, RF-8]
+features: [all, do, exec, capture]
+plan: |
+  blokky: 1.0
+  all:
+    - exec: [blokky-testkit, print, --out, one]
+      capture: A
+    - do:
+        - exec: [blokky-testkit, print, --out, two]
+          capture: A
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-8 }
+notes: No position is asserted, because either binding can be the one reported.

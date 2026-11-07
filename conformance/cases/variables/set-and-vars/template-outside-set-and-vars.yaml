@@ -1,0 +1,18 @@
+title: A template in an env value is a plan error; templates belong in set and vars
+rules: [VA-57, RF-27]
+features: [do, set, exec, env]
+plan: |
+  blokky: 1.0
+  do:
+    - set: { A: x }
+    - exec: [blokky-testkit, getenv, X]
+      env: { X: 'v-${A}' }
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-27 }
+      line: 5
+      column: 15
+notes: >-
+  SY-76 (a `${` in a literal field) and SY-91 (the targeted error) describe
+  the same mistake; this case asserts the RF rule.

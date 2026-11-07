@@ -1,0 +1,21 @@
+title: An unset from_env in set fails the set node when it runs
+rules: [VA-40, VA-58]
+features: [do, set, from-env, log]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  do:
+    - log: before
+    - set: { T: { from_env: CONF_UNSET } }
+    - log: after
+env:
+  CONF_UNSET: null
+expect:
+  status: failed
+  error: { code: BK_FROM_ENV_UNSET, node: /do/1, detail: { name: CONF_UNSET } }
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1:
+      status: failed
+      error: { code: BK_FROM_ENV_UNSET, node: /do/1, detail: { name: CONF_UNSET } }
+    /do/2: { status: skipped, skip_reason: not_reached }

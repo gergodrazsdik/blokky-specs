@@ -1,0 +1,17 @@
+title: An `in` constraint is an exact string match, without case folding
+rules: [VA-16]
+spec: [variables.md§4.3]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    ENVIRONMENT:
+      default: staging
+      in: [staging, production]
+  log: deploying
+inputs: [ENVIRONMENT=Staging]
+expect:
+  input_errors:
+    - code: BK_INPUT_INVALID
+      detail: { constraint: { $present: true } }   # errors.md §3
+  exhaustive: true

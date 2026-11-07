@@ -1,0 +1,24 @@
+title: A possibly bound name isn't a plan error; unbound at run time, it fails the node
+rules: [VA-31, VA-38]
+features: [vars, do, if, cond-var, set, log, interpolation]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    GO: 'no'
+  do:
+    - if: { var: GO, equals: 'yes' }
+      then:
+        - set: { A: one }
+      else:
+        - log: not setting A
+    - log: "A is ${A}"
+expect:
+  status: failed
+  error: { code: BK_UNDEFINED_VARIABLE, node: /do/1, detail: { name: A } }
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1:
+      status: failed
+      error: { code: BK_UNDEFINED_VARIABLE, node: /do/1, detail: { name: A } }
+notes: VA-31 asks for a warning on the unguarded use; warnings don't block the run (SY-2).

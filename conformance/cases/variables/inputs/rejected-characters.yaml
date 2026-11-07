@@ -1,0 +1,39 @@
+title: Input values with LF, CR, C1, bidirectional or zero-width characters or U+FFFD are invalid
+rules: [VA-13]
+spec: [variables.md§4.3]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    A:
+      default: ''
+    B:
+      default: ''
+    C:
+      default: ''
+    D:
+      default: ''
+    E:
+      default: ''
+    F:
+      default: ''
+  log: checking
+inputs:
+  - "A=one\ntwo"
+  - "B=one\rtwo"
+  - "C=one\u0085two"
+  - "D=one\u202Etwo"
+  - "E=one\u200Btwo"
+  - "F=one\uFFFDtwo"
+expect:
+  input_errors:
+    - { code: BK_INPUT_INVALID }
+    - { code: BK_INPUT_INVALID }
+    - { code: BK_INPUT_INVALID }
+    - { code: BK_INPUT_INVALID }
+    - { code: BK_INPUT_INVALID }
+    - { code: BK_INPUT_INVALID }
+  exhaustive: true
+notes: >-
+  NUL is left out: it can't be passed in a command-line argument, the
+  transport blokky-cli uses (CF-18). All errors are reported together (EM-2).

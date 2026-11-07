@@ -1,0 +1,14 @@
+title: The same input given twice is an input error
+spec: [variables.md§4.3]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH:
+      default: main
+  log: building
+inputs: [BRANCH=dev, BRANCH=release]
+expect:
+  input_errors:
+    - { code: BK_INPUT_DUPLICATE }
+notes: Not exhaustive, because the spec doesn't say whether one duplicate pair is one error or two.

@@ -1,0 +1,13 @@
+title: A user error code outside the code grammar is a plan error
+rules: [ER-1, SY-52]
+features: [fail]
+plan: |
+  blokky: 1.0
+  fail: deploy failed
+  code: deploy_failed
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      line: 3
+      column: 7
+  exhaustive: true

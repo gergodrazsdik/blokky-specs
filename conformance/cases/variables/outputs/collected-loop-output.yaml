@@ -1,0 +1,15 @@
+title: A loop-body capture gathered with collect can be an output
+rules: [VA-48, VA-55]
+features: [outputs, for-each, collect, do, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [VS]
+  for: { each: [a, b], as: ITEM }
+  collect: { V: VS }
+  do:
+    - exec: [blokky-testkit, print, --out, { var: ITEM }]
+      capture: V
+expect:
+  status: succeeded
+  outputs:
+    VS: '["a","b"]'

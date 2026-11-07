@@ -1,0 +1,15 @@
+title: A reference to a capture of a later node is a plan error
+rules: [VA-38, RF-23]
+features: [do, log, exec, capture, interpolation]
+plan: |
+  blokky: 1.0
+  do:
+    - log: "version ${VERSION}"
+    - exec: [blokky-testkit, print, --out, '1.0']
+      capture: VERSION
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-23 }
+      line: 3
+      column: 10

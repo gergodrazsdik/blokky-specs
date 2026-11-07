@@ -1,0 +1,15 @@
+title: A vars value can't use a later vars entry
+rules: [VA-61, RF-27]
+features: [vars, log, interpolation]
+plan: |
+  blokky: 1.0
+  vars:
+    A: '${B}-x'
+    B: base
+  log: done
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-27 }
+      line: 3
+      column: 6

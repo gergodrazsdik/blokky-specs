@@ -1,0 +1,19 @@
+title: A name bound only in the other branch of an if is a plan error in this branch
+rules: [VA-38, RF-23]
+features: [vars, if, cond-var, exec, capture, log, interpolation]
+plan: |
+  blokky: 1.0
+  vars:
+    GO: 'yes'
+  if: { var: GO, equals: 'yes' }
+  then:
+    - exec: [blokky-testkit, print, --out, x]
+      capture: A
+  else:
+    - log: "A is ${A}"
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-23 }
+      line: 9
+      column: 10

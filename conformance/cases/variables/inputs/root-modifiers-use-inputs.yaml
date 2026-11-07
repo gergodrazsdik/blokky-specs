@@ -1,0 +1,22 @@
+title: Root modifiers can use inputs, which are bound before the root node
+rules: [VA-7]
+features: [inputs, outputs, exec, env, capture, interpolation]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH:
+      description: Branch to build
+  outputs: [OUT]
+  name: "build ${BRANCH}"
+  env: { B: { var: BRANCH } }
+  exec: [blokky-testkit, getenv, B]
+  capture: OUT
+inputs: [BRANCH=main]
+expect:
+  status: succeeded
+  outputs:
+    OUT: main
+  nodes:
+    /: { name: "build ${BRANCH}" }   # the raw template (§3.6)
+  invocations:
+    - { argv: [getenv, B] }

@@ -1,0 +1,15 @@
+title: The derived <AS>_INDEX name counts as a declaration, so a body capture can't reuse it
+rules: [VA-5, VA-36, RF-7]
+features: [for-each, do, exec, capture]
+plan: |
+  blokky: 1.0
+  for: { each: [a, b], as: ITEM }
+  do:
+    - exec: [blokky-testkit, print, --out, x]
+      capture: ITEM_INDEX
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-7 }
+      line: 5
+      column: 14

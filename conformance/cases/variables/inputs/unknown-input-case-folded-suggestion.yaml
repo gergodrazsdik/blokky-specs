@@ -1,0 +1,15 @@
+title: A lowercase input name is unknown, and the suggestion is the declared name
+rules: [SY-30]
+spec: [variables.md§4.3]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH:
+      default: main
+  log: building
+inputs: [branch=dev]
+expect:
+  input_errors:
+    - code: BK_INPUT_UNKNOWN
+      detail: { suggestion: BRANCH }   # edit distance 0 after uppercase mapping

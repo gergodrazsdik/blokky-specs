@@ -1,0 +1,14 @@
+title: A fail node's user code is the node's error code
+rules: [ER-1]
+spec: [reference.md§2.10, errors.md§5.4]
+features: [fail]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  fail: deploy failed
+  code: DEPLOY_FAILED
+expect:
+  status: failed
+  error: { code: DEPLOY_FAILED, node: / }
+  nodes:
+    /: { kind: fail, status: failed }

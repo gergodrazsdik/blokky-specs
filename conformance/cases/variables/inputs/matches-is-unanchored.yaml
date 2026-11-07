@@ -1,0 +1,16 @@
+title: An input `matches` constraint is an unanchored search
+rules: [VA-16]
+features: [inputs, outputs, log]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH:
+      matches: 'release'
+  outputs: [BRANCH]
+  log: building
+inputs: [BRANCH=feature/release-2]
+expect:
+  status: succeeded
+  outputs:
+    BRANCH: feature/release-2

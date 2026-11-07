@@ -1,0 +1,15 @@
+title: ${X} resolves plan variables only, so a name set only in the environment is undefined
+rules: [VA-2, VA-38, RF-23]
+features: [log, interpolation]
+plan: |
+  blokky: 1.0
+  log: "user ${CONF_ONLY_IN_ENV}"
+env:
+  CONF_ONLY_IN_ENV: x
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-23 }
+      line: 2
+      column: 6
+  exhaustive: true

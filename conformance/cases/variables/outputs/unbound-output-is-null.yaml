@@ -1,0 +1,19 @@
+title: An output whose variable is unbound at the end of the run is null
+rules: [VA-46]
+features: [vars, outputs, if, cond-var, set, log]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    GO: 'no'
+  outputs: [A, GO]
+  if: { var: GO, equals: 'yes' }
+  then:
+    - set: { A: one }
+  else:
+    - log: not setting A
+expect:
+  status: succeeded
+  outputs:
+    A: null
+    GO: 'no'

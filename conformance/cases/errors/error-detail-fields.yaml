@@ -1,0 +1,13 @@
+title: A node error carries its code and the detail fields errors.md lists
+rules: [ER-3]
+features: [exec]
+plan: |
+  blokky: 1.0
+  exec: [blokky-testkit, exit, '3']
+expect:
+  status: failed
+  error: { code: BK_EXIT, node: /, detail: { exit_code: 3 } }
+  nodes:
+    /:
+      status: failed
+      exit_code: 3

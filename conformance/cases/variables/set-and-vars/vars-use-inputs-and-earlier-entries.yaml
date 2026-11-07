@@ -1,0 +1,18 @@
+title: vars entries bind in order after the inputs, and templates join strings
+rules: [VA-56, VA-57, VA-61]
+features: [inputs, vars, outputs, log, interpolation]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH:
+      default: main
+  vars:
+    REF: 'origin/${BRANCH}'
+    LABEL: '${REF}:$${X}'
+  outputs: [LABEL]
+  log: done
+expect:
+  status: succeeded
+  outputs:
+    LABEL: 'origin/main:${X}'   # $${ produces ${ (VA-57)

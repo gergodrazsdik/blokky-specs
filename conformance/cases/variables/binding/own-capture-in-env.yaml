@@ -1,0 +1,14 @@
+title: A node's env can't reference the node's own capture
+rules: [VA-37, RF-6]
+features: [exec, env, capture]
+plan: |
+  blokky: 1.0
+  exec: [blokky-testkit, getenv, X]
+  env: { X: { var: OUT } }
+  capture: OUT
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-6 }
+      line: 3
+      column: 18

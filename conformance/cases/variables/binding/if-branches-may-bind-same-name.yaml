@@ -1,0 +1,20 @@
+title: Both branches of an if may bind the same name, which is bound afterwards
+rules: [VA-31, VA-36]
+features: [vars, outputs, do, if, cond-var, set, log, interpolation]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    GO: 'yes'
+  outputs: [A]
+  do:
+    - if: { var: GO, equals: 'yes' }
+      then:
+        - set: { A: one }
+      else:
+        - set: { A: two }
+    - log: "A is ${A}"
+expect:
+  status: succeeded
+  outputs:
+    A: one
