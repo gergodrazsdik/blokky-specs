@@ -1,0 +1,27 @@
+title: A tempdir on a retrying node is created once, around all attempts
+rules: [EM-4]
+spec: [reference.md§4.5, reference.md§5.1]
+features: [exec, tempdir, retry]
+plan: |
+  blokky: 1.0
+  tempdir: true
+  retry: true
+  every: 0s
+  exec: [blokky-testkit, flaky, --state, attempts.txt, --fail-times, '1']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 0
+      repetition: { count: 2, ended_by: success }
+  invocations:
+    - { argv: [flaky, --state, attempts.txt, --fail-times, '1'] }
+    - { argv: [flaky, --state, attempts.txt, --fail-times, '1'] }
+  files:
+    attempts.txt: { exists: false }
+notes: >-
+  The state file lives in the tempdir, the node's cwd. Because the same
+  directory serves both attempts, the second one sees the count of the first
+  and succeeds; a fresh directory per attempt would fail all three attempts.

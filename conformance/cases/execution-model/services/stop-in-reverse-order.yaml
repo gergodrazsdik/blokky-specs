@@ -1,0 +1,38 @@
+title: After the body and finally, services are stopped in reverse list order
+rules: [EM-65]
+spec: [reference.md§4.9]
+features: [exec, services, cond-path]
+clock: [real]
+plan: |
+  blokky: 1.0
+  services:
+    - name: first
+      exec: [blokky-testkit, sleep, 1m, --record-signals, sig.txt, --tag, first, --pid-file, first.pid]
+      ready: { path: first.pid, is_file: true }
+    - name: second
+      exec: [blokky-testkit, sleep, 1m, --record-signals, sig.txt, --tag, second, --pid-file, second.pid]
+      ready: { path: second.pid, is_file: true }
+  exec: [blokky-testkit, sleep, 1s]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      services:
+        - { name: first, ended: stopped }
+        - { name: second, ended: stopped }
+platforms:
+  unix:
+    expect:
+      files:
+        sig.txt: { text: "second SIGTERM\nfirst SIGTERM\n" }
+  windows:
+    expect:
+      files:
+        sig.txt: { text: "second CTRL_BREAK\nfirst CTRL_BREAK\n" }
+notes: >-
+  Both services record their stop request in the same file, tagged with their
+  name (TK-14), and end on it. The second service is stopped first, and the
+  first only after it, so the file holds the second's line first. The 1s body
+  gives both testkits time to set up their handlers after writing the pid file.

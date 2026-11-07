@@ -1,0 +1,23 @@
+title: tempdir becomes the node's cwd, and as binds its absolute path inside the node
+rules: [EM-4]
+spec: [reference.md§4.5]
+features: [do, exec, tempdir]
+plan: |
+  blokky: 1.0
+  tempdir: { as: WORK }
+  do:
+    - exec: [blokky-testkit, exit, '0', --cwd-check, { var: WORK }]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      bindings: [WORK]
+    /do/0: { status: succeeded, exit_code: 0 }
+  invocations:
+    - { argv: [exit, '0', --cwd-check, { $regex: '^(/|[A-Za-z]:\\)' }] }
+notes: >-
+  --cwd-check makes the testkit exit with 125 unless its cwd is the given
+  directory (TK-7), so exit 0 shows that the leaf runs in the directory WORK
+  names. The logged argument shows the path is absolute.

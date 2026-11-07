@@ -1,0 +1,37 @@
+title: tempdir with remove on_success is deleted after a success and kept after a failure
+rules: [EM-4]
+spec: [reference.md§4.5]
+features: [do, exec, tempdir, capture, capture-fields, set, interpolation, ignore-errors, assert, cond-path]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, info]
+      capture: { RUN_CWD: .cwd }
+    - set:
+        NOTE: ${RUN_CWD}/failed-dir.txt
+    - tempdir: { as: GOOD, remove: on_success }
+      do:
+        - exec: [blokky-testkit, print, --out, { var: GOOD }]
+          capture: GOOD_DIR
+    - tempdir: { as: BAD, remove: on_success }
+      ignore_errors: true
+      do:
+        - exec: [blokky-testkit, write-file, { var: NOTE }, --text, { var: BAD }, --newline, none]
+        - exec: [blokky-testkit, exit, '1']
+    - exec: [blokky-testkit, read-file, failed-dir.txt]
+      capture: BAD_DIR
+    - assert: { path: { var: GOOD_DIR }, not_exists: true }
+    - assert: { path: { var: BAD_DIR }, is_dir: true }
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/2: { status: succeeded }
+    /do/3: { status: failed, ignored: true }
+    /do/6: { status: succeeded }
+    /do/7: { status: succeeded }
+notes: >-
+  The failing node writes its tempdir's path to a file in the work directory
+  (a node whose failure is ignored binds no captures, so a capture can't carry
+  it out). After the run of both nodes, the succeeded one's directory is gone
+  and the failed one's is still there.

@@ -1,0 +1,42 @@
+title: A service not ready within ready_timeout fails the node, stops the started services, and skips body and finally
+rules: [EM-62, EM-63]
+spec: [reference.md§4.9, errors.md§5.5]
+features: [do, exec, services, finally]
+clock: [real]
+plan: |
+  blokky: 1.0
+  finally:
+    - exec: [blokky-testkit, print, --out, cleanup]
+  services:
+    - name: started
+      exec: [blokky-testkit, print, --out, ready, --hang]
+      ready: { output: stdout, contains: ready }
+    - name: slow
+      exec: [blokky-testkit, print, --sleep, 30s, --out, ready, --hang]
+      ready: { output: stdout, contains: ready }
+      ready_timeout: 1s
+  do:
+    - exec: [blokky-testkit, print, --out, body]
+expect:
+  status: failed
+  error: { code: BK_SERVICE_NOT_READY, node: /, detail: { service: slow } }
+  nodes:
+    /:
+      status: failed
+      error: { code: BK_SERVICE_NOT_READY, node: /, detail: { service: slow } }
+      services:
+        - { name: started, ended: stopped }
+        - { name: slow, ended: never_ready }
+      finally_status: { $absent: true }
+    /do/0: { status: skipped, skip_reason: not_reached }
+    /finally/0: { status: skipped, skip_reason: not_reached }
+  invocations:
+    - { argv: [print, --out, ready, --hang] }
+    - { argv: [print, --sleep, 30s, --out, ready, --hang] }
+  duration: { $min: 1s, $max: 15s }
+notes: >-
+  The second service would print its ready line only after 30s. Its 1s
+  ready_timeout runs out first; the first service is stopped, and neither the
+  body nor the finally runs (finally sits inside services, EM-63), so the
+  invocation log holds only the two services; their nodes are skipped with
+  not_reached and there is no finally status.

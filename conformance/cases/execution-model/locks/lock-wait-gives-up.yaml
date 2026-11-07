@@ -1,0 +1,30 @@
+title: A lock not acquired within wait fails the node with BK_LOCK_TIMEOUT, and the wait is recorded
+rules: [EM-60]
+spec: [reference.md§4.4, errors.md§5.5]
+features: [all, do, sleep, exec, lock]
+clock: [real]
+plan: |
+  blokky: 1.0
+  fail_fast: false
+  all:
+    - lock: conf-lock-wait-gives-up
+      exec: [blokky-testkit, sleep, 4s]
+    - do:
+        - sleep: 1s
+        - lock: { name: conf-lock-wait-gives-up, wait: 1s }
+          exec: [blokky-testkit, print, --out, got-lock]
+expect:
+  status: failed
+  error: { code: BK_LOCK_TIMEOUT, node: /all/1/do/1 }
+  nodes:
+    /all/0: { status: succeeded }
+    /all/1/do/1:
+      status: failed
+      error: { code: BK_LOCK_TIMEOUT, node: /all/1/do/1 }
+      lock_wait: { $min: 1s, $max: 3s }
+  invocations:
+    - { argv: [sleep, 4s] }
+notes: >-
+  The lock is busy until about 4s; the second child asks for it at 1s and
+  gives up 1s later, long before it is free. The node has no timeout of its
+  own, so it fails rather than timing out.

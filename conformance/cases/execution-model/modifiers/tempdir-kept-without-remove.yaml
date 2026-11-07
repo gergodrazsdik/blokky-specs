@@ -1,0 +1,26 @@
+title: tempdir without remove, or with remove false, keeps the directory after the node ends
+rules: [EM-4]
+spec: [reference.md§4.5]
+features: [do, exec, tempdir, capture, assert, cond-path]
+plan: |
+  blokky: 1.0
+  do:
+    - tempdir: { as: WORK }
+      do:
+        - exec: [blokky-testkit, print, --out, { var: WORK }]
+          capture: DIR
+    - tempdir: { as: WORK2, remove: false }
+      do:
+        - exec: [blokky-testkit, print, --out, { var: WORK2 }]
+          capture: DIR2
+    - assert: { path: { var: DIR }, is_dir: true }
+    - assert: { path: { var: DIR2 }, is_dir: true }
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1: { status: succeeded }
+    /do/2: { status: succeeded }
+    /do/3: { status: succeeded }
+notes: remove false is the default (reference.md §4.5), so both directories are still there after their nodes end.

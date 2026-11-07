@@ -1,0 +1,25 @@
+title: A service is stopped as a whole process tree, its descendants included
+rules: [EM-65]
+spec: [reference.md§4.9]
+features: [exec, services, cond-path]
+clock: [real]
+plan: |
+  blokky: 1.0
+  services:
+    - name: tree
+      exec: [blokky-testkit, spawn, --release-output, --pids, pids.txt, --wait, --, sleep, 1m]
+      ready: { path: pids.txt, is_file: true }
+  exec: [blokky-testkit, sleep, 1s]
+after_run:
+  - { argv: [alive, pids.txt], exit_code: 0 }
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      services:
+        - { name: tree, ended: stopped }
+notes: >-
+  The service's descendant sleeps for a minute; stopping the service stops it
+  too, so nothing recorded in pids.txt is alive after the run.
