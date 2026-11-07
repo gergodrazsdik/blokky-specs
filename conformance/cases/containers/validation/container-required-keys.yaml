@@ -1,0 +1,34 @@
+title: container needs image, and every mount needs host and path
+rules: [CP-40]
+spec: [errors.md§4]
+features: [do, container, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - container: { mounts: [] }
+      exec: [sh, -c, 'exit 0']
+    - container:
+        image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+        mounts:
+          - { host: . }
+          - { path: /src }
+      exec: [sh, -c, 'exit 0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: CP-40 }
+      line: 3      # the container key, which requires image (SY-1)
+      column: 16
+    - code: BK_PLAN_INVALID
+      detail: { rule: CP-40 }
+      line: 8      # the mount mapping that lacks path (SY-1)
+      column: 11
+    - code: BK_PLAN_INVALID
+      detail: { rule: CP-40 }
+      line: 9      # the mount mapping that lacks host
+      column: 11
+  exhaustive: true
+notes: >-
+  The keys were required only by the field table and the schema before; CP-40
+  (ADR 0026) states it. A mount entry has no key that requires path or host,
+  so the error is at the mapping that lacks it.

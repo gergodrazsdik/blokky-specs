@@ -1,0 +1,28 @@
+title: An image reference outside the OCI grammar is a plan error
+rules: [SY-103]
+spec: [syntax.md§6.10]
+features: [do, container, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - container: { image: 'busybox:' }
+      exec: [sh, -c, 'exit 0']
+    - container: { image: Busybox:1.37 }
+      exec: [sh, -c, 'exit 0']
+    - container: { image: 'busybox@sha256:a7dbc319' }
+      exec: [sh, -c, 'exit 0']
+    - container: { image: 'busybox:-1.37' }
+      exec: [sh, -c, 'exit 0']
+    - container: { image: 'localhost:5000/team/app:1.2' }
+      exec: [sh, -c, 'exit 0']
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-103 }, line: 3, column: 25 }   # an empty tag
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-103 }, line: 5, column: 25 }   # an upper-case name
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-103 }, line: 7, column: 25 }   # a sha256 digest of 8 hex digits, not 64
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-103 }, line: 9, column: 25 }   # a tag starting with -
+  exhaustive: true
+notes: >-
+  Image references follow [registry/]name[:tag][@digest] (SY-103, ADR 0026).
+  The last node's reference, with a registry port, a two-component name and
+  a tag, is valid. Nothing starts, so no container engine is needed (CF-66).

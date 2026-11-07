@@ -1,7 +1,7 @@
 title: Service startup counts against the node's timeout but not its attempt_timeout, and runs once before repetition
-rules: [EM-4, EM-6, EM-62]
-spec: [reference.md§4.3, reference.md§4.9, reference.md§4.12]
-features: [exec, cwd, timeout, services, retry, attempt-timeout]
+rules: [EM-4, EM-6, EM-62, EM-63]
+spec: [reference.md§4.3, reference.md§4.9, reference.md§4.10, reference.md§4.12]
+features: [exec, cwd, timeout, services, finally, retry, attempt-timeout]
 clock: [real]
 files:
   sub: { dir: true }
@@ -13,6 +13,8 @@ plan: |
     - name: slow
       exec: [blokky-testkit, sleep, 1m]
       ready: { output: stdout, contains: ready }
+  finally:
+    - exec: [blokky-testkit, print, --out, cleanup]
   retry: true
   max: 3
   every: 0s
@@ -27,16 +29,21 @@ expect:
       error: { code: BK_TIMEOUT_TOTAL, node: / }
       services:
         - { name: slow, ended: never_ready }
+      finally_status: { $absent: true }
+      repetition: { count: 0 }
+    /finally/0: { status: skipped, skip_reason: not_reached }
   invocations:
     - { argv: [sleep, 1m], cwd: { $regex: '[/\\]sub$' } }
   duration: { $min: 3s, $max: 15s }
 notes: >-
-  Pairs covered (CF-46): timeout with services; services with repetition and
-  attempt_timeout; cwd with services; timeout with cwd, repetition and
-  attempt_timeout (co-located). The service never prints its ready text. The
+  Pairs covered (CF-46): timeout with services; services with finally,
+  repetition and attempt_timeout; cwd with services; timeout with cwd,
+  repetition and attempt_timeout (co-located). The service never prints its ready text. The
   node's 3s timeout covers service startup and fires first (EM-6, EM-62); the
   1s attempt_timeout, which sits inside services (EM-4) and covers only an
   attempt's body (reference.md §4.12), doesn't apply to the startup, so the
   error is BK_TIMEOUT_TOTAL, not BK_TIMEOUT_ATTEMPT, and no attempt or retry
-  ever starts. The service started once, in sub, and ended never_ready.
-  Whether the node's repetition is recorded with zero attempts isn't asserted.
+  ever starts: the repetition records count 0. The service started once, in
+  sub, and ended never_ready. The timeout fired during service startup, a
+  layer outside finally, so the finally doesn't run either (EM-63): it is
+  skipped with not_reached and no finally status is recorded.

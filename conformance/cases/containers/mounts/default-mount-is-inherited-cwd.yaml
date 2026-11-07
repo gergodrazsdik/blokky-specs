@@ -1,0 +1,42 @@
+title: Without mounts, the cwd the node inherits is mounted, and the node's own cwd under it maps through that mount
+rules: [CP-9, CP-14]
+spec: [reference.md§4.6]
+features: [outputs, do, cwd, container, exec, capture, capture-fields]
+requires:
+  container-engine: true
+clock: [real]
+files:
+  marker.txt: from the parent
+  sub: { dir: true }
+plan: |
+  blokky: 1.0
+  outputs: [RELATIVE, ABSOLUTE]
+  do:
+    - cwd: sub
+      exec: [blokky-testkit, info]
+      capture: { SUB_DIR: .cwd }
+    - cwd: sub
+      container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+      exec: [sh, -c, 'cat ../marker.txt && echo one > ../one.txt']
+      capture: RELATIVE
+    - cwd: { var: SUB_DIR }
+      container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+      exec: [sh, -c, 'cat ../marker.txt && echo two > ../two.txt']
+      capture: ABSOLUTE
+expect:
+  status: succeeded
+  outputs:
+    RELATIVE: from the parent
+    ABSOLUTE: from the parent
+  files:
+    one.txt: { text: "one\n" }
+    two.txt: { text: "two\n" }
+notes: >-
+  The container nodes inherit the work directory as their cwd, so that is
+  what is mounted, read-write at the same path (CP-9, ADR 0026), not their own
+  cwd sub. The relative cwd sub resolves against it and maps through the
+  mount; the absolute host path of sub, taken from the testkit's info, is a
+  host path under the mount, so it maps the same way (CP-14). In both, the
+  parent directory is visible and writable: had sub itself been mounted,
+  ../marker.txt wouldn't exist inside. On Windows the mount path is the
+  drive-letter form (CP-10).

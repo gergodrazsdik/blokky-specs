@@ -1,0 +1,40 @@
+title: A name in env_pass and in env or export on the same node is a plan error
+rules: [CP-42, RF-10]
+spec: [errors.md§4]
+features: [vars, do, container, env, export, exec]
+plan: |
+  blokky: 1.0
+  vars: { CONF_B: from-plan }
+  do:
+    - env: { CONF_A: from-env }
+      container:
+        image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+        env_pass: [CONF_A]
+      exec: [sh, -c, 'exit 0']
+    - export: [CONF_B]
+      container:
+        image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+        env_pass: [CONF_B]
+      exec: [sh, -c, 'exit 0']
+    - env: { CONF_C: from-env }
+      exec: [blokky-testkit, exit, '0']
+    - container:
+        image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+        env_pass: [CONF_C]
+      exec: [sh, -c, 'exit 0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-10 }
+      line: 7      # the later of the two names, the env_pass entry (SY-1)
+      column: 18
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-10 }
+      line: 12
+      column: 18
+  exhaustive: true
+notes: >-
+  env_pass follows the rules of env and export (CP-42, ADR 0026): a name in
+  env_pass and in env (the first node) or export (the second) on one node is
+  RF-10. The rule is per node: the third node's env and the fourth node's
+  env_pass name the same variable on different nodes, which is valid.

@@ -1,0 +1,30 @@
+title: Shell detection for a container script runs inside the image, so busybox gets sh even when the host has bash
+rules: [CP-15, CP-38, CP-41, SH-22]
+spec: [results.md§3.1]
+features: [outputs, container, script, capture]
+requires:
+  shells: [bash]
+  container-engine: true
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+  script: |
+    echo "${BASH_VERSION:-no-bash}"
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: no-bash
+  nodes:
+    /:
+      status: succeeded
+      invocation: [{ $regex: '(^|/)sh$' }, { $regex: '^/.*\.sh$' }]
+notes: >-
+  No shell is named, so detection picks it (SH-22). For a container leaf it
+  runs inside the image: bash, else sh (CP-15, ADR 0026). The pinned busybox
+  image has no bash, so the script runs under its sh, which leaves
+  BASH_VERSION unset, although bash resolves on the host. The invocation is
+  the in-container argv (CP-38): the shell, then the script file on the
+  scripts mount, a POSIX container path on every host (CP-41).

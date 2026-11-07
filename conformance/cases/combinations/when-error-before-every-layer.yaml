@@ -1,5 +1,5 @@
 title: A condition error in when fails the node before any of its other layers apply
-rules: [EM-4, EM-47, CO-41]
+rules: [EM-4, EM-47, CO-41, RS-8]
 features: [vars, do, exec, when, cond-var, cond-numeric, timeout, lock, tempdir, cwd, env, services, finally, retry-condition, cond-result, attempt-timeout, ignore-errors]
 clock: [real]
 plan: |
@@ -34,6 +34,12 @@ expect:
       status: failed
       ignored: true
       error: { code: BK_CONDITION_ERROR, node: /do/0, detail: { reason: not_a_number } }
+      duration: { $absent: true }
+      lock_wait: { $absent: true }
+      services: { $absent: true }
+      finally_status: { $absent: true }
+      repetition: { $absent: true }
+    /do/0/finally/0: { $absent: true }
     /do/1: { status: succeeded }
   invocations:
     - { argv: [print, --out, next] }
@@ -43,4 +49,6 @@ notes: >-
   BK_CWD_INVALID its missing cwd would raise, starts no service, attempt, body
   or finally, and its retry condition, which would match the code, doesn't
   retry it because repetition sits inside when. ignore_errors on the node
-  applies to the error (CO-41), so the run goes on.
+  applies to the error (CO-41), so the run goes on. The failed node records
+  only its error (RS-8): no duration, lock wait, services, finally status or
+  repetition, and its finally node isn't in the result.

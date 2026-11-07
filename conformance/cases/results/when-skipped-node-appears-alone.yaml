@@ -1,0 +1,43 @@
+title: A node skipped by its when appears alone, without its descendants and finally nodes
+rules: [RS-6, RS-7, EM-5, CO-31]
+spec: [reference.md§4.2]
+features: [do, all, exec, when, cond-probe, finally, log]
+clock: [real]
+plan: |
+  blokky: 1.0
+  do:
+    - when: { probe: { exec: [blokky-testkit, exit, '1'] } }
+      finally:
+        - log: cleanup
+      do:
+        - exec: [blokky-testkit, print, --out, first]
+        - all:
+            - exec: [blokky-testkit, print, --out, second]
+            - log: third
+    - log: after
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0:
+      status: skipped
+      skip_reason: condition
+      kind: do
+      probes:
+        - { invocation: [blokky-testkit, exit, '1'], exit_code: 1, result: false }
+      children: { $absent: true }
+      finally_status: { $absent: true }
+      duration: { $absent: true }
+    /do/0/do/0: { $absent: true }
+    /do/0/do/1: { $absent: true }
+    /do/0/do/1/all/0: { $absent: true }
+    /do/0/do/1/all/1: { $absent: true }
+    /do/0/finally/0: { $absent: true }
+    /do/1: { status: succeeded }
+  invocations:
+    - { argv: [exit, '1'] }
+notes: >-
+  The when probe exits 1, so the group is skipped. Only the group itself is in
+  the run result, with its when probe (CO-31); its children, their
+  descendants and its finally node are not there at all, not even as skipped
+  nodes (RS-7, ADR 0026).

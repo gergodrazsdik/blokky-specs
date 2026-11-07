@@ -1,8 +1,7 @@
 title: mounts [] is valid, and an absolute cwd under no mount is a container path
-rules: [RF-21, CP-12, CP-14]
+rules: [RF-21, CP-12, CP-14, CP-41]
 features: [outputs, cwd, container, exec, capture]
 requires:
-  os: [linux, macos]
   container-engine: true
 clock: [real]
 plan: |
@@ -18,4 +17,7 @@ expect:
   status: succeeded
   outputs:
     CONTAINER_CWD: /
-notes: The near miss of RF-21 - mounts is the only field where an empty list is valid (syntax.md §7.4).
+notes: >-
+  The near miss of RF-21 - mounts is the only field where an empty list is
+  valid (syntax.md §7.4). / is a container path on every host OS, Windows
+  included (CP-41).
