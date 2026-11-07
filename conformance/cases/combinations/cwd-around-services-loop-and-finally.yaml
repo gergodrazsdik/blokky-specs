@@ -1,0 +1,51 @@
+title: A node's cwd applies to its services, its until condition, its body and its finally
+rules: [EM-4, EM-7, EM-8]
+spec: [reference.md§4.6, reference.md§4.9, conditions.md§6]
+features: [exec, cwd, timeout, env, services, finally, until, cond-path, attempt-timeout]
+clock: [real]
+files:
+  sub: { dir: true }
+plan: |
+  blokky: 1.0
+  cwd: sub
+  timeout: 10s
+  env: { CONF_LAYER: node }
+  services:
+    - name: svc
+      exec: [blokky-testkit, print, --out, ready, --hang]
+      ready: { output: stdout, contains: ready }
+  finally:
+    - exec: [blokky-testkit, write-file, fin.txt, --text, x]
+  until: { path: done.txt, exists: true }
+  max: 3
+  every: 0s
+  attempt_timeout: 5s
+  exec: [blokky-testkit, write-file, done.txt, --text, x]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      finally_status: succeeded
+      services:
+        - { name: svc, ended: stopped }
+      repetition: { count: 1, ended_by: condition }
+  invocations:
+    - { argv: [print, --out, ready, --hang], cwd: { $regex: '[/\\]sub$' } }
+    - { argv: [write-file, done.txt, --text, x], cwd: { $regex: '[/\\]sub$' } }
+    - { argv: [write-file, fin.txt, --text, x], cwd: { $regex: '[/\\]sub$' } }
+  files:
+    sub/done.txt: { text: "x\n" }
+    sub/fin.txt: { text: "x\n" }
+    done.txt: { exists: false }
+    fin.txt: { exists: false }
+notes: >-
+  Pairs covered (CF-46): cwd with services, finally, repetition and the kind,
+  from the cwd's side; cwd with timeout, env and attempt_timeout, which have no
+  order-dependent observable and are co-located here. The service, the body
+  and the finally all run in sub. The until condition is checked in the node's
+  own scope (EM-8), after cwd applies, so it finds sub/done.txt after the first
+  iteration and ends the loop; checked against the work directory it would
+  stay false and the loop would end with BK_LOOP_MAX_REACHED after 3
+  iterations. The finally runs once, after the loop, in sub (EM-7).

@@ -1,0 +1,44 @@
+title: A node's services start only after it has its lock, which another node holds through its finally
+rules: [EM-4, EM-60, EM-61]
+spec: [reference.md§4.4, reference.md§4.9]
+features: [all, do, sleep, exec, lock, finally, services]
+clock: [real]
+plan: |
+  blokky: 1.0
+  all:
+    - lock: conf-lock-taken-before-services-start
+      finally:
+        - exec: [blokky-testkit, print, --out, holder-done]
+      exec: [blokky-testkit, sleep, 2s]
+    - do:
+        - sleep: 300ms
+        - lock: conf-lock-taken-before-services-start
+          services:
+            - name: svc
+              exec: [blokky-testkit, print, --out, ready, --hang]
+              ready: { output: stdout, contains: ready }
+          exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /all/0: { status: succeeded, finally_status: succeeded }
+    /all/1/do/1:
+      status: succeeded
+      lock_wait: { $min: 1s, $max: 4s }
+      services:
+        - { name: svc, ended: stopped, ready_after: { $min: 1s } }
+  invocations:
+    - { argv: [sleep, 2s] }
+    - { argv: [print, --out, holder-done] }
+    - { argv: [print, --out, ready, --hang] }
+    - { argv: [exit, '0'] }
+notes: >-
+  Pairs covered (CF-46): lock with services, finally and the kind; services
+  with the kind. The second node asks for the lock at 0.3s while the first
+  holds it until its finally has run, at about 2s (EM-60). Its service starts
+  only after the lock is acquired (EM-4), so it is logged after the holder's
+  finally and becomes ready after the lock wait (ready_after is measured from
+  the node's start); started before the lock it would be logged at about
+  0.3s, before holder-done. The body starts after the service is ready
+  (EM-61).

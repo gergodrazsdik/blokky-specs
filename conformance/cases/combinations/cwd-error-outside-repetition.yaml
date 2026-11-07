@@ -1,0 +1,27 @@
+title: An invalid cwd fails the node before repetition starts, so a retry condition matching BK_CWD_INVALID never retries it
+rules: [EM-4]
+spec: [reference.md§4.6, reference.md§5.1]
+features: [exec, cwd, retry-condition, cond-result, attempt-timeout]
+plan: |
+  blokky: 1.0
+  cwd: missing
+  retry: { result: error, equals: BK_CWD_INVALID }
+  max: 3
+  every: 0s
+  attempt_timeout: 5s
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: failed
+  error: { code: BK_CWD_INVALID, node: / }
+  nodes:
+    /:
+      status: failed
+      error: { code: BK_CWD_INVALID, node: / }
+  invocations: []
+notes: >-
+  Pairs covered (CF-46): cwd with repetition, attempt_timeout and the kind,
+  from the repetition's side. cwd sits outside repetition (EM-4), so the
+  missing directory fails the node once, as the node starts, with
+  BK_CWD_INVALID; no attempt runs and the retry condition, which would match
+  that code, is never evaluated. If cwd applied per attempt, the node would
+  end with BK_RETRIES_EXHAUSTED after 3 attempts.

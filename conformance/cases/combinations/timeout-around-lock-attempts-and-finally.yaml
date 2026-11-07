@@ -1,0 +1,86 @@
+title: A node's timeout covers its lock wait and all attempts but not its finally, and the lock is held through the finally
+rules: [EM-4, EM-6, EM-7, EM-25, EM-27, EM-53, EM-60]
+spec: [reference.md§4.3, reference.md§4.12, reference.md§5.1]
+features: [all, do, sleep, exec, lock, timeout, tempdir, env, finally, retry, attempt-timeout]
+clock: [real]
+plan: |
+  blokky: 1.0
+  fail_fast: false
+  all:
+    - lock: conf-timeout-around-lock-attempts-and-finally
+      exec: [blokky-testkit, sleep, 3s]
+    - do:
+        - sleep: 500ms
+        - lock: conf-timeout-around-lock-attempts-and-finally
+          timeout: 5500ms
+          tempdir: { prefix: conf-tlaf }
+          env: { CONF_LAYER: node }
+          finally:
+            - exec: [blokky-testkit, sleep, 2s]
+            - exec: [blokky-testkit, getenv, CONF_LAYER]
+          retry: true
+          max: 5
+          every: 0s
+          attempt_timeout: 2s
+          exec: [blokky-testkit, sleep, 30s]
+    - do:
+        - sleep: 4s
+        - lock: conf-timeout-around-lock-attempts-and-finally
+          exec: [blokky-testkit, print, --out, third]
+expect:
+  status: failed
+  error: { code: BK_TIMEOUT_TOTAL, node: /all/1/do/1 }
+  nodes:
+    /all/0: { status: succeeded }
+    /all/1/do/1:
+      status: timed_out
+      killed_by: timeout
+      error:
+        code: BK_TIMEOUT_TOTAL
+        node: /all/1/do/1
+        causes:
+          - { code: BK_CANCELLED }   # the attempt the timeout interrupted (EM-53)
+      lock_wait: { $min: 1.5s, $max: 5s }
+      finally_status: succeeded
+      repetition:
+        count: 2
+        ended_by: timeout
+        entries:
+          - { index: 0, status: timed_out, error: { code: BK_TIMEOUT_ATTEMPT } }
+          - { index: 1, error: { code: BK_CANCELLED } }
+      duration: { $min: 7500ms, $max: 15s }   # 5.5s timeout, then a 2s finally
+    /all/1/do/1/finally/0:
+      status: succeeded
+      duration: { $min: 2s, $max: 5s }
+    /all/1/do/1/finally/1: { status: succeeded, exit_code: 0 }
+    /all/2/do/1:
+      status: succeeded
+      lock_wait: { $min: 3s, $max: 8s }
+  invocations:
+    - { argv: [sleep, 3s] }
+    - { argv: [sleep, 30s], cwd: { $regex: '[/\\]conf-tlaf[^/\\]*$' } }
+    - { argv: [sleep, 30s], cwd: { $regex: '[/\\]conf-tlaf[^/\\]*$' } }
+    - { argv: [sleep, 2s], cwd: { $regex: '[/\\]conf-tlaf[^/\\]*$' } }
+    - { argv: [getenv, CONF_LAYER], cwd: { $regex: '[/\\]conf-tlaf[^/\\]*$' } }
+    - { argv: [print, --out, third] }
+notes: >-
+  Pairs covered (CF-46): timeout with lock, tempdir, env, finally, repetition,
+  attempt_timeout and the kind; lock with tempdir, env, finally, repetition,
+  attempt_timeout and the kind; tempdir with env, finally, repetition,
+  attempt_timeout and the kind; env with finally, repetition and
+  attempt_timeout; finally with repetition, attempt_timeout and the kind;
+  repetition with attempt_timeout and the kind; attempt_timeout with the kind.
+  Timeline: the first child holds the lock until about 3s. The second node
+  starts at 0.5s, so its 5.5s timeout ends at about 6s, and it waits about
+  2.5s for the lock, which counts against the timeout (EM-6, EM-60). Attempt 1
+  runs from about 3s and is ended by its 2s attempt_timeout at about 5s
+  (timed_out entry, EM-27); retry true retries it; attempt 2 starts at about
+  5s and is interrupted by the node's own timeout at about 6s (EM-25, EM-53),
+  about 1s before a third attempt could start. Without the lock wait counted,
+  the timeout would end at about 8.5s and a third attempt would start at
+  about 7s. The finally runs once, after all attempts, inside the tempdir and
+  env, for 2s past both limits (EM-7), until about 8s. The third child asks
+  for the lock at 4s, while the second node holds it, and gets it only after
+  that finally, so it waits about 4s (EM-60); released before the finally it
+  would wait about 2s. The tempdir name starts with its prefix (reference.md
+  §4.5).

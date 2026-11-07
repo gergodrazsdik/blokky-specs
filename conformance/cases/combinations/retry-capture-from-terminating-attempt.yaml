@@ -1,0 +1,54 @@
+title: A capture on a retrying node is seen by its retry condition and published only from a succeeding last attempt
+rules: [VA-32, EM-24]
+spec: [reference.md§5.4]
+features: [do, exec, retry, retry-condition, cond-var, capture, ignore-errors, when]
+plan: |
+  blokky: 1.0
+  do:
+    - retry: true
+      max: 3
+      every: 0s
+      exec: [blokky-testkit, flaky, --state, a.txt, --fail-times, '2']
+      capture: N
+    - exec: [blokky-testkit, argv, { var: N }]
+    - retry: { var: M, equals: '1' }
+      max: 3
+      every: 0s
+      ignore_errors: true
+      exec: [blokky-testkit, flaky, --state, b.txt, --fail-times, '5']
+      capture: M
+    - when: { var: M, not_defined: true }
+      exec: [blokky-testkit, print, --out, m-unbound]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0:
+      status: succeeded
+      exit_code: 0
+      repetition: { count: 3, ended_by: success }
+      bindings: [N]
+    /do/2:
+      status: failed
+      ignored: true
+      exit_code: 1
+      error: { code: BK_EXIT, node: /do/2, detail: { exit_code: 1 } }
+      repetition: { count: 2 }
+    /do/3: { status: succeeded }
+  invocations:
+    - { argv: [flaky, --state, a.txt, --fail-times, '2'] }
+    - { argv: [flaky, --state, a.txt, --fail-times, '2'] }
+    - { argv: [flaky, --state, a.txt, --fail-times, '2'] }
+    - { argv: [argv, '3'] }
+    - { argv: [flaky, --state, b.txt, --fail-times, '5'] }
+    - { argv: [flaky, --state, b.txt, --fail-times, '5'] }
+    - { argv: [print, --out, m-unbound] }
+notes: >-
+  CF-47 (retry with captures). flaky prints its new counter value. The first
+  node fails twice and succeeds on attempt 3; N is published from that
+  attempt, so the next node gets 3 (VA-32). The third node's attempts print 1
+  and 2 and exit 1. Its retry condition sees the failed attempt's own capture
+  (VA-32, best effort): M is 1 after attempt 1, so it retries, and 2 after
+  attempt 2, so it doesn't; the node fails with the attempt's BK_EXIT
+  (reference.md §5.4 step 4), not BK_RETRIES_EXHAUSTED. A failed node binds
+  nothing (EM-24, VA-32), so M is unbound afterwards.

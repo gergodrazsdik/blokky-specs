@@ -1,0 +1,78 @@
+title: Services start once inside the node's tempdir and env, outlive a timed-out attempt and are still up for the finally
+rules: [EM-4, EM-7, EM-8, EM-61, EM-65]
+spec: [reference.md§4.5, reference.md§4.9, reference.md§4.10, reference.md§5.1, conditions.md§6]
+features: [exec, do, if, cond-path, cond-probe, cond-env, cond-composite, tempdir, env, services, finally, ok-exit, retry-condition, attempt-timeout]
+clock: [real]
+plan: |
+  blokky: 1.0
+  tempdir: { prefix: conf-soaa }
+  env: { CONF_LAYER: node }
+  services:
+    - name: svc
+      exec: [blokky-testkit, print, --out, started, --hang, --pid-file, svc.pid]
+      ready:
+        all:
+          - { output: stdout, contains: started }
+          - { probe: { exec: [blokky-testkit, getenv, CONF_LAYER] } }
+  finally:
+    - exec: [blokky-testkit, alive, svc.pid]
+      ok_exit: [1]
+    - exec: [blokky-testkit, getenv, CONF_LAYER]
+  retry: { env: CONF_LAYER, equals: node }
+  max: 3
+  every: 0s
+  attempt_timeout: 2s
+  do:
+    - if: { path: first.txt, exists: true }
+      then:
+        - exec: [blokky-testkit, getenv, CONF_LAYER]
+      else:
+        - exec: [blokky-testkit, write-file, first.txt, --text, x]
+        - exec: [blokky-testkit, sleep, 30s]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      finally_status: succeeded
+      services:
+        - { name: svc, ended: stopped }
+      repetition:
+        count: 2
+        ended_by: success
+        entries:
+          - { index: 0, status: timed_out, error: { code: BK_TIMEOUT_ATTEMPT } }
+          - { index: 1, status: succeeded }
+    /finally/0: { status: succeeded, exit_code: 1 }
+    /finally/1: { status: succeeded, exit_code: 0 }
+  invocations:
+    - { argv: [print, --out, started, --hang, --pid-file, svc.pid], cwd: { $regex: '[/\\]conf-soaa[^/\\]*$' } }
+    - { argv: [getenv, CONF_LAYER], cwd: { $regex: '[/\\]conf-soaa[^/\\]*$' } }
+    - { argv: [write-file, first.txt, --text, x], cwd: { $regex: '[/\\]conf-soaa[^/\\]*$' } }
+    - { argv: [sleep, 30s], cwd: { $regex: '[/\\]conf-soaa[^/\\]*$' } }
+    - { argv: [getenv, CONF_LAYER], cwd: { $regex: '[/\\]conf-soaa[^/\\]*$' } }
+    - { argv: [alive, svc.pid], cwd: { $regex: '[/\\]conf-soaa[^/\\]*$' } }
+    - { argv: [getenv, CONF_LAYER], cwd: { $regex: '[/\\]conf-soaa[^/\\]*$' } }
+  files:
+    first.txt: { exists: false }
+    svc.pid: { exists: false }
+  duration: { $min: 2s, $max: 10s }
+notes: >-
+  Pairs covered (CF-46): tempdir with services, finally, repetition,
+  attempt_timeout and the kind; env with services, finally, repetition,
+  attempt_timeout and the kind; services with finally, repetition,
+  attempt_timeout and the kind; finally with the kind. The service starts in
+  the tempdir with the node's env: its ready probe (the service's scope,
+  conditions.md §6) finds CONF_LAYER set, and the body starts after it is ready
+  (EM-61). The probe runs only once the service has printed started (the
+  composite short-circuits, CO-23), and is true at once, so it is logged once,
+  after the service. Attempt 1 writes first.txt in the
+  tempdir and is ended by its attempt_timeout. The retry condition is checked
+  in the node's own scope (EM-8), where CONF_LAYER is set, so the attempt is
+  retried; in the parent's scope it would be false and the node would fail.
+  Attempt 2 finds first.txt in the same tempdir (once per node) and succeeds.
+  The service was started once and survived the attempt_timeout (it sits
+  outside repetition, EM-4): the finally, run once after both attempts in the
+  tempdir and env, sees it alive (alive exits 1) and the service is stopped
+  after it (EM-65).

@@ -1,0 +1,57 @@
+title: A node whose when is false applies none of its other layers, from timeout to the body's capture
+rules: [EM-4, EM-5, RS-6]
+spec: [reference.md§4.2]
+features: [vars, do, exec, when, cond-var, timeout, lock, tempdir, cwd, env, services, finally, retry, attempt-timeout, capture]
+clock: [real]
+plan: |
+  blokky: 1.0
+  vars:
+    TARGET: staging
+  do:
+    - when: { var: TARGET, equals: prod }
+      timeout: 5s
+      lock: conf-when-false-skips-every-layer
+      tempdir: { prefix: conf-skipped, remove: true }
+      cwd: missing
+      env: { CONF_LAYER: node }
+      services:
+        - name: svc
+          exec: [blokky-testkit, print, --out, ready, --hang]
+          ready: { output: stdout, contains: ready }
+      finally:
+        - exec: [blokky-testkit, print, --out, cleanup]
+      retry: true
+      max: 2
+      every: 0s
+      attempt_timeout: 2s
+      exec: [blokky-testkit, print, --out, body]
+      capture: OUT
+    - when: { var: OUT, not_defined: true }
+      lock: { name: conf-when-false-skips-every-layer, wait: 0s }
+      exec: [blokky-testkit, print, --out, after]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0:
+      status: skipped
+      skip_reason: condition
+      error: { $absent: true }
+      duration: { $absent: true }
+      lock_wait: { $absent: true }
+      services: { $absent: true }
+      finally_status: { $absent: true }
+      repetition: { $absent: true }
+      bindings: { $absent: true }
+    /do/1: { status: succeeded, exit_code: 0 }
+  invocations:
+    - { argv: [print, --out, after] }
+notes: >-
+  Pairs covered (CF-46): when with timeout, lock, tempdir, cwd, env, services,
+  finally, repetition, attempt_timeout and the kind. when is the outermost
+  layer (EM-4), so a false when stops everything below it (EM-5): the missing
+  cwd raises no BK_CWD_INVALID, no service, attempt, body or finally process
+  starts (the invocation log holds only the second node), and the skipped
+  node has no result fields beyond its status and skip reason (RS-6). Its
+  capture OUT is never bound, so the second node's when is true; that node
+  also gets the lock with wait 0s.

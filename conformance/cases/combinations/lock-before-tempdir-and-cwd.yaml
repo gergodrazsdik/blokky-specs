@@ -1,0 +1,42 @@
+title: A node takes its lock before its tempdir and cwd apply, and a relative cwd resolves inside the tempdir
+rules: [EM-4, EM-60]
+spec: [reference.md§4.5, reference.md§4.6]
+features: [all, do, sleep, exec, lock, timeout, tempdir, cwd, env]
+clock: [real]
+files:
+  sub: { dir: true }
+plan: |
+  blokky: 1.0
+  all:
+    - lock: conf-lock-before-tempdir-and-cwd
+      exec: [blokky-testkit, sleep, 2s]
+    - do:
+        - sleep: 500ms
+        - lock: conf-lock-before-tempdir-and-cwd
+          timeout: 10s
+          tempdir: true
+          cwd: sub
+          env: { CONF_LAYER: node }
+          exec: [blokky-testkit, getenv, CONF_LAYER]
+expect:
+  status: failed
+  error: { code: BK_CWD_INVALID, node: /all/1/do/1 }
+  nodes:
+    /all/0: { status: succeeded }
+    /all/1/do/1:
+      status: failed
+      error: { code: BK_CWD_INVALID, node: /all/1/do/1 }
+      lock_wait: { $min: 1s, $max: 4s }
+  invocations:
+    - { argv: [sleep, 2s] }
+notes: >-
+  Pairs covered (CF-46): lock with tempdir, cwd and env; tempdir with cwd and
+  env; cwd with env; timeout with lock, tempdir, cwd and env. The first child
+  holds the lock until about 2s; the second asks for it at 0.5s and waits
+  about 1.5s. Only then does it apply its tempdir and cwd (EM-4): sub exists
+  in the work directory but not in the fresh temp dir, where the relative cwd
+  resolves (reference.md §4.5), so the node fails with BK_CWD_INVALID after the
+  wait instead of at once, and its program never starts. Its 10s timeout,
+  started before the wait (EM-60), doesn't fire. tempdir and env, and timeout
+  with tempdir, cwd and env, have no order-dependent observable: they are
+  co-located here and compose without error.
