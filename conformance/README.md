@@ -381,7 +381,7 @@ Most modifiers can be combined on one node, and their order is fixed (EM-4). Tes
 | CO-37 | A warning (SY-8). |
 | SH-8 | Static views of a plan aren't part of the run result. |
 | SH-19 | Static views of a plan aren't part of the run result. |
-| SH-20 | Provisional until the spike. |
+| SH-20 | Cases for the `pwsh` exit codes follow ADR 0027 (T-0030); `powershell` 5.1 is provisional until the Windows spike. |
 | SH-30 | A MAY: what implementations analyse is implementation-defined. |
 
 SH-11 is covered except its "readable only by the run's user" part: file modes aren't portable, so no case asserts them. EM-60 is covered except its per-user scope (reference.md §4.4), which needs a second OS user. EM-26 is covered except `graceful: none`, which needs a program that detaches from its console.

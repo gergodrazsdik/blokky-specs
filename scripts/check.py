@@ -366,6 +366,12 @@ def check_matchers(where: Path, value: Any, path: str) -> None:
             check_matchers(where, sub, f"{path}[{i}]")
 
 
+def _rule_of(error: dict) -> str | None:
+    """detail.rule when it is a plain rule ID; None for a matcher such as {$present: true}."""
+    rule = (error.get("detail") or {}).get("rule")
+    return rule if isinstance(rule, str) else None
+
+
 def check_positions(where: Path, text: str, plan_errors: list) -> None:
     """Each asserted line exists, and each asserted column lands on a character that isn't
     whitespace (SY-1: lines end at LF, CRLF or a lone CR; columns are code points; a BOM
@@ -494,7 +500,7 @@ def check_case(
             e
             for e in plan_errors
             if e["code"] == "BK_PLAN_UNKNOWN_KEY"
-            or (e["code"] == "BK_PLAN_INVALID" and (e.get("detail") or {}).get("rule") in schema_enforced)
+            or (e["code"] == "BK_PLAN_INVALID" and _rule_of(e) in schema_enforced)
         ]
         if not plan_errors and not schema_ok:
             first = jsonschema.exceptions.best_match(plan_validator.iter_errors(plan))

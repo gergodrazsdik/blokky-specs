@@ -90,7 +90,9 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 ### 3.1 String operators
 
 - **CO-11.** `equals`, `in` and `contains` compare strings ordinally. Nothing is trimmed except process output, which has all trailing `\n` and `\r` removed when it becomes a value ([ADR 0002](../adr/0002-language-core.md)).
-- **CO-12.** `ignore_case: true` makes `equals`, `in`, `contains` (ordinal, case-insensitive) and `matches` (as `(?i)`), and their negations `not_equals`, `not_in`, `not_contains` and `not_matches`, ignore case: two characters are equal if their Unicode simple uppercase mappings are equal (so `k` matches `K` but not the Kelvin sign `K`). On other operators it is a plan error.
+- **CO-12.** `ignore_case: true` makes `equals`, `in`, `contains` (ordinal, case-insensitive) and `matches` (as `(?i)`), and their negations `not_equals`, `not_in`, `not_contains` and `not_matches`, ignore case: two characters are equal if their Unicode simple uppercase mappings are equal (so `k` matches `K` but not the Kelvin sign `K`, and `ı` (U+0131) and `ſ` (U+017F) match `I` and `S`). The mappings are those of **Unicode 16.0** (UnicodeData.txt, the simple uppercase field), whatever the platform's version ([ADR 0027](../adr/0027-spike-findings.md)). On other operators it is a plan error.
+
+  Non-normative: platform case-insensitive APIs differ from this mapping (for example on U+0131, U+017F, U+212A and the final sigma), so implementations use a table generated from that Unicode version rather than the platform's comparison.
 
 ### 3.2 `matches`
 

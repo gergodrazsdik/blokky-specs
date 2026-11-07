@@ -154,7 +154,7 @@ Static views of a plan (for review, before a run) MAY accept a missing required 
 
 ### 7.1 A leaf's environment
 
-- **VA-39.** A leaf's environment is Blokky's own environment, overlaid by the `env` and `export` mappings of every enclosing node from the root down (inner wins), then by the variables Blokky sets (§7.4). `BASH_ENV` and `ENV` are then removed.
+- **VA-39.** A leaf's environment is Blokky's own environment, overlaid by the output defaults Blokky sets (`NO_COLOR`, `TERM`, VA-44), then by the `env` and `export` mappings of every enclosing node from the root down (inner wins), then by the `BLOKKY_*` variables (VA-44). `BASH_ENV` and `ENV` are then removed.
 - **VA-40.** `{ from_env: NAME }` reads the environment the run started with. Because that is known before anything runs, `from_env` values are treated like inputs: they are resolved in the validation phase, and static views show each value next to the inputs (masked when the reference is secret), or that it is unset. An unset `NAME` fails with `BK_FROM_ENV_UNSET` where it is used: in validation for `vars`, which bind before anything runs (reported with the plan errors, at the environment variable name, [syntax.md](syntax.md) SY-1), and otherwise when the node that uses it runs, so a reference guarded by `when: { env: NAME, defined: true }` stays valid ([ADR 0018](../adr/0018-review-semantics.md)).
 
 ### 7.2 Forbidden and reserved names
@@ -175,7 +175,9 @@ The list is illustrative, not exhaustive: almost any environment variable can ch
 
 ### 7.4 Variables Blokky sets
 
-- **VA-44.** Every leaf gets `BLOKKY_RUN_ID`, the run's id. Implementations MAY set further `BLOKKY_*` variables for their own needs (for blokky-cli: `BLOKKY_MAX_DURATION`, the remaining run budget for nested runs). Plans can't set `BLOKKY_*` names.
+- **VA-44.** Every leaf gets:
+  - `BLOKKY_RUN_ID`, the run's id. Implementations MAY set further `BLOKKY_*` variables for their own needs (for blokky-cli: `BLOKKY_MAX_DURATION`, the remaining run budget for nested runs). Plans can't set `BLOKKY_*` names, and these variables override the plan's mappings.
+  - `NO_COLOR=1`, and `TERM=dumb` when the environment the run started with has no `TERM`, so that programs don't write colour codes into captured output: leaves have no terminal, but many programs (PowerShell among them) decide by `TERM` alone ([ADR 0027](../adr/0027-spike-findings.md)). These are defaults below the plan's mappings: `env` (or `export`) can override either, for example `env: { TERM: xterm-256color, NO_COLOR: '' }` for a program whose coloured output is wanted. Neither name is forbidden (VA-41) or reserved (VA-42).
 
 ## 8. Outputs
 

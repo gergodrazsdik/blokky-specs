@@ -16,24 +16,28 @@
       ]
     },
     "bool": {
+      "description": "Exactly true or false; True, yes, on and 1 are errors (SY-53).",
       "anyOf": [
         { "type": "boolean" },
         { "type": "string", "enum": ["true", "false"] }
       ]
     },
     "trueOnly": {
+      "description": "Only true is meaningful here.",
       "anyOf": [
         { "const": true },
         { "const": "true" }
       ]
     },
     "int": {
+      "description": "A non-negative decimal integer without leading zeros (SY-54).",
       "anyOf": [
         { "type": "integer", "minimum": 0, "maximum": 2147483647 },
         { "type": "string", "pattern": "^(0|[1-9][0-9]{0,9})$" }
       ]
     },
     "posInt": {
+      "description": "A positive decimal integer without leading zeros (SY-54).",
       "anyOf": [
         { "type": "integer", "minimum": 1, "maximum": 2147483647 },
         { "type": "string", "pattern": "^[1-9][0-9]{0,9}$" }
@@ -52,35 +56,59 @@
       "items": { "$ref": "#/$defs/exitCode" }
     },
     "decimal": {
+      "description": "A non-negative decimal number such as 2 or 1.5.",
       "anyOf": [
         { "type": "number", "minimum": 0 },
         { "type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$" }
       ]
     },
     "duration": {
-      "description": "<integer><unit> parts with units h, m, s, ms in descending order (500ms, 10s, 1h30m). No bare numbers.",
+      "description": "A duration: <integer><unit> parts with units h, m, s, ms in descending order (500ms, 10s, 1h30m). No bare numbers and no fractions: 1500ms, not 1.5s (SY-56, SY-57).",
       "type": "string",
       "pattern": "^(?=[0-9])((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m(?!s))?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$"
     },
     "specVersion": {
+      "description": "The spec version the plan targets, MAJOR.MINOR such as 1.0 (SY-51).",
       "anyOf": [
         { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
         { "type": "number" }
       ]
     },
     "varName": {
+      "description": "A plan variable name: an uppercase letter, then uppercase letters, digits and _; not starting with BLOKKY_ (SY-52).",
       "type": "string",
       "pattern": "^(?!BLOKKY_)[A-Z][A-Z0-9_]*$"
     },
     "envName": {
+      "description": "An environment variable name: a letter or _, then letters, digits and _.",
       "type": "string",
       "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
     },
     "userCode": {
+      "description": "A user error code: an uppercase letter, then uppercase letters, digits and _; not starting with BK_.",
       "type": "string",
       "pattern": "^(?!BK_)[A-Z][A-Z0-9_]*$"
     },
+    "lockName": {
+      "description": "A lock name: a lowercase letter or digit, then up to 63 lowercase letters, digits, '.', '_' and '-'. An unquoted number is read as written (lock: 2024).",
+      "anyOf": [
+        { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+        { "type": "integer", "minimum": 0 }
+      ]
+    },
+    "tempdirPrefix": {
+      "description": "A tempdir name prefix: 1 to 32 letters, digits, '.', '_' and '-'. An unquoted number is read as written.",
+      "anyOf": [
+        { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,32}$" },
+        { "type": "integer", "minimum": 0 }
+      ]
+    },
+    "regex": {
+      "description": "A regular expression in the portable subset (syntax.md section 6.7; RF-22), best single-quoted. Any scalar is read as written.",
+      "type": ["string", "number", "boolean"]
+    },
     "jsonPath": {
+      "description": "A JSON path in the jq-like subset, starting with . (.number, .head.ref, .[0].name; SY-63).",
       "type": "string",
       "pattern": "^\\."
     },
@@ -219,8 +247,8 @@
         "not_in": { "$ref": "#/$defs/stringList" },
         "contains": { "$ref": "#/$defs/scalar" },
         "not_contains": { "$ref": "#/$defs/scalar" },
-        "matches": { "type": "string" },
-        "not_matches": { "type": "string" },
+        "matches": { "$ref": "#/$defs/regex" },
+        "not_matches": { "$ref": "#/$defs/regex" },
         "empty": { "$ref": "#/$defs/trueOnly" },
         "not_empty": { "$ref": "#/$defs/trueOnly" },
         "defined": { "$ref": "#/$defs/trueOnly" },
@@ -426,40 +454,42 @@
       "description": "A node. Every key a node may carry is listed here, so an error is reported at its own key; the validity rules are in nodeRules.",
       "type": "object",
       "properties": {
-        "exec": { "$ref": "#/$defs/exec" },
-        "script": { "type": "string", "minLength": 1 },
-        "do": { "$ref": "#/$defs/nodeList" },
-        "all": { "$ref": "#/$defs/nodeList" },
-        "any": { "$ref": "#/$defs/nodeList" },
-        "race": { "$ref": "#/$defs/nodeList" },
-        "if": { "$ref": "#/$defs/condition" },
-        "sleep": { "$ref": "#/$defs/duration" },
-        "log": { "$ref": "#/$defs/scalar" },
-        "fail": { "$ref": "#/$defs/scalar" },
-        "assert": { "$ref": "#/$defs/condition" },
-        "set": { "$ref": "#/$defs/setMap" },
-        "return": { "$ref": "#/$defs/scalar" },
+        "exec": { "description": "Kind: run a program, as a string or an argv list; no shell.", "$ref": "#/$defs/exec" },
+        "script": { "description": "Kind: run shell text, best as a | block scalar; the shell comes from shell: or detection.", "type": "string", "minLength": 1 },
+        "do": { "description": "Kind: run the listed nodes in order.", "$ref": "#/$defs/nodeList" },
+        "all": { "description": "Kind: run the listed nodes concurrently; fails if any fails.", "$ref": "#/$defs/nodeList" },
+        "any": { "description": "Kind: run the listed nodes concurrently; succeeds if any succeeds.", "$ref": "#/$defs/nodeList" },
+        "race": { "description": "Kind: run the listed nodes concurrently; the first to complete decides.", "$ref": "#/$defs/nodeList" },
+        "if": { "description": "Kind: evaluate a condition, then run then: or else:.", "$ref": "#/$defs/condition" },
+        "sleep": { "description": "Kind: wait for a duration.", "$ref": "#/$defs/duration" },
+        "log": { "description": "Kind: record a message (${X} interpolated, secrets masked).", "$ref": "#/$defs/scalar" },
+        "fail": { "description": "Kind: fail the node with a message.", "$ref": "#/$defs/scalar" },
+        "assert": { "description": "Kind: fail the node unless a condition holds.", "$ref": "#/$defs/condition" },
+        "set": { "description": "Kind: bind variables from literals, templates or references.", "$ref": "#/$defs/setMap" },
+        "return": { "description": "Kind: end the nearest enclosing sequence successfully, with a message.", "$ref": "#/$defs/scalar" },
 
-        "shell": { "$ref": "#/$defs/shell" },
-        "then": { "$ref": "#/$defs/nodeList" },
-        "else": { "$ref": "#/$defs/nodeList" },
-        "level": { "enum": ["debug", "info", "warn"] },
-        "message": { "$ref": "#/$defs/scalar" },
-        "code": { "$ref": "#/$defs/userCode" },
-        "concurrency": { "$ref": "#/$defs/posInt" },
-        "fail_fast": { "$ref": "#/$defs/bool" },
+        "shell": { "description": "The shell for script: bash, sh, pwsh, powershell or zsh.", "$ref": "#/$defs/shell" },
+        "then": { "description": "With if: the nodes to run when the condition is true.", "$ref": "#/$defs/nodeList" },
+        "else": { "description": "With if: the nodes to run when the condition is false.", "$ref": "#/$defs/nodeList" },
+        "level": { "description": "With log: debug, info (default) or warn.", "enum": ["debug", "info", "warn"] },
+        "message": { "description": "With assert: the message when the condition is false.", "$ref": "#/$defs/scalar" },
+        "code": { "description": "With fail or assert: the user error code (default BK_FAIL, BK_ASSERT).", "$ref": "#/$defs/userCode" },
+        "concurrency": { "description": "With all or any: how many children run at once.", "$ref": "#/$defs/posInt" },
+        "fail_fast": { "description": "With do or all: stop the remaining children as soon as one fails.", "$ref": "#/$defs/bool" },
 
-        "stdin": { "$ref": "#/$defs/stdin" },
-        "ok_exit": { "$ref": "#/$defs/exitCodes" },
-        "stderr": { "const": "merge" },
-        "encoding": { "enum": ["utf-8", "utf-16le", "utf-16be", "latin1"] },
+        "stdin": { "description": "Leaf option: the standard input, literal text, { var: X } or { file: P }; empty by default.", "$ref": "#/$defs/stdin" },
+        "ok_exit": { "description": "Leaf option: extra exit codes that count as success.", "$ref": "#/$defs/exitCodes" },
+        "stderr": { "description": "Leaf option: merge sends stderr into the stdout stream.", "const": "merge" },
+        "encoding": { "description": "Leaf option: how output is decoded (default utf-8).", "enum": ["utf-8", "utf-16le", "utf-16be", "latin1"] },
         "keep_descendants": {
+          "description": "Leaf option: keep the leaf's remaining processes at completion (true) or past the run (detach).",
           "anyOf": [
             { "$ref": "#/$defs/bool" },
             { "const": "detach" }
           ]
         },
         "capture": {
+          "description": "Leaf option: bind stdout, or JSON fields of it, to variables.",
           "anyOf": [
             { "$ref": "#/$defs/varName" },
             {
@@ -470,19 +500,20 @@
             }
           ]
         },
-        "capture_file": { "$ref": "#/$defs/varName" },
-        "secret": { "$ref": "#/$defs/bool" },
+        "capture_file": { "description": "Leaf option: write stdout to a run-owned file and bind its path.", "$ref": "#/$defs/varName" },
+        "secret": { "description": "Leaf option: mark every capture of this node as secret.", "$ref": "#/$defs/bool" },
 
-        "name": { "$ref": "#/$defs/scalar" },
-        "when": { "$ref": "#/$defs/condition" },
-        "timeout": { "$ref": "#/$defs/duration" },
+        "name": { "description": "A display name for the node (${X} interpolated).", "$ref": "#/$defs/scalar" },
+        "when": { "description": "Modifier: a guard; when false, the node is skipped.", "$ref": "#/$defs/condition" },
+        "timeout": { "description": "Modifier: the node's total wall-clock limit.", "$ref": "#/$defs/duration" },
         "lock": {
+          "description": "Modifier: hold a named advisory lock for the node, NAME or { name, wait }.",
           "anyOf": [
-            { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+            { "$ref": "#/$defs/lockName" },
             {
               "type": "object",
               "properties": {
-                "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+                "name": { "$ref": "#/$defs/lockName" },
                 "wait": { "$ref": "#/$defs/duration" }
               },
               "required": ["name"],
@@ -491,6 +522,7 @@
           ]
         },
         "tempdir": {
+          "description": "Modifier: run the node in a fresh temporary directory.",
           "anyOf": [
             { "$ref": "#/$defs/trueOnly" },
             {
@@ -498,7 +530,7 @@
               "minProperties": 1,
               "properties": {
                 "as": { "$ref": "#/$defs/varName" },
-                "prefix": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,32}$" },
+                "prefix": { "$ref": "#/$defs/tempdirPrefix" },
                 "remove": {
                   "anyOf": [
                     { "$ref": "#/$defs/bool" },
@@ -510,28 +542,30 @@
             }
           ]
         },
-        "cwd": { "$ref": "#/$defs/pathValue" },
-        "env": { "$ref": "#/$defs/envMap" },
-        "export": { "$ref": "#/$defs/nameList" },
-        "container": { "$ref": "#/$defs/container" },
-        "services": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/service" } },
-        "finally": { "$ref": "#/$defs/nodeList" },
-        "finally_timeout": { "$ref": "#/$defs/duration" },
-        "ignore_errors": { "$ref": "#/$defs/bool" },
+        "cwd": { "description": "Modifier: the node's working directory, relative to the parent's.", "$ref": "#/$defs/pathValue" },
+        "env": { "description": "Modifier: environment variables for every process in the node's scope.", "$ref": "#/$defs/envMap" },
+        "export": { "description": "Modifier: export plan variables as environment variables of the same name.", "$ref": "#/$defs/nameList" },
+        "container": { "description": "Modifier: run the node's leaves in a container.", "$ref": "#/$defs/container" },
+        "services": { "description": "Modifier: background processes started, and waited for, before the body, and stopped after it.", "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/service" } },
+        "finally": { "description": "Modifier: nodes that run after the body, whatever its outcome.", "$ref": "#/$defs/nodeList" },
+        "finally_timeout": { "description": "Modifier: the time limit for finally.", "$ref": "#/$defs/duration" },
+        "ignore_errors": { "description": "Modifier: a failure of this node doesn't fail its parent.", "$ref": "#/$defs/bool" },
 
         "retry": {
+          "description": "Repetition: run again after a failure, true or a condition on the error; with max.",
           "anyOf": [
             { "$ref": "#/$defs/trueOnly" },
             { "$ref": "#/$defs/condition" }
           ]
         },
-        "while": { "$ref": "#/$defs/condition" },
-        "until": { "$ref": "#/$defs/condition" },
-        "for": { "$ref": "#/$defs/forSpec" },
-        "attempt_timeout": { "$ref": "#/$defs/duration" },
-        "max": { "$ref": "#/$defs/posInt" },
-        "every": { "$ref": "#/$defs/duration" },
+        "while": { "description": "Repetition: run while a condition holds; with max or timeout.", "$ref": "#/$defs/condition" },
+        "until": { "description": "Repetition: run until a condition holds; with max or timeout.", "$ref": "#/$defs/condition" },
+        "for": { "description": "Repetition: run once per item of a list, count, glob, JSON array, lines or matrix.", "$ref": "#/$defs/forSpec" },
+        "attempt_timeout": { "description": "Repetition: the time limit for each attempt or iteration.", "$ref": "#/$defs/duration" },
+        "max": { "description": "Repetition: the most attempts or iterations, the first included.", "$ref": "#/$defs/posInt" },
+        "every": { "description": "Repetition: the delay between attempts or iterations (default 1s).", "$ref": "#/$defs/duration" },
         "backoff": {
+          "description": "With retry: grow the delay by factor after each attempt, up to max.",
           "type": "object",
           "properties": {
             "factor": { "$ref": "#/$defs/decimal" },
@@ -540,9 +574,10 @@
           "required": ["factor"],
           "additionalProperties": false
         },
-        "jitter": { "$ref": "#/$defs/decimal" },
-        "on_body_failure": { "enum": ["stop", "continue"] },
+        "jitter": { "description": "With retry: randomize each delay by up to this fraction.", "$ref": "#/$defs/decimal" },
+        "on_body_failure": { "description": "With while or until: stop (default) or continue when an iteration fails.", "enum": ["stop", "continue"] },
         "index": {
+          "description": "Repetition: bind the attempt or iteration number to a variable.",
           "anyOf": [
             { "$ref": "#/$defs/varName" },
             {
@@ -557,6 +592,7 @@
           ]
         },
         "carry": {
+          "description": "With while or until: pass a value from one iteration to the next.",
           "type": "object",
           "minProperties": 1,
           "propertyNames": { "$ref": "#/$defs/varName" },
@@ -576,6 +612,7 @@
           }
         },
         "collect": {
+          "description": "Repetition: gather a variable from every iteration into a list.",
           "type": "object",
           "minProperties": 1,
           "propertyNames": { "$ref": "#/$defs/varName" },
@@ -592,10 +629,10 @@
     "input": {
       "type": "object",
       "properties": {
-        "default": { "$ref": "#/$defs/scalar" },
-        "description": { "type": "string" },
-        "in": { "$ref": "#/$defs/stringList" },
-        "matches": { "type": "string" }
+        "default": { "description": "The value used when none is supplied; an input without one is required.", "$ref": "#/$defs/scalar" },
+        "description": { "description": "What the input is for, shown to whoever supplies it.", "$ref": "#/$defs/scalar" },
+        "in": { "description": "The allowed values.", "$ref": "#/$defs/stringList" },
+        "matches": { "description": "A pattern the value must match (unanchored search).", "$ref": "#/$defs/regex" }
       },
       "not": { "required": ["in", "matches"] },
       "minProperties": 1,
@@ -605,16 +642,18 @@
       "description": "The root mapping: the plan-only keys plus the root node's keys.",
       "type": "object",
       "properties": {
-        "blokky": { "$ref": "#/$defs/specVersion" },
+        "blokky": { "description": "The spec version the plan targets, such as 1.0 (SY-35).", "$ref": "#/$defs/specVersion" },
         "inputs": {
+          "description": "The plan's inputs: values supplied when the plan runs, by NAME (syntax.md section 5).",
           "type": "object",
           "minProperties": 1,
           "propertyNames": { "$ref": "#/$defs/varName" },
           "additionalProperties": { "$ref": "#/$defs/input" }
         },
-        "vars": { "$ref": "#/$defs/setMap" },
-        "outputs": { "$ref": "#/$defs/nameList" },
+        "vars": { "description": "Plan-wide variables bound before anything runs, from literals, templates, inputs and from_env.", "$ref": "#/$defs/setMap" },
+        "outputs": { "description": "Variables whose final values the run result returns.", "$ref": "#/$defs/nameList" },
         "defaults": {
+          "description": "Plan-wide defaults: the script shell and a time limit for every leaf.",
           "type": "object",
           "minProperties": 1,
           "properties": {
@@ -623,40 +662,42 @@
           },
           "additionalProperties": false
         },
-        "exec": { "$ref": "#/$defs/exec" },
-        "script": { "type": "string", "minLength": 1 },
-        "do": { "$ref": "#/$defs/nodeList" },
-        "all": { "$ref": "#/$defs/nodeList" },
-        "any": { "$ref": "#/$defs/nodeList" },
-        "race": { "$ref": "#/$defs/nodeList" },
-        "if": { "$ref": "#/$defs/condition" },
-        "sleep": { "$ref": "#/$defs/duration" },
-        "log": { "$ref": "#/$defs/scalar" },
-        "fail": { "$ref": "#/$defs/scalar" },
-        "assert": { "$ref": "#/$defs/condition" },
-        "set": { "$ref": "#/$defs/setMap" },
-        "return": { "$ref": "#/$defs/scalar" },
+        "exec": { "description": "Kind: run a program, as a string or an argv list; no shell.", "$ref": "#/$defs/exec" },
+        "script": { "description": "Kind: run shell text, best as a | block scalar; the shell comes from shell: or detection.", "type": "string", "minLength": 1 },
+        "do": { "description": "Kind: run the listed nodes in order.", "$ref": "#/$defs/nodeList" },
+        "all": { "description": "Kind: run the listed nodes concurrently; fails if any fails.", "$ref": "#/$defs/nodeList" },
+        "any": { "description": "Kind: run the listed nodes concurrently; succeeds if any succeeds.", "$ref": "#/$defs/nodeList" },
+        "race": { "description": "Kind: run the listed nodes concurrently; the first to complete decides.", "$ref": "#/$defs/nodeList" },
+        "if": { "description": "Kind: evaluate a condition, then run then: or else:.", "$ref": "#/$defs/condition" },
+        "sleep": { "description": "Kind: wait for a duration.", "$ref": "#/$defs/duration" },
+        "log": { "description": "Kind: record a message (${X} interpolated, secrets masked).", "$ref": "#/$defs/scalar" },
+        "fail": { "description": "Kind: fail the node with a message.", "$ref": "#/$defs/scalar" },
+        "assert": { "description": "Kind: fail the node unless a condition holds.", "$ref": "#/$defs/condition" },
+        "set": { "description": "Kind: bind variables from literals, templates or references.", "$ref": "#/$defs/setMap" },
+        "return": { "description": "Kind: end the nearest enclosing sequence successfully, with a message.", "$ref": "#/$defs/scalar" },
 
-        "shell": { "$ref": "#/$defs/shell" },
-        "then": { "$ref": "#/$defs/nodeList" },
-        "else": { "$ref": "#/$defs/nodeList" },
-        "level": { "enum": ["debug", "info", "warn"] },
-        "message": { "$ref": "#/$defs/scalar" },
-        "code": { "$ref": "#/$defs/userCode" },
-        "concurrency": { "$ref": "#/$defs/posInt" },
-        "fail_fast": { "$ref": "#/$defs/bool" },
+        "shell": { "description": "The shell for script: bash, sh, pwsh, powershell or zsh.", "$ref": "#/$defs/shell" },
+        "then": { "description": "With if: the nodes to run when the condition is true.", "$ref": "#/$defs/nodeList" },
+        "else": { "description": "With if: the nodes to run when the condition is false.", "$ref": "#/$defs/nodeList" },
+        "level": { "description": "With log: debug, info (default) or warn.", "enum": ["debug", "info", "warn"] },
+        "message": { "description": "With assert: the message when the condition is false.", "$ref": "#/$defs/scalar" },
+        "code": { "description": "With fail or assert: the user error code (default BK_FAIL, BK_ASSERT).", "$ref": "#/$defs/userCode" },
+        "concurrency": { "description": "With all or any: how many children run at once.", "$ref": "#/$defs/posInt" },
+        "fail_fast": { "description": "With do or all: stop the remaining children as soon as one fails.", "$ref": "#/$defs/bool" },
 
-        "stdin": { "$ref": "#/$defs/stdin" },
-        "ok_exit": { "$ref": "#/$defs/exitCodes" },
-        "stderr": { "const": "merge" },
-        "encoding": { "enum": ["utf-8", "utf-16le", "utf-16be", "latin1"] },
+        "stdin": { "description": "Leaf option: the standard input, literal text, { var: X } or { file: P }; empty by default.", "$ref": "#/$defs/stdin" },
+        "ok_exit": { "description": "Leaf option: extra exit codes that count as success.", "$ref": "#/$defs/exitCodes" },
+        "stderr": { "description": "Leaf option: merge sends stderr into the stdout stream.", "const": "merge" },
+        "encoding": { "description": "Leaf option: how output is decoded (default utf-8).", "enum": ["utf-8", "utf-16le", "utf-16be", "latin1"] },
         "keep_descendants": {
+          "description": "Leaf option: keep the leaf's remaining processes at completion (true) or past the run (detach).",
           "anyOf": [
             { "$ref": "#/$defs/bool" },
             { "const": "detach" }
           ]
         },
         "capture": {
+          "description": "Leaf option: bind stdout, or JSON fields of it, to variables.",
           "anyOf": [
             { "$ref": "#/$defs/varName" },
             {
@@ -667,19 +708,20 @@
             }
           ]
         },
-        "capture_file": { "$ref": "#/$defs/varName" },
-        "secret": { "$ref": "#/$defs/bool" },
+        "capture_file": { "description": "Leaf option: write stdout to a run-owned file and bind its path.", "$ref": "#/$defs/varName" },
+        "secret": { "description": "Leaf option: mark every capture of this node as secret.", "$ref": "#/$defs/bool" },
 
-        "name": { "$ref": "#/$defs/scalar" },
-        "when": { "$ref": "#/$defs/condition" },
-        "timeout": { "$ref": "#/$defs/duration" },
+        "name": { "description": "A display name for the node (${X} interpolated).", "$ref": "#/$defs/scalar" },
+        "when": { "description": "Modifier: a guard; when false, the node is skipped.", "$ref": "#/$defs/condition" },
+        "timeout": { "description": "Modifier: the node's total wall-clock limit.", "$ref": "#/$defs/duration" },
         "lock": {
+          "description": "Modifier: hold a named advisory lock for the node, NAME or { name, wait }.",
           "anyOf": [
-            { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+            { "$ref": "#/$defs/lockName" },
             {
               "type": "object",
               "properties": {
-                "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+                "name": { "$ref": "#/$defs/lockName" },
                 "wait": { "$ref": "#/$defs/duration" }
               },
               "required": ["name"],
@@ -688,6 +730,7 @@
           ]
         },
         "tempdir": {
+          "description": "Modifier: run the node in a fresh temporary directory.",
           "anyOf": [
             { "$ref": "#/$defs/trueOnly" },
             {
@@ -695,7 +738,7 @@
               "minProperties": 1,
               "properties": {
                 "as": { "$ref": "#/$defs/varName" },
-                "prefix": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,32}$" },
+                "prefix": { "$ref": "#/$defs/tempdirPrefix" },
                 "remove": {
                   "anyOf": [
                     { "$ref": "#/$defs/bool" },
@@ -707,28 +750,30 @@
             }
           ]
         },
-        "cwd": { "$ref": "#/$defs/pathValue" },
-        "env": { "$ref": "#/$defs/envMap" },
-        "export": { "$ref": "#/$defs/nameList" },
-        "container": { "$ref": "#/$defs/container" },
-        "services": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/service" } },
-        "finally": { "$ref": "#/$defs/nodeList" },
-        "finally_timeout": { "$ref": "#/$defs/duration" },
-        "ignore_errors": { "$ref": "#/$defs/bool" },
+        "cwd": { "description": "Modifier: the node's working directory, relative to the parent's.", "$ref": "#/$defs/pathValue" },
+        "env": { "description": "Modifier: environment variables for every process in the node's scope.", "$ref": "#/$defs/envMap" },
+        "export": { "description": "Modifier: export plan variables as environment variables of the same name.", "$ref": "#/$defs/nameList" },
+        "container": { "description": "Modifier: run the node's leaves in a container.", "$ref": "#/$defs/container" },
+        "services": { "description": "Modifier: background processes started, and waited for, before the body, and stopped after it.", "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/service" } },
+        "finally": { "description": "Modifier: nodes that run after the body, whatever its outcome.", "$ref": "#/$defs/nodeList" },
+        "finally_timeout": { "description": "Modifier: the time limit for finally.", "$ref": "#/$defs/duration" },
+        "ignore_errors": { "description": "Modifier: a failure of this node doesn't fail its parent.", "$ref": "#/$defs/bool" },
 
         "retry": {
+          "description": "Repetition: run again after a failure, true or a condition on the error; with max.",
           "anyOf": [
             { "$ref": "#/$defs/trueOnly" },
             { "$ref": "#/$defs/condition" }
           ]
         },
-        "while": { "$ref": "#/$defs/condition" },
-        "until": { "$ref": "#/$defs/condition" },
-        "for": { "$ref": "#/$defs/forSpec" },
-        "attempt_timeout": { "$ref": "#/$defs/duration" },
-        "max": { "$ref": "#/$defs/posInt" },
-        "every": { "$ref": "#/$defs/duration" },
+        "while": { "description": "Repetition: run while a condition holds; with max or timeout.", "$ref": "#/$defs/condition" },
+        "until": { "description": "Repetition: run until a condition holds; with max or timeout.", "$ref": "#/$defs/condition" },
+        "for": { "description": "Repetition: run once per item of a list, count, glob, JSON array, lines or matrix.", "$ref": "#/$defs/forSpec" },
+        "attempt_timeout": { "description": "Repetition: the time limit for each attempt or iteration.", "$ref": "#/$defs/duration" },
+        "max": { "description": "Repetition: the most attempts or iterations, the first included.", "$ref": "#/$defs/posInt" },
+        "every": { "description": "Repetition: the delay between attempts or iterations (default 1s).", "$ref": "#/$defs/duration" },
         "backoff": {
+          "description": "With retry: grow the delay by factor after each attempt, up to max.",
           "type": "object",
           "properties": {
             "factor": { "$ref": "#/$defs/decimal" },
@@ -737,9 +782,10 @@
           "required": ["factor"],
           "additionalProperties": false
         },
-        "jitter": { "$ref": "#/$defs/decimal" },
-        "on_body_failure": { "enum": ["stop", "continue"] },
+        "jitter": { "description": "With retry: randomize each delay by up to this fraction.", "$ref": "#/$defs/decimal" },
+        "on_body_failure": { "description": "With while or until: stop (default) or continue when an iteration fails.", "enum": ["stop", "continue"] },
         "index": {
+          "description": "Repetition: bind the attempt or iteration number to a variable.",
           "anyOf": [
             { "$ref": "#/$defs/varName" },
             {
@@ -754,6 +800,7 @@
           ]
         },
         "carry": {
+          "description": "With while or until: pass a value from one iteration to the next.",
           "type": "object",
           "minProperties": 1,
           "propertyNames": { "$ref": "#/$defs/varName" },
@@ -773,6 +820,7 @@
           }
         },
         "collect": {
+          "description": "Repetition: gather a variable from every iteration into a list.",
           "type": "object",
           "minProperties": 1,
           "propertyNames": { "$ref": "#/$defs/varName" },

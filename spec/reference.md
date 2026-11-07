@@ -299,7 +299,7 @@ There is no implicit `timeout` on groups or the root; `defaults.leaf_timeout` se
 - Creates a fresh directory (mode 0700, unpredictable name that starts with the optional `prefix`) under the per-user temp root, **once per node** (not per attempt; nest `retry` inside to get a fresh dir per attempt).
 - The directory **becomes the node's cwd**. A relative `cwd` on the same node resolves inside it; an absolute `cwd` together with `tempdir` is a plan error.
 - `as` binds the directory's absolute path to a variable visible inside the node.
-- **`remove`:** `true` deletes the directory at node end, after `finally`; `on_success` deletes it only if the node succeeded, so a failure can be inspected. Removal never follows symbolic links. `false`, the default, keeps the directory, and removing it later is the implementation's business (for blokky-cli: `blokky clean`).
+- **`remove`:** `true` deletes the directory at node end, after `finally`; `on_success` deletes it only if the node succeeded, so a failure can be inspected. Removal never follows symbolic links and stops at mount points, which are kept and reported as a partial removal (EM-69). `false`, the default, keeps the directory, and removing it later is the implementation's business (for blokky-cli: `blokky clean`).
 - `prefix` matches `^[A-Za-z0-9._-]{1,32}$`.
 
 ### 4.6 `cwd`
@@ -318,7 +318,7 @@ export: [BRANCH]
 
 - `env` sets environment variables for every process in the node's scope, layered over the parent's environment. Values are literals, `{ var: X }` or `{ from_env: NAME }`, each optionally `secret: true`.
 - `export` makes the listed plan variables environment variables of the same name.
-- `env` MUST NOT set `PATH`, `BASH_ENV`, `ENV`, `SHELLOPTS` or `BASHOPTS`; `BASH_ENV` and `ENV` are cleared for every leaf. `export` MUST NOT name a reserved environment name ([variables.md](variables.md)); setting one deliberately needs an explicit `env` entry, which `leaves` flags as `exec_env_risk` when the name is execution-influencing.
+- `env` MUST NOT set `PATH`, `BASH_ENV`, `ENV`, `SHELLOPTS` or `BASHOPTS`; `BASH_ENV` and `ENV` are cleared for every leaf. Every leaf gets `NO_COLOR=1`, and `TERM=dumb` when the run's environment has no `TERM`, which `env` can override ([variables.md](variables.md) VA-44). `export` MUST NOT name a reserved environment name ([variables.md](variables.md)); setting one deliberately needs an explicit `env` entry, which `leaves` flags as `exec_env_risk` when the name is execution-influencing.
 - A name both in `env` and in `export` on the same node is a plan error. On Windows, names are compared case-insensitively.
 
 ### 4.8 `container`
@@ -570,7 +570,7 @@ Implementations MUST enforce these as plan errors (unless noted), with `BK_PLAN_
 - **RF-19.** A secret marker is only on references, never on literals; a literal marked secret (SY-91) is reported under this rule, not as an unknown key.
 - **RF-20.** An input's `default` satisfies its constraint; at most one of `in`/`matches`.
 - **RF-21.** Empty lists only in fields that allow them (`mounts`).
-- **RF-22.** A regex stays within the portable subset ([syntax.md §6.7](syntax.md#67-regular-expressions)); a regex that doesn't compile is outside the subset too.
+- **RF-22.** A regex stays within the portable subset ([syntax.md §6.7](syntax.md#67-regular-expressions)), including its size bound (SY-104); a regex that doesn't compile is outside the subset too.
 - **RF-23.** A reference (`${X}`, `{ var: X }`, a `var:` subject, an `outputs` entry) names a variable that some binding can provide before it: a syntactic scope check over the plan. A reference with no possible binding is a plan error; whether a possible binding actually happened is checked at run time ([variables.md §6](variables.md#6-scope-and-binding)). RF-23 is reported only when no more specific rule applies: RF-6, RF-16 and RF-27 win over it ([errors.md §4](errors.md#4-plan-errors)).
 - **RF-24.** Service names are present and unique within a node.
 - **RF-25.** `fields` only with `items`; `keep_blank` only with `lines`; `allow_empty` only with `glob`. *(schema)*
