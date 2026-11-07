@@ -1,0 +1,14 @@
+title: A regex with lookahead is outside the portable subset
+rules: [RF-22]
+features: [vars, when, cond-var, exec]
+plan: |
+  blokky: 1.0
+  vars: { TAG: v1 }
+  when: { var: TAG, matches: '^v(?=1)' }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: RF-22 }
+      line: 3
+      column: 28   # the opening quote of the pattern (SY-1)

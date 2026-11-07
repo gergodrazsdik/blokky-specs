@@ -13,3 +13,4 @@ expect:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-7 }
       line: 5
+      column: 30   # the as value ITEM

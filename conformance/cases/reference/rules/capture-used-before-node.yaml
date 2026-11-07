@@ -12,3 +12,4 @@ expect:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-23 }
       line: 3
+      column: 41   # the variable name OUT

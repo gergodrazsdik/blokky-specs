@@ -1,0 +1,19 @@
+title: A return under a root if has no enclosing sequence
+rules: [RF-29]
+features: [vars, if, cond-var, return, log]
+plan: |
+  blokky: 1.0
+  vars: { MODE: quick }
+  if: { var: MODE, equals: quick }
+  then:
+    - return: quick mode
+  else:
+    - log: full mode
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-29 }
+      line: 5
+      column: 5
+  exhaustive: true
+notes: then and else are transparent, and a root if isn't a sequence (reference.md §2.13).

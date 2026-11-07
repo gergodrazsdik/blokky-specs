@@ -1,0 +1,17 @@
+title: Children of an all may use the same loop variable, which is scoped to an iteration
+rules: [RF-8]
+features: [all, for-each, exec]
+plan: |
+  blokky: 1.0
+  all:
+    - for: { each: [a], as: ITEM }
+      exec: [blokky-testkit, argv, { var: ITEM }]
+    - for: { each: [b], as: ITEM }
+      exec: [blokky-testkit, argv, { var: ITEM }]
+expect:
+  status: succeeded
+  invocations:
+    $unordered:
+      - { argv: [argv, a] }
+      - { argv: [argv, b] }
+notes: Near miss for RF-8, which ignores names scoped to a loop iteration (ADR 0021, B-8).

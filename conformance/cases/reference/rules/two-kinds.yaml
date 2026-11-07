@@ -9,5 +9,5 @@ expect:
   plan_errors:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-1 }
-      line: 3      # both kind keys are on this line; which one is offending isn't specified
-notes: A flow mapping puts both kinds on one line, so the line is determined even though the column isn't.
+      line: 3
+      column: 19   # the later of the two kind keys (SY-1)

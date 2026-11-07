@@ -13,4 +13,6 @@ expect:
   plan_errors:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-20 }
-notes: No position; either constraint could be the offending key. The input is supplied so no input error is expected.
+      line: 5      # matches, the later key (SY-1)
+      column: 5
+notes: The input is supplied so no input error is expected.

@@ -12,4 +12,5 @@ expect:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-27 }
       line: 3
-notes: vars values use only inputs, earlier vars entries and from_env. The scope check (RF-23) may report the same reference.
+      column: 8    # the value; an error inside a string is at its start (SY-1)
+notes: vars values use only inputs, earlier vars entries and from_env.

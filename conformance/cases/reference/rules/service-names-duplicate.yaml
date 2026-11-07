@@ -15,4 +15,5 @@ expect:
   plan_errors:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-24 }
-notes: No position; whether the first or the second name is reported isn't specified.
+      line: 6      # the second name (SY-1)
+      column: 11

@@ -12,4 +12,6 @@ expect:
   plan_errors:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-17 }
-notes: reference.md §4.4 counts finally as a descendant. No position, as in lock-nested.
+      line: 5      # the lock in finally, the later key (SY-1)
+      column: 5
+notes: reference.md §4.4 counts finally as a descendant.

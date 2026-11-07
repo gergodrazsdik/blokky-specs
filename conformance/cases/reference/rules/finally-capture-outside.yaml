@@ -14,4 +14,4 @@ expect:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-16 }
       line: 7
-notes: The scope check (RF-23) may report the same reference too, so the case isn't exhaustive.
+      column: 10   # the opening quote of the log message (SY-1)

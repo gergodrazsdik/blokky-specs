@@ -12,6 +12,8 @@ expect:
   plan_errors:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-11 }
+      line: 3      # cwd, the later of the two keys (SY-1)
+      column: 1
 notes: >-
-  No position: the rule is about the combination. The Windows twin is
+  The Windows twin is
   tempdir-absolute-cwd-windows; plans can't be overridden per OS (CF-34).

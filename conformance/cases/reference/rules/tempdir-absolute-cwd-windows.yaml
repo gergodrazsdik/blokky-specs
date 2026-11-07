@@ -12,4 +12,6 @@ expect:
   plan_errors:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-11 }
+      line: 3      # cwd, the later of the two keys (SY-1)
+      column: 1
 notes: The Windows twin of tempdir-absolute-cwd-unix.

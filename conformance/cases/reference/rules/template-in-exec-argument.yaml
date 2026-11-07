@@ -1,5 +1,5 @@
-title: A template in an exec argument is a plan error
-rules: [RF-27]
+title: A ${…} in an exec argument, a literal field, is a plan error
+rules: [RF-9]
 features: [vars, exec]
 plan: |
   blokky: 1.0
@@ -8,6 +8,7 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_INVALID
-      detail: { rule: RF-27 }
+      detail: { rule: RF-9 }
       line: 3
-      column: 30   # the element, the value that is wrong
+      column: 30   # the opening quote of the element (SY-1)
+notes: RF-9 wins over RF-27 for ${…} in a literal field (errors.md §4).

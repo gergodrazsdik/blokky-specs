@@ -10,6 +10,7 @@ expect:
   plan_errors:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-2 }
+      line: 3      # retry, the later of the two keys (SY-1)
+      column: 1
 notes: >-
-  No position: either repetition key could be the offending one. No max or
-  every either, so no sibling-table error (RF-3) can fire as well.
+  No max or every, so no sibling-table error (RF-3) can fire as well.

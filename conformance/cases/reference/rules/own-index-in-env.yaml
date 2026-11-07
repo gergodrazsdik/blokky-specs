@@ -1,0 +1,17 @@
+title: env on a loop node can't use the node's own index variable
+rules: [RF-6]
+features: [until, cond-var, index, env, exec, capture]
+plan: |
+  blokky: 1.0
+  until: { var: OUT, equals: done }
+  index: N
+  max: 3
+  env: { ATTEMPT: { var: N } }
+  exec: [blokky-testkit, print, --out, done]
+  capture: OUT
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-6 }
+      line: 5
+      column: 24   # the variable name N

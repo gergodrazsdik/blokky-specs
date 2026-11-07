@@ -10,3 +10,4 @@ expect:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-23 }
       line: 3
+      column: 37   # the variable name BRANH

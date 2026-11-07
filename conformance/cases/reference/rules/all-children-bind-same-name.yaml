@@ -13,4 +13,5 @@ expect:
   plan_errors:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-8 }
-notes: No position; which of the two bindings is reported isn't specified.
+      line: 7      # the later binding (SY-1)
+      column: 18

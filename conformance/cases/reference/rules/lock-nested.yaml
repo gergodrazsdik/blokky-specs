@@ -11,4 +11,5 @@ expect:
   plan_errors:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-17 }
-notes: No position; whether the outer or the inner lock is reported isn't specified.
+      line: 4      # the inner lock, the later key (SY-1)
+      column: 5

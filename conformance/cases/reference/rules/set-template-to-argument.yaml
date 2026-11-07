@@ -1,5 +1,5 @@
 title: A set template passed as a whole-value reference reaches the argument
-rules: [RF-27]
+rules: [RF-9, RF-27]
 features: [vars, do, set, interpolation, exec]
 plan: |
   blokky: 1.0
@@ -11,4 +11,4 @@ expect:
   status: succeeded
   invocations:
     - { argv: [argv, --name=demo] }
-notes: Near miss for RF-27, and the fix its error suggests (syntax.md §9).
+notes: Near miss for RF-9 and RF-27, and the fix its error suggests (syntax.md §9).

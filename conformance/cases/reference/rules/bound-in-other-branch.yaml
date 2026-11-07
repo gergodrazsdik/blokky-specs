@@ -14,4 +14,5 @@ expect:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-23 }
       line: 7
+      column: 10   # the opening quote of the log message (SY-1)
 notes: No binding of MODE can come before the else branch (VA-38, "a name bound only in an unrelated branch").
