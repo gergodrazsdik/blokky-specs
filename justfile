@@ -108,6 +108,11 @@ check:
 coverage:
     scripts/with-tool.sh uv run -q scripts/check.py --coverage
 
+# Regenerate the validity-matrix cases in conformance/cases/reference/matrix (CF-45)
+[group('meta')]
+generate-matrix:
+    scripts/with-tool.sh uv run -q scripts/generate-matrix.py
+
 # Pin GitHub Actions to full commit SHAs (pinact)
 [group('meta')]
 pin:
