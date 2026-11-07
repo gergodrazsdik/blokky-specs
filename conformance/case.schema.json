@@ -209,7 +209,8 @@
     "expect": {
       "oneOf": [
         { "$ref": "#/$defs/validationOutcome" },
-        { "$ref": "#/$defs/runOutcome" }
+        { "$ref": "#/$defs/runOutcome" },
+        { "$ref": "#/$defs/noResultOutcome" }
       ]
     },
     "validationOutcome": {
@@ -220,6 +221,17 @@
         "exhaustive": { "type": "boolean" }
       },
       "anyOf": [ { "required": ["plan_errors"] }, { "required": ["input_errors"] } ],
+      "additionalProperties": false
+    },
+    "noResultOutcome": {
+      "description": "For a case with a kill action: the implementation is killed, so there is no run result; after_run checks what survives (CF-22).",
+      "type": "object",
+      "properties": {
+        "no_result": { "const": true },
+        "files": { "type": "object" },
+        "invocations": { "type": ["array", "object"] }
+      },
+      "required": ["no_result"],
       "additionalProperties": false
     },
     "runOutcome": {

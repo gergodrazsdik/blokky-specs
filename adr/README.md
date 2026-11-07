@@ -31,6 +31,7 @@ ADRs are **grouped**: a baseline ADR, then one ADR per batch of answered open qu
 | [0021](0021-wave-a-gaps.md) | Gaps found by the wave A conformance cases | accepted | — (F-0016) |
 | [0022](0022-wave-b-gaps.md) | Gaps found by the wave B conformance cases | accepted | — (F-0018) |
 | [0023](0023-wave-c-gaps.md) | Gaps found by the wave C conformance cases | accepted | — (F-0019) |
+| [0024](0024-wave-d-gaps.md) | Gaps found by the wave D conformance cases | accepted | — (F-0020) |
 
 ## Format
 

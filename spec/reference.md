@@ -272,13 +272,13 @@ A guard condition, evaluated **once, before anything else, in the parent's scope
 
 ### 4.3 `timeout`
 
-The node's **total** wall-clock limit, measured on a monotonic clock. It covers lock wait, tempdir creation, container and service startup, the body and every repetition, but not `finally` (which has its own limit). When it fires, running processes get the graceful signal, then the forced kill after the grace period (5s), and the node fails with `BK_TIMEOUT_TOTAL`, status `timed_out`. The grace period comes after the limit ([ADR 0003](../adr/0003-execution-defaults.md), Q-k). Nested limits combine as the minimum.
+The node's **total** wall-clock limit, measured on a monotonic clock. It covers lock wait, tempdir creation, container and service startup, the body and every repetition, but not `finally` (which has its own limit). When it fires, running processes get the graceful signal, then the forced kill after the grace period (5s), and the node fails with `BK_TIMEOUT_TOTAL`, status `timed_out`; an attempt it interrupts is the last attempt, and its `BK_CANCELLED` is nested (EM-53). The grace period comes after the limit ([ADR 0003](../adr/0003-execution-defaults.md), Q-k). Nested limits combine as the minimum.
 
-There is no implicit `timeout` on groups or the root; `defaults.leaf_timeout` sets one for leaves and probes only. On a leaf with `retry`, `while` or `until`, `defaults.leaf_timeout` limits each attempt or iteration, like an implicit `attempt_timeout`, not the whole loop; the node's own `timeout` always limits the whole node, repetition included ([ADR 0018](../adr/0018-review-semantics.md)). An implementation may also stop a whole run from outside ([execution-model.md §7](execution-model.md#7-external-stops)).
+There is no implicit `timeout` on groups or the root; `defaults.leaf_timeout` sets one for leaves and probes only. On a leaf with `retry`, `while` or `until`, `defaults.leaf_timeout` limits each attempt or iteration, like an implicit `attempt_timeout`, not the whole loop (`BK_TIMEOUT_ATTEMPT`, `killed_by: attempt_timeout`); the node's own `timeout` always limits the whole node, repetition included ([ADR 0018](../adr/0018-review-semantics.md)). An implementation may also stop a whole run from outside ([execution-model.md §7](execution-model.md#7-external-stops)).
 
 ### 4.4 `lock`
 
-`lock: NAME` or `lock: { name: NAME, wait: 2m }` holds an exclusive lock named `NAME` for the node's duration (including its `finally`), so runs that use the same lock take turns. Waiting runs acquire it in no particular order.
+`lock: NAME` or `lock: { name: NAME, wait: 2m }` holds an exclusive lock named `NAME` for the node's duration (including its `finally`), so runs that use the same lock take turns, and so do two nodes of the same run (EM-60). Waiters acquire it in no particular order.
 
 ```yaml
 - name: deploy staging, one at a time
@@ -299,7 +299,7 @@ There is no implicit `timeout` on groups or the root; `defaults.leaf_timeout` se
 - Creates a fresh directory (mode 0700, unpredictable name, optional `prefix`) under the per-user temp root, **once per node** (not per attempt; nest `retry` inside to get a fresh dir per attempt).
 - The directory **becomes the node's cwd**. A relative `cwd` on the same node resolves inside it; an absolute `cwd` together with `tempdir` is a plan error.
 - `as` binds the directory's absolute path to a variable visible inside the node.
-- **`remove`:** `true` deletes the directory at node end, after `finally`; `on_success` deletes it only if the node succeeded, so a failure can be inspected. Removal never follows symbolic links. Without `remove`, the directory is kept, and removing it later is the implementation's business (for blokky-cli: `blokky clean`).
+- **`remove`:** `true` deletes the directory at node end, after `finally`; `on_success` deletes it only if the node succeeded, so a failure can be inspected. Removal never follows symbolic links. `false`, the default, keeps the directory, and removing it later is the implementation's business (for blokky-cli: `blokky clean`).
 - `prefix` matches `^[A-Za-z0-9._-]{1,32}$`.
 
 ### 4.6 `cwd`
@@ -353,10 +353,10 @@ Background processes that live for the node's duration: a database, a dev server
 | `on_exit` | no | `fail` (default) or `ignore`: what happens if the service exits on its own after it was ready. |
 
 - **Start:** services start one at a time, in list order; each starts after the previous one is ready. The node's body starts when every service is ready.
-- **Readiness:** `ready:` is first checked right after the service process starts, then 250ms after the previous check ends. A service that exits before it is ready, or isn't ready within `ready_timeout`, fails the node (`BK_SERVICE_EXITED`, `BK_SERVICE_NOT_READY`); services already started are stopped.
+- **Readiness:** `ready:` is first checked right after the service process starts, then 250ms after the previous check ends. A service that exits before it is ready, or isn't ready within `ready_timeout`, fails the node (`BK_SERVICE_EXITED`, `BK_SERVICE_NOT_READY`); services already started are stopped, and the body and `finally` don't run: their nodes are `skipped` with `not_reached` (EM-63).
 - **While the body runs:** a service with `on_exit: fail` that exits on its own cancels the body and fails the node with `BK_SERVICE_EXITED` (with the service name and exit code). With `on_exit: ignore`, the exit is recorded and the body continues. A service that exits after the body ended (for example during `finally`) is recorded, not a failure.
 - **Stop:** after the node's `finally`, services are stopped in reverse list order, each as a whole process tree (graceful, then forced). An exit caused by stopping is not a failure.
-- **Visibility:** services bind no variables. The run result records each service's readiness time and how it ended ([results.md](results.md)). Services are processes the plan executes, like leaves.
+- **Visibility:** services bind no variables. The run result lists the services that started, in list order, with each one's readiness time, measured from the node's start, and how it ended: `stopped` by the run, `exited` with its exit code (also before it was ready), or `never_ready` (not ready in time, or stopped by a timeout or cancellation during startup) ([results.md](results.md)). Services are processes the plan executes, like leaves, and are stoppable the same way (EM-15).
 
 ([ADR 0014](../adr/0014-remaining-features.md))
 
@@ -364,7 +364,7 @@ Background processes that live for the node's duration: a database, a dev server
 
 A list of cleanup nodes that runs **once per node** (not per attempt or iteration) after the node's body ends, whether it succeeded, failed, timed out or was cancelled.
 
-- **Companion `finally_timeout`** (duration, default 5m). `finally` runs under it even after the node's `timeout` fired; when the runtime stops the whole run, it may get less time ([execution-model.md §7](execution-model.md#7-external-stops)).
+- **Companion `finally_timeout`** (duration, default 5m). `finally` runs under it even after the node's `timeout` fired; when the runtime stops the whole run, it may get less time ([execution-model.md §7](execution-model.md#7-external-stops)). When it fires, the running `finally` nodes are `cancelled`, their leaves with `killed_by: finally_timeout`, and the `finally` list fails with `BK_TIMEOUT_FINALLY` (EM-7, [ADR 0024](../adr/0024-wave-d-gaps.md)).
 - A node skipped by `when` runs no `finally`.
 - `finally` runs inside the node's tempdir, cwd, env, container and services, and sees what the body bound.
 - **Errors:** a `finally` list runs every node even if one fails, like a `do` with `fail_fast: false`, so each cleanup step is tried; it fails with its first failure ([ADR 0022](../adr/0022-wave-b-gaps.md)). A failing `finally` fails an otherwise successful node. If the body failed too, the body error is primary and the `finally` error is attached.
@@ -404,7 +404,7 @@ Using a field where the table says "—" is a plan error. `for` takes its own op
 
 ### 5.3 `every`, `backoff` and `jitter`
 
-- **`every`** is the delay between the **end** of one attempt or iteration (including its condition check) and the **start** of the next. There is no delay before the first. The default is 1s, so a loop never runs back to back by accident; `every: 0s` removes the delay. Waits end immediately on cancellation.
+- **`every`** is the delay between the **end** of one attempt or iteration (including its condition check) and the **start** of the next. There is no delay before the first. In `while`, whose condition is checked before each iteration, the wait comes first, then the condition check, right before each iteration ([ADR 0024](../adr/0024-wave-d-gaps.md)). The default is 1s, so a loop never runs back to back by accident; `every: 0s` removes the delay. Waits end immediately on cancellation.
 - **`backoff: { factor: F, max: D }`** (`retry` only) grows the delay: the delay before attempt n+1 is `every × F^(n−1)`, capped at `max`. `factor` is a decimal from 1 to 10 and required in the mapping; `max` is a duration, default 5m.
 - **`jitter: J`** (`retry` only, decimal 0 < J ≤ 1) multiplies each delay by a random value in [1 − J, 1], drawn from a random source that implementations MAY make seedable, so tests can be reproducible.
 
@@ -416,7 +416,7 @@ Using a field where the table says "—" is a plan error. `for` takes its own op
 2. If it succeeds, the node succeeds, and captures on the node are bound from it.
 3. If it fails, decide whether to retry: with `retry: true`, by the table in §5.5; with a condition, by evaluating it against the failed attempt (the `result:` subject sees its `stdout`, `stderr`, `exit` and `error`; after an `attempt_timeout`, `error` is `BK_TIMEOUT_ATTEMPT`).
 4. If no retry is warranted, the node fails with the attempt's error.
-5. If attempts reached `max`, the node fails with `BK_RETRIES_EXHAUSTED`, with the last attempt's error nested.
+5. If attempts reached `max`, the node fails with `BK_RETRIES_EXHAUSTED`, with the last attempt's error nested. Its status is `failed`, even if the attempts timed out (EM-27).
 6. Otherwise wait the delay (§5.3) and run the next attempt.
 
 `on_body_failure` is not valid on `retry`.
@@ -441,10 +441,10 @@ For a group node with `retry`, "attempt failed" means the group failed, and the 
 ### 5.6 `while` and `until`
 
 - **Bounded loops:** `while` and `until` MUST have `max`, `timeout`, or both. An unbounded loop is a plan error.
-- **`while: <condition>`** checks the condition **before** each iteration. The first check sees only the enclosing scope; later checks also see the previous iteration's captures. False ends the loop successfully, so a `while` that is false at the first check succeeds with zero iterations (`ended_by: condition`).
+- **`while: <condition>`** checks the condition **before** each iteration, after the `every` wait (§5.3). The first check sees only the enclosing scope; later checks also see the previous iteration's captures. False ends the loop successfully, so a `while` that is false at the first check succeeds with zero iterations (`ended_by: condition`).
 - **`until: <condition>`** checks the condition **after** each successful iteration; true ends the loop successfully. Polling is `until` with a `result:` condition.
 - **Body failure** (including `BK_TIMEOUT_ATTEMPT`): with `on_body_failure: stop`, the node fails with the body's error. With `continue`, the iteration counts as "not done yet": no condition is checked, and the loop goes on to the next iteration after the delay. In `until`, a condition error from the `result:` subject (a response that isn't the expected JSON yet) counts as a body failure too (CO-40).
-- **Reaching `max`** without the condition ending the loop fails the node with `BK_LOOP_MAX_REACHED`, with the last iteration's error or condition error (if any) nested. Reaching `timeout` fails with `BK_TIMEOUT_TOTAL`.
+- **Reaching `max`** without the condition ending the loop fails the node with `BK_LOOP_MAX_REACHED`, with the last iteration's error or condition error (if any) nested. Reaching `timeout` fails with `BK_TIMEOUT_TOTAL` (EM-53). A loop whose iterations hit `attempt_timeout` and that then reaches `max` is `failed`, not `timed_out` (EM-27).
 - Captures on the repeating node itself are bound from the terminating iteration; captures in a loop body are scoped to the loop ([variables.md](variables.md)). Values pass from one iteration to the next only through `carry`, and leave the loop only through `collect` (§5.8).
 
 ### 5.7 `for`
@@ -473,7 +473,7 @@ All `for` options live inside the `for:` mapping:
 - A source with no items (`each` can't be empty; `count: 0`; an `items` array or `lines` value with no entries) runs zero iterations and succeeds; only `glob` fails on zero matches unless `allow_empty: true`.
 - `as` (variable name): **required** for every source except `matrix`, where it is forbidden. It binds the item; `<AS>_INDEX` binds the **0-based** index. For `matrix`, the index is `MATRIX_INDEX` and the result's item is an object.
 - `concurrency` (integer ≥ 1, default 1, capped by `max_concurrency`): above 1 the loop is a fan-out; iterations start in item order.
-- `fail_fast` (boolean, default `true`): as for `all`.
+- `fail_fast` (boolean, default `true`): as for `all`. A loop stopped by `fail_fast` ends with `ended_by: failure`; one that ran all its items ends with `ended_by: items`, even if some failed ([results.md §3](results.md#3-nodes)).
 - `allow_empty` (boolean, default `false`, `glob` only): zero matches succeed with zero iterations instead of failing.
 - `max_items` (integer, default 1000, every source): more items (for `matrix`, more combinations) fail the node with `BK_ITEMS_TOO_MANY` before the first iteration; items are never truncated.
 - `fields` (`items` only): `{ NAME: .path, … }` binds a variable per field from each item, with the JSON-path subset and conversion of field captures. A path that doesn't resolve for an item fails that iteration with `BK_CAPTURE_PATH`.

@@ -112,12 +112,12 @@ New ids are added with the language features they name, in the same spec release
 - **CF-19.** `env` values are added to the base environment (§8.2), replacing a variable of the same name. A value of `null` removes the variable from the base environment.
 - **CF-20.** `files` maps a path relative to the work directory to its content. A string value is the content as UTF-8 (no newline added). A mapping value has `text` or `base64`, plus optional `executable: true` (mode 0755 on Unix; ignored on Windows); `{ dir: true }` creates a directory. Parent directories are created as needed. Paths use `/` on every platform.
 - **CF-21.** `programs` maps an alias name to the testkit arguments it stands for: `programs: { git: [print, --out, 'git version 2.0'] }` puts an executable named `git` on `PATH` that behaves like `blokky-testkit print --out 'git version 2.0'` followed by its own arguments ([testkit-interface.md](testkit-interface.md), TK-6).
-- **CF-22.** `actions` is a list of `{ after: <duration>, stop: true }` or `{ after: <duration>, kill: true }` entries; `after` is in plan time (§5). `stop` stops the run from outside at that time (EM-55 to EM-57) with the means the adapter provides; cases with it list the `external-stop` feature, and assert on `status: stopped` and the nodes, not on `stop_cause`, which is implementation-defined. `kill` kills the implementation's process at once (SIGKILL, `TerminateProcess`), with no run result expected; cases with it list the `kill` feature and check what survives with `after_run`.
+- **CF-22.** `actions` is a list of `{ after: <duration>, stop: true }` or `{ after: <duration>, kill: true }` entries; `after` is in plan time (§5). `stop` stops the run from outside at that time (EM-55 to EM-57) with the means the adapter provides; cases with it list the `external-stop` feature, and assert on `status: stopped` and the nodes, not on `stop_cause`, which is implementation-defined. `kill` kills the implementation's process at once (SIGKILL, `TerminateProcess`), with no run result expected; cases with it list the `kill` feature, so implementations without it skip them (CF-12), may use the no-result outcome (§3.5, CF-65), and check what survives with `after_run`.
 - **CF-64.** `after_run` is a list of checks the runner makes, in order, after the case's run ended, in the same work directory and environment. An entry is a testkit invocation with its expected exit code, `{ argv: [alive, pids.txt], exit_code: 0 }` (nothing left running after a kill, EM-22), or a second plan with its own `inputs` and `expect`, `{ plan: '…', expect: { status: succeeded } }` (a plan taking the same lock with `wait: 0s`: a lock released by a killed run, EM-60). A failed check fails the case.
 
 ### 3.5 Expectations
 
-`expect` describes either a **validation outcome** or a **run outcome**.
+`expect` describes a **validation outcome**, a **run outcome** or, for a case with a `kill` action, **no result**.
 
 **Validation outcome:**
 
@@ -143,7 +143,17 @@ New ids are added with the language features they name, in the same spec release
 | `files` | Expected files in the work directory after the run: `{ exists: false }`, or `text`/`base64`/`contains`. |
 | `duration` | The run's duration (§5), usually `{ $min: …, $max: … }`. |
 
-- **CF-25.** A case's `expect` holds a validation outcome or a run outcome, never both. A plan that validates and then fails at run time is a run outcome.
+- **CF-25.** A case's `expect` holds exactly one of a validation outcome, a run outcome and no result. A plan that validates and then fails at run time is a run outcome.
+
+**No result:**
+
+| Key | Meaning |
+|---|---|
+| `no_result` | `true` (required for this outcome). |
+| `invocations` | As for a run outcome. |
+| `files` | As for a run outcome. |
+
+- **CF-65.** `expect: { no_result: true }`, optionally with `files` and `invocations`, is allowed only in a case with a `kill` action (CF-22). The implementation was killed, so the runner expects no result document (CF-61 doesn't apply), matches the listed keys, and checks what survives with `after_run` (CF-64).
 
 ### 3.6 The result document and path ids
 
@@ -159,7 +169,7 @@ The result document is the run result of results.md, written with these keys. Va
 | node: children | `children` | The children's path ids in plan order, so cases can assert plan order (RS-3, EM-13). |
 | node: finally | `finally_status` | The `finally` list's nodes have their own path ids. |
 | node: lock wait | `lock_wait` | A duration (§5). |
-| node: services | `services` | `[{ name, ready_after, ended, exit_code }]`; `ended` is `stopped`, `exited` or `never_ready`; `ready_after` is a duration from the node's start. |
+| node: services | `services` | `[{ name, ready_after, ended, exit_code }]`, in list order, without services that never started; `ended` is `stopped`, `exited` or `never_ready`; `ready_after` is a duration from the node's start. |
 | node: messages | `messages` | `[{ text, level }]`, `text` rendered and masked. |
 | node: probes | `probes` | `[{ invocation, exit_code, result }]`. |
 | node: bindings | `bindings` | A list of names. |
@@ -346,6 +356,7 @@ Most modifiers can be combined on one node, and their order is fixed (EM-4). Tes
 |---|---|
 | EM-11 | A concurrency cap is implementation configuration; it changes no observable result. |
 | EM-56 | How far an implementation shortens `finally` during an external stop is its own choice. |
+| EM-32 | Its survivor clause only: the testkit can't make a process that survives a forced kill. The rest of EM-32 is cited by cases. |
 | CP-7 | Which engines an implementation supports is implementation-defined. |
 | SY-4 | How the plan text reaches the implementation is the adapter's concern (CF-53). |
 | SY-8 | Warnings have no codes and no result key in 1.0, so they can't be asserted. |
@@ -369,7 +380,7 @@ Most modifiers can be combined on one node, and their order is fixed (EM-4). Tes
 | SH-20 | Provisional until the spike. |
 | SH-30 | A MAY: what implementations analyse is implementation-defined. |
 
-SH-11 is covered except its "readable only by the run's user" part: file modes aren't portable, so no case asserts them.
+SH-11 is covered except its "readable only by the run's user" part: file modes aren't portable, so no case asserts them. EM-60 is covered except its per-user scope (reference.md §4.4), which needs a second OS user. EM-26 is covered except `graceful: none`, which needs a program that detaches from its console.
 
 The list grows as cases are written.
 
@@ -393,7 +404,7 @@ A **runner** reads the cases, prepares each one, runs it through the adapter and
 ### 8.3 Checking
 
 - **CF-60.** The runner applies the platform overrides (§4), checks requirements and features (§3.2), picks the clock mode (§5.1), prepares the work directory, runs the plan, then matches the outcome against `expect` (§3.7), including the invocation log and the files.
-- **CF-61.** For a validation outcome, the runner also checks that the invocation log is empty (CF-23); for a run outcome, that the run produced a result document (EM-3).
+- **CF-61.** For a validation outcome, the runner also checks that the invocation log is empty (CF-23); for a run outcome, that the run produced a result document (EM-3); for no result, nothing about the result document (CF-65).
 
 ### 8.4 Reporting
 
