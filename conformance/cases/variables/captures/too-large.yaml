@@ -1,0 +1,19 @@
+title: stdout over max_capture_bytes fails the node with BK_CAPTURE_TOO_LARGE and binds nothing
+rules: [VA-18, VA-21]
+features: [outputs, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [OUT]
+  exec: [blokky-testkit, print, --out-fill, 2MiB]
+  capture: OUT
+expect:
+  status: failed
+  error: { code: BK_CAPTURE_TOO_LARGE, node: / }
+  outputs:
+    OUT: null
+  nodes:
+    /:
+      status: failed
+      exit_code: 0
+      error: { code: BK_CAPTURE_TOO_LARGE, node: / }
+notes: The process exits 0; the capture fails the node. max_capture_bytes is 1 MiB by default (VA-21, ADR 0003).

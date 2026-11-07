@@ -1,0 +1,18 @@
+title: A NUL byte in stdout fails a text capture with BK_CAPTURE_NUL
+rules: [VA-21]
+features: [outputs, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [OUT]
+  exec: [blokky-testkit, print, --out-hex, '6100620a']
+  capture: OUT
+expect:
+  status: failed
+  error: { code: BK_CAPTURE_NUL, node: / }
+  outputs:
+    OUT: null
+  nodes:
+    /:
+      status: failed
+      exit_code: 0
+      error: { code: BK_CAPTURE_NUL, node: / }

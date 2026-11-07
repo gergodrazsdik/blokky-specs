@@ -1,0 +1,17 @@
+title: from_env reads the environment the run started with, not an enclosing env
+rules: [VA-40]
+features: [outputs, env, do, from-env, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  env: { CONF_SRC: overlaid }
+  do:
+    - env: { CONF_COPY: { from_env: CONF_SRC } }
+      exec: [blokky-testkit, env, CONF_SRC, CONF_COPY]
+      capture: SEEN
+env:
+  CONF_SRC: start
+expect:
+  status: succeeded
+  outputs:
+    SEEN: '{"CONF_SRC":"overlaid","CONF_COPY":"start"}'

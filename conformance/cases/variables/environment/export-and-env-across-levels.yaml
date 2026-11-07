@@ -1,0 +1,26 @@
+title: export and env overlay alike from the root down, and the same name may be in both on different nodes
+rules: [VA-39, VA-43]
+features: [vars, outputs, export, env, do, exec, capture]
+plan: |
+  blokky: 1.0
+  vars:
+    CONF_X: from-var
+    CONF_Y: from-var
+  outputs: [SEEN]
+  export: [CONF_X]
+  env: { CONF_Y: outer }
+  do:
+    - env: { CONF_X: inner }
+      export: [CONF_Y]
+      exec: [blokky-testkit, env, CONF_X, CONF_Y, CONF_Z]
+      capture: SEEN
+env:
+  CONF_X: base
+  CONF_Z: base
+expect:
+  status: succeeded
+  outputs:
+    SEEN: '{"CONF_X":"inner","CONF_Y":"from-var","CONF_Z":"base"}'
+notes: >-
+  The inner env beats the outer export of CONF_X, and the inner export beats
+  the outer env of CONF_Y. VA-43 forbids a name in both only on the same node.

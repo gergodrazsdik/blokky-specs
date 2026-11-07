@@ -1,0 +1,38 @@
+title: Field captures bind JSON values converted to strings
+rules: [VA-3, VA-22, VA-23, SY-86]
+features: [outputs, exec, capture-fields]
+plan: |
+  blokky: 1.0
+  outputs: [S, N, E, NEG, T, F, Z, O, ARR]
+  exec:
+    - blokky-testkit
+    - print
+    - --out
+    - '{"s":"a\"bé","n":1.50,"e":1E3,"neg":-0,"t":true,"f":false,"z":null,"o":{"z": 1.50, "a": [1, "q\"\u00e9"], "c": "\u0001\t\u00e9"},"arr":[ ]}'
+  capture:
+    S: .s
+    N: .n
+    E: .e
+    NEG: .neg
+    T: .t
+    F: .f
+    Z: .z
+    O: .o
+    ARR: .arr
+expect:
+  status: succeeded
+  outputs:
+    S: a"bé
+    N: '1.50'
+    E: '1E3'
+    NEG: '-0'
+    T: 'true'
+    F: 'false'
+    Z: ''
+    O: '{"z":1.50,"a":[1,"q\"é"],"c":"\u0001\té"}'
+    ARR: '[]'
+notes: >-
+  Strings are unescaped, numbers keep their text as written (1.50, 1E3, -0),
+  null is empty, and objects and arrays become compact JSON (SY-86): members
+  in input order, the nested 1.50 as written, \" and \t as short escapes,
+  U+0001 as \u0001, and é (escaped in the input) as itself.

@@ -1,0 +1,19 @@
+title: stdout that isn't valid UTF-8 fails a capture with BK_CAPTURE_ENCODING, never replaced
+rules: [VA-21]
+features: [outputs, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [OUT]
+  exec: [blokky-testkit, print, --out-hex, '61ff0a']
+  capture: OUT
+expect:
+  status: failed
+  error: { code: BK_CAPTURE_ENCODING, node: / }
+  outputs:
+    OUT: null
+  nodes:
+    /:
+      status: failed
+      exit_code: 0
+      error: { code: BK_CAPTURE_ENCODING, node: / }
+notes: The default encoding is UTF-8 (VA-20); 0xFF is never valid there, and captured values are never silently altered.

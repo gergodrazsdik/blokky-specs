@@ -1,0 +1,11 @@
+title: A field capture needs exactly one JSON value in stdout
+rules: [VA-22]
+features: [exec, capture-fields]
+plan: |
+  blokky: 1.0
+  exec: [blokky-testkit, print, --out, '{"n":1}', --out, '{"n":2}']
+  capture: { N: .n }
+expect:
+  status: failed
+  error: { code: BK_CAPTURE_JSON, node: / }
+notes: Two JSON documents on two lines are not one JSON value (VA-22, errors.md §5.3).

@@ -1,0 +1,26 @@
+title: A fields path that doesn't resolve for an item fails that iteration with BK_CAPTURE_PATH
+rules: [VA-54]
+spec: [reference.md§5.7]
+features: [vars, for-items, exec]
+plan: |
+  blokky: 1.0
+  vars:
+    LIST: '[{"n":"1"},{"m":"2"}]'
+  for:
+    items: { var: LIST }
+    as: IT
+    fields: { N: .n }
+  exec: [blokky-testkit, argv, { var: N }]
+expect:
+  status: failed
+  nodes:
+    /:
+      status: failed
+      repetition:
+        count: 2
+        entries:
+          - { index: 0, status: succeeded }
+          - { index: 1, status: failed, error: { code: BK_CAPTURE_PATH } }
+  invocations:
+    - { argv: [argv, '1'] }
+notes: The second item has no n, so its iteration fails before the leaf can start.

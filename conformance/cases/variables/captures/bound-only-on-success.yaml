@@ -1,0 +1,28 @@
+title: A capture is bound only if the node succeeds, including through ok_exit
+rules: [VA-18]
+features: [outputs, do, exec, capture, ignore-errors, ok-exit]
+plan: |
+  blokky: 1.0
+  outputs: [LOST, KEPT]
+  do:
+    - exec: [blokky-testkit, print, --out, lost, --exit, '1']
+      capture: LOST
+      ignore_errors: true
+    - exec: [blokky-testkit, print, --out, kept, --exit, '3']
+      ok_exit: [3]
+      capture: KEPT
+expect:
+  status: succeeded
+  outputs:
+    LOST: null
+    KEPT: kept
+  nodes:
+    /do/0:
+      status: failed
+      ignored: true
+      error: { code: BK_EXIT, node: /do/0, detail: { exit_code: 1 } }
+    /do/1:
+      status: succeeded
+      exit_code: 3
+      bindings: [KEPT]
+notes: The ignored failure binds nothing, so LOST is unbound at the end (VA-46 gives null).

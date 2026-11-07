@@ -1,0 +1,18 @@
+title: On Windows an inner env name that differs only in case replaces the outer one
+rules: [VA-6, VA-39]
+features: [outputs, env, do, exec, capture]
+requires:
+  os: [windows]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  env: { CONF_MIX: outer }
+  do:
+    - env: { conf_mix: inner }
+      exec: [blokky-testkit, env, CONF_MIX]
+      capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: '{"CONF_MIX":"inner"}'
+notes: Names are compared case-insensitively on Windows (VA-6), so the inner entry wins (VA-39).

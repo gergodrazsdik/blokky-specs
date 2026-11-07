@@ -1,0 +1,28 @@
+title: capture_file writes stdout's raw bytes to a file and binds its absolute path, next to a text capture
+rules: [VA-3, VA-17, VA-25, VA-26]
+features: [outputs, do, exec, capture, capture-file]
+plan: |
+  blokky: 1.0
+  outputs: [FILE, TEXT, BACK]
+  do:
+    - exec: [blokky-testkit, print, --newline, crlf, --out, line, --out-hex, '2e']
+      capture: TEXT
+      capture_file: FILE
+    - exec: [blokky-testkit, read-file, { var: FILE }]
+      capture: BACK
+expect:
+  status: succeeded
+  outputs:
+    FILE: { $regex: '^(/|[A-Za-z]:\\)\S' }
+    TEXT: "line\r\n."
+    BACK: "line\r\n."
+  nodes:
+    /do/0:
+      bindings: { $unordered: [TEXT, FILE] }
+notes: >-
+  stdout is "line\r\n." and the file holds it as raw bytes, so the CR LF
+  inside reads back unchanged. A kept trailing newline can't be shown this
+  way, because the read-back capture trims it (VA-20). The file is not written
+  to: VA-25 promises only that the run's user can read it. The file is still
+  there for a later node (VA-26); that it outlives the run can't be checked
+  from a case.

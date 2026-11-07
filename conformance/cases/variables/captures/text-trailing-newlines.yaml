@@ -1,0 +1,20 @@
+title: A text capture removes every trailing LF and CR and nothing else
+rules: [VA-20]
+features: [outputs, do, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [TEXT, BLANK]
+  do:
+    - exec: [blokky-testkit, print, --out-hex, '2020610a62200d0a0a0d']
+      capture: TEXT
+    - exec: [blokky-testkit, print, --out-hex, '0d0a0a']
+      capture: BLANK
+expect:
+  status: succeeded
+  outputs:
+    TEXT: "  a\nb "
+    BLANK: ''
+notes: >-
+  The first stdout is "  a\nb \r\n\n\r": leading spaces, the inner LF and the
+  space before the trailing CR/LF run are kept. Output made only of line
+  endings captures as the empty string.

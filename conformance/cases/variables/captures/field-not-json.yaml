@@ -1,0 +1,18 @@
+title: A field capture of stdout that isn't JSON fails the node with BK_CAPTURE_JSON
+rules: [VA-18, VA-22]
+features: [outputs, exec, capture-fields]
+plan: |
+  blokky: 1.0
+  outputs: [N]
+  exec: [blokky-testkit, print, --out, 'not json']
+  capture: { N: .n }
+expect:
+  status: failed
+  error: { code: BK_CAPTURE_JSON, node: / }
+  outputs:
+    N: null
+  nodes:
+    /:
+      status: failed
+      exit_code: 0
+      error: { code: BK_CAPTURE_JSON, node: / }

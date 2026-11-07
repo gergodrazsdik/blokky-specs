@@ -1,0 +1,32 @@
+title: export can't name reserved names matched by prefix or suffix, or execution-influencing names
+rules: [VA-42, RF-10]
+features: [vars, export, exec]
+plan: |
+  blokky: 1.0
+  vars:
+    LD_PRELOAD: x
+    TMP_CACHE: x
+    PS5: x
+    NODE_OPTIONS: x
+    BUILD_OPTIONS: x
+    CONF_OK: x
+  export:
+    - LD_PRELOAD
+    - TMP_CACHE
+    - PS5
+    - NODE_OPTIONS
+    - BUILD_OPTIONS
+    - CONF_OK
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - { code: BK_PLAN_INVALID, detail: { rule: RF-10 }, line: 10, column: 5 }
+    - { code: BK_PLAN_INVALID, detail: { rule: RF-10 }, line: 11, column: 5 }
+    - { code: BK_PLAN_INVALID, detail: { rule: RF-10 }, line: 12, column: 5 }
+    - { code: BK_PLAN_INVALID, detail: { rule: RF-10 }, line: 13, column: 5 }
+    - { code: BK_PLAN_INVALID, detail: { rule: RF-10 }, line: 14, column: 5 }
+  exhaustive: true
+notes: >-
+  LD_* and names starting with TMP and PS are reserved (VA-42); NODE_OPTIONS
+  and names ending in _OPTIONS are execution-influencing (§7.3). CONF_OK is
+  the near miss. The plan variable names themselves are valid (VA-4).

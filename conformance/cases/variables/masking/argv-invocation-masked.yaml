@@ -1,0 +1,25 @@
+title: A secret passed in argv is masked in the result's invocation and captures, but the process gets the real value
+rules: [VA-51]
+features: [outputs, do, set, from-env, secret-ref, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [OUT]
+  do:
+    - set: { TOKEN: { from_env: CONF_TOKEN, secret: true } }
+    - exec: [blokky-testkit, argv, { var: TOKEN }]
+      capture: OUT
+env:
+  CONF_TOKEN: s3cr3t-value
+expect:
+  status: succeeded
+  outputs:
+    OUT: '["***"]'
+  nodes:
+    /do/1:
+      invocation: [{ $regex: blokky-testkit }, argv, '***']
+  invocations:
+    - { argv: [argv, s3cr3t-value] }
+notes: >-
+  The invocation log is written by the testkit, not the implementation, so it
+  shows what the process received. A secret in exec is discouraged (variables.md
+  §9.3) but valid.

@@ -1,0 +1,18 @@
+title: collect gathers a field capture of an object as its compact JSON text
+rules: [VA-55, SY-86]
+features: [outputs, for-each, collect, exec, capture-fields]
+plan: |
+  blokky: 1.0
+  outputs: [OS]
+  for: { each: ['1'], as: N }
+  collect: { O: OS }
+  exec: [blokky-testkit, print, --out, '{"o":{"z": 1.50, "a": "é\"x"}}']
+  capture: { O: .o }
+expect:
+  status: succeeded
+  outputs:
+    OS: '["{\"z\":1.50,\"a\":\"é\\\"x\"}"]'
+notes: >-
+  The field converts to compact JSON text first (VA-23, SY-86): members in
+  input order, 1.50 as written, é as itself, the quote as \". The list's item
+  is that text as a JSON string, so its quotes and backslash are escaped again.

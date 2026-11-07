@@ -1,0 +1,20 @@
+title: An until condition sees the capture its iteration's body bound
+rules: [VA-33]
+features: [until, do, exec, capture, cond-var]
+plan: |
+  blokky: 1.0
+  until: { var: N, equals: '2' }
+  max: 5
+  every: 0s
+  do:
+    - exec: [blokky-testkit, count, --state, n.txt]
+      capture: N
+expect:
+  status: succeeded
+  nodes:
+    /:
+      status: succeeded
+      repetition: { count: 2, ended_by: condition, last_condition: true }
+  invocations:
+    - { argv: [count, --state, n.txt] }
+    - { argv: [count, --state, n.txt] }

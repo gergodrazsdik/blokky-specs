@@ -1,0 +1,35 @@
+title: collect lists values in item order, with null for failed iterations and iterations that didn't bind the capture
+rules: [VA-34, VA-55]
+features: [outputs, do, for-each, for-concurrency, collect, ignore-errors, fail, when, cond-var, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [VS]
+  do:
+    - for: { each: [a, b, c, d], as: ITEM, concurrency: 4, fail_fast: false }
+      collect: { V: VS }
+      ignore_errors: true
+      do:
+        - when: { var: ITEM, equals: b }
+          fail: b fails
+        - when: { var: ITEM, in: [a, c] }
+          exec: [blokky-testkit, print, --out, { var: ITEM }]
+          capture: V
+expect:
+  status: succeeded
+  outputs:
+    VS: '["a",null,"c",null]'
+  nodes:
+    /do/0:
+      status: failed
+      ignored: true
+      repetition:
+        count: 4
+        entries:
+          - { index: 0, status: succeeded }
+          - { index: 1, status: failed }
+          - { index: 2, status: succeeded }
+          - { index: 3, status: succeeded }
+notes: >-
+  Iterations run concurrently, so completion order is free, but the list is in
+  item order, and so are the entries (results.md §3). Item b fails (null); item d succeeds without binding V (null).
+  The list is bound although the loop failed (VA-55).

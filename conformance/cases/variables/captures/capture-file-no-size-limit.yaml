@@ -1,0 +1,16 @@
+title: capture_file accepts output over max_capture_bytes and NUL bytes
+rules: [VA-25]
+features: [do, exec, capture-file]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, print, --out-fill, 2MiB]
+      capture_file: BIG
+    - exec: [blokky-testkit, print, --out-hex, '610062']
+      capture_file: BINARY
+expect:
+  status: succeeded
+  nodes:
+    /do/0: { status: succeeded, bindings: [BIG] }
+    /do/1: { status: succeeded, bindings: [BINARY] }
+notes: max_capture_bytes doesn't apply to capture_file, and the bytes aren't decoded (VA-25), so the text capture failures don't apply.
