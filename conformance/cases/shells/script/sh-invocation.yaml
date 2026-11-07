@@ -1,0 +1,32 @@
+title: An sh script is run as the resolved sh with the script file as its only argument
+rules: [SH-11, SH-13, SH-15, SH-28, SH-29, SH-32]
+spec: [results.md§3.1]
+features: [script, shell-sh]
+requires:
+  os: [linux, macos]
+clock: [real]
+programs:
+  sh: [argv]
+plan: |
+  blokky: 1.0
+  shell: sh
+  script: |
+    blokky-testkit argv not-run
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 0
+      program: { $regex: '^/.*/sh$' }
+      invocation: [{ $regex: '^/.*/sh$' }, { $regex: '\.sh$' }]
+  invocations:
+    - { name: sh, argv: [argv, { $regex: '\.sh$' }] }
+notes: >-
+  The testkit alias named sh comes first on PATH (CF-57), so it is the sh that
+  resolves (SH-28), and it records how it was invoked: no options, no -c, one
+  file ending in .sh. The script text never runs, and Blokky never runs it as
+  an exec itself (SH-32), so blokky-testkit argv not-run isn't in the log.
+  requires.shells isn't needed: the alias stands in for the shell. On Windows
+  sh only resolves through configuration (SH-28).

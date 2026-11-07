@@ -1,0 +1,16 @@
+title: An unquoted ~ or # at the start of a word in an exec string (string form) is a plan error
+rules: [SH-7]
+features: [do, exec-string]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: blokky-testkit argv ~/x
+    - exec: 'blokky-testkit argv #x'
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, detail: { rule: SH-7 }, line: 3, column: 11 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SH-7 }, line: 4, column: 11 }   # a quoted scalar is located at its opening quote (SY-1)
+  exhaustive: true
+notes: >-
+  The second string is YAML-quoted so that " #" doesn't start a YAML comment;
+  the exec string itself holds an unquoted # at the start of a word.

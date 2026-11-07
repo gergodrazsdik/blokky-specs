@@ -1,0 +1,11 @@
+title: A trailing lone backslash in an exec string (string form) is a plan error
+rules: [SH-7]
+features: [exec-string]
+plan: |
+  blokky: 1.0
+  exec: blokky-testkit argv a\
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, detail: { rule: SH-7 }, line: 2, column: 7 }   # an error inside a string is at the value's start (SY-1)
+  exhaustive: true
+notes: The backslash has no character to escape.

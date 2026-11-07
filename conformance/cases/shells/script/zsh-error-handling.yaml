@@ -1,0 +1,27 @@
+title: A zsh script has pipefail but neither -e nor -u
+rules: [SH-33]
+spec: [shells.md§2.2]
+features: [outputs, script, shell-zsh, capture]
+requires:
+  shells: [zsh]
+  os: [linux, macos]
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  shell: zsh
+  script: |
+    false | true
+    echo "pipe=$?"
+    false
+    echo "unset=[${conf_unset_var}]"
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: "pipe=1\nunset=[]"
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 0
+notes: The invocation table gives zsh `pipefail; no -e, no -u`; zsh is used because it is named (SH-33).

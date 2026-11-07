@@ -1,0 +1,19 @@
+title: A Windows PowerShell 5.1 script file starts with a UTF-8 BOM
+rules: [SH-12]
+features: [outputs, script, shell-powershell, capture]
+requires:
+  os: [windows]
+  shells: [powershell]
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [FIRST]
+  shell: powershell
+  script: |
+    # conf é
+    [Console]::Out.Write(([IO.File]::ReadAllBytes($PSCommandPath)[0..2]) -join ',')
+  capture: FIRST
+expect:
+  status: succeeded
+  outputs:
+    FIRST: '239,187,191'   # EF BB BF

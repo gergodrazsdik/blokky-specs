@@ -1,0 +1,29 @@
+title: The PowerShell prologue shares the first line that isn't blank, a comment or a using statement, so line numbers stay exact
+rules: [SH-12, SH-13, SH-17]
+features: [outputs, script, shell-pwsh, capture]
+requires:
+  shells: [pwsh]
+  os: [linux, macos]
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  shell: pwsh
+  script: |
+    # conf comment
+
+    using namespace System.IO
+    $text = [File]::ReadAllText($PSCommandPath)
+    try { throw 'x' } catch { $line = $_.InvocationInfo.ScriptLineNumber }
+    [Console]::Out.Write($text + "line=$line")
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: "# conf comment\n\nusing namespace System.IO\n$ErrorActionPreference = 'Stop'; $text = [File]::ReadAllText($PSCommandPath)\ntry { throw 'x' } catch { $line = $_.InvocationInfo.ScriptLineNumber }\n[Console]::Out.Write($text + \"line=$line\")\nline=5"
+notes: >-
+  $PSCommandPath is the script file (SH-13), read back with its LF line
+  endings (SH-12). The prologue is `$ErrorActionPreference = 'Stop';` and a
+  space at the start of line 4, so the throw is still reported on line 5.
+  Unix-only: on Windows the prologue also sets the output encoding (SH-34,
+  script/pwsh-prologue-placement-windows).

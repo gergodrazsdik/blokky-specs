@@ -1,0 +1,22 @@
+title: The param( check doesn't apply when no shell is named, so a POSIX function called param runs
+rules: [SH-17]
+features: [outputs, script, shell-bash, capture]
+requires:
+  os: [linux, macos]
+  shells: [bash]
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  script: |
+    param() { echo "a function named param"; }
+    param
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: a function named param
+notes: >-
+  Neither shell: nor defaults.shell names pwsh or powershell, so the plan is
+  valid (SH-17). Detection picks bash on Unix (SH-22), where param() { … }
+  defines a function.

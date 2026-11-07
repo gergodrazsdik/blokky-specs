@@ -1,0 +1,26 @@
+title: A zsh script is run as the resolved zsh with --no-rcs -o pipefail and a .zsh file
+rules: [SH-11, SH-13, SH-28, SH-29, SH-33]
+spec: [shells.md§2.2]
+features: [script, shell-zsh]
+requires:
+  os: [linux, macos]
+clock: [real]
+programs:
+  zsh: [argv]
+plan: |
+  blokky: 1.0
+  shell: zsh
+  script: |
+    exit 0
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 0
+      program: { $regex: '^/.*/zsh$' }
+      invocation: [{ $regex: '^/.*/zsh$' }, --no-rcs, -o, pipefail, { $regex: '\.zsh$' }]
+  invocations:
+    - { name: zsh, argv: [argv, --no-rcs, -o, pipefail, { $regex: '\.zsh$' }] }
+notes: The testkit alias named zsh comes first on PATH (CF-57) and records its arguments.

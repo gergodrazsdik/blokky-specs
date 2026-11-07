@@ -1,0 +1,27 @@
+title: With the PowerShell prologue, a cmdlet error ends the script with exit code 1
+rules: [SH-17]
+features: [outputs, script, shell-pwsh, ok-exit, capture]
+requires:
+  shells: [pwsh]
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  shell: pwsh
+  script: |
+    Write-Output before
+    Get-Item -LiteralPath ./conf-missing-file
+    Write-Output after
+  ok_exit: [1]
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: before
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 1
+notes: >-
+  Without the prologue, Get-Item would write its error to stderr and the
+  script would go on and exit 0. ok_exit lets the capture bind.

@@ -1,0 +1,18 @@
+title: A pwsh script file is UTF-8 without a BOM
+rules: [SH-12]
+features: [outputs, script, shell-pwsh, capture]
+requires:
+  shells: [pwsh]
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [FIRST]
+  shell: pwsh
+  script: |
+    # conf é
+    [Console]::Out.Write(([IO.File]::ReadAllBytes($PSCommandPath)[0..2]) -join ',')
+  capture: FIRST
+expect:
+  status: succeeded
+  outputs:
+    FIRST: '35,32,99'   # "# c"

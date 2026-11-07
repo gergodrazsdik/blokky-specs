@@ -1,0 +1,11 @@
+title: Adjacent quoted and unquoted parts of an exec string (string form) join into one word, and '' or "" alone is an empty argument
+rules: [SH-6]
+features: [exec-string]
+plan: |
+  blokky: 1.0
+  exec: blokky-testkit argv --name='a b' x"y z"w '' "" a''b
+expect:
+  status: succeeded
+  error: null
+  invocations:
+    - { argv: [argv, '--name=a b', xy zw, '', '', ab] }

@@ -1,0 +1,38 @@
+title: On Windows, bash and sh never resolve through PATH, so without configuration they are unavailable
+rules: [SH-23, SH-28]
+spec: [shells.md§5, errors.md§5.1]
+features: [do, script, shell-bash, shell-sh, ignore-errors]
+requires:
+  os: [windows]
+clock: [real]
+programs:
+  bash: [exit, '0']
+  sh: [exit, '0']
+plan: |
+  blokky: 1.0
+  do:
+    - ignore_errors: true
+      shell: bash
+      script: |
+        exit 0
+    - shell: sh
+      script: |
+        exit 0
+expect:
+  status: failed
+  error: { code: BK_SHELL_UNAVAILABLE, node: /do/1 }
+  nodes:
+    /do/0:
+      status: failed
+      ignored: true
+      error: { code: BK_SHELL_UNAVAILABLE, node: /do/0 }
+    /do/1:
+      status: failed
+      error: { code: BK_SHELL_UNAVAILABLE, node: /do/1 }
+  invocations: []
+notes: >-
+  bash.exe and sh.exe aliases are first on PATH, standing in for the WSL
+  launcher; neither may be started. This assumes the implementation runs
+  without shells.<name>.path configuration, as conformance runs use no
+  implementation configuration (errors.md: "isn't configured (Git Bash on
+  Windows)").

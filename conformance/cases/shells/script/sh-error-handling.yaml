@@ -1,0 +1,32 @@
+title: An sh script runs with no options, keeps going after a failing command, and its exit status is the leaf's
+rules: [SH-15, SH-16]
+spec: [shells.md§2.2]
+features: [outputs, script, shell-sh, ok-exit, capture]
+requires:
+  shells: [sh]
+  os: [linux, macos]
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  shell: sh
+  script: |
+    false | true
+    echo "pipe=$?"
+    false
+    echo "unset=[${conf_unset_var}]"
+    exit 3
+  ok_exit: [3]
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: "pipe=0\nunset=[]"
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 3
+notes: >-
+  No pipefail (the pipeline's status is true's), no -e (the script goes on
+  after false), no -u (an unset variable expands to nothing). ok_exit lets
+  the capture bind with the script's own exit status.

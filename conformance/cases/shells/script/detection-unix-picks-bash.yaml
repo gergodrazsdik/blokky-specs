@@ -1,0 +1,26 @@
+title: Without shell or defaults.shell, detection on Unix picks bash when it resolves, whatever $SHELL says
+rules: [SH-22, SH-33]
+features: [script, shell-bash]
+requires:
+  os: [linux, macos]
+clock: [real]
+env:
+  SHELL: /bin/zsh
+programs:
+  bash: [argv]
+  sh: [argv]
+  zsh: [argv]
+plan: |
+  blokky: 1.0
+  script: |
+    exit 0
+expect:
+  status: succeeded
+  error: null
+  invocations:
+    - { name: bash, argv: [argv, --noprofile, --norc, -o, pipefail, { $regex: '\.sh$' }] }
+notes: >-
+  Testkit aliases stand in for bash, sh and zsh. $SHELL names zsh, which is
+  never consulted (SH-22) and never picked by detection (SH-33). Conformance
+  runs use no implementation configuration, so detection is the step that
+  decides (SH-21).

@@ -1,0 +1,27 @@
+title: A pwsh script is run as the resolved pwsh with -NoProfile -NonInteractive -File and a .ps1 file
+rules: [SH-11, SH-13, SH-28, SH-29]
+spec: [shells.md§2.2, shells.md§5]
+features: [script, shell-pwsh]
+clock: [real]
+programs:
+  pwsh: [argv]
+plan: |
+  blokky: 1.0
+  shell: pwsh
+  script: |
+    exit 0
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 0
+      program: { $regex: '^(/|[A-Za-z]:[/\\]|\\\\).*[/\\]pwsh(\.exe)?$' }
+      invocation: [{ $regex: '^(/|[A-Za-z]:[/\\]|\\\\).*[/\\]pwsh(\.exe)?$' }, -NoProfile, -NonInteractive, -File, { $regex: '\.ps1$' }]
+  invocations:
+    - { name: pwsh, argv: [argv, -NoProfile, -NonInteractive, -File, { $regex: '\.ps1$' }] }
+notes: >-
+  The testkit alias named pwsh comes first on PATH (CF-57) and records its
+  arguments; pwsh is supported on every OS (§5). The prologue is inside the
+  file, not on the command line.

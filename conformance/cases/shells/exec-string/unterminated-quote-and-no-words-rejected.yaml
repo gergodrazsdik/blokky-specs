@@ -1,0 +1,18 @@
+title: An unterminated quote, or a string with no words, in an exec string (string form) is a plan error
+rules: [SH-7]
+features: [do, exec-string]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: blokky-testkit argv 'abc
+    - exec: blokky-testkit argv "abc
+    - exec: '   '
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, detail: { rule: SH-7 }, line: 3, column: 11 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SH-7 }, line: 4, column: 11 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SH-7 }, line: 5, column: 11 }
+  exhaustive: true
+notes: >-
+  The third value isn't empty (three spaces), so it isn't the generic empty
+  value error; it splits into no words.

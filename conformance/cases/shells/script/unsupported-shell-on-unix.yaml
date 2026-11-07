@@ -1,0 +1,24 @@
+title: A reached powershell script on Unix fails with BK_SHELL_UNAVAILABLE, even if a powershell resolves on PATH
+rules: [SH-23]
+spec: [shells.md§5, errors.md§5.1]
+features: [script, shell-powershell]
+requires:
+  os: [linux, macos]
+clock: [real]
+programs:
+  powershell: [exit, '0']
+plan: |
+  blokky: 1.0
+  shell: powershell
+  script: |
+    exit 0
+expect:
+  status: failed
+  error: { code: BK_SHELL_UNAVAILABLE, node: / }
+  nodes:
+    /:
+      status: failed
+      exit_code: { $absent: true }
+      error: { code: BK_SHELL_UNAVAILABLE, node: / }
+  invocations: []
+notes: powershell (Windows PowerShell 5.1) is Windows-only in the matrix (§5); the alias on PATH must not be started.

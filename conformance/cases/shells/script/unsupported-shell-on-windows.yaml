@@ -1,0 +1,24 @@
+title: A reached zsh script on Windows fails with BK_SHELL_UNAVAILABLE, even if a zsh resolves on PATH
+rules: [SH-23]
+spec: [shells.md§5, errors.md§5.1]
+features: [script, shell-zsh]
+requires:
+  os: [windows]
+clock: [real]
+programs:
+  zsh: [exit, '0']
+plan: |
+  blokky: 1.0
+  shell: zsh
+  script: |
+    exit 0
+expect:
+  status: failed
+  error: { code: BK_SHELL_UNAVAILABLE, node: / }
+  nodes:
+    /:
+      status: failed
+      exit_code: { $absent: true }
+      error: { code: BK_SHELL_UNAVAILABLE, node: / }
+  invocations: []
+notes: zsh is Unix-only (SH-33, §5); the alias on PATH must not be started.

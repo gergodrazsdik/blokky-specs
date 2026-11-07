@@ -1,0 +1,20 @@
+title: $ and backticks outside single quotes in an exec string (string form) are plan errors, also inside double quotes
+rules: [SH-7]
+features: [do, exec-string]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: blokky-testkit argv $HOME
+    - exec: blokky-testkit argv "$HOME"
+    - exec: blokky-testkit argv a`b
+    - exec: blokky-testkit argv "a`b"
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, detail: { rule: SH-7 }, line: 3, column: 11 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SH-7 }, line: 4, column: 11 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SH-7 }, line: 5, column: 11 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SH-7 }, line: 6, column: 11 }
+  exhaustive: true
+notes: >-
+  `${X}` is a different mistake, reported under RF-9 (syntax/values/exec-string-interpolation);
+  these use `$NAME` and a single backtick per string, which no other rule covers.

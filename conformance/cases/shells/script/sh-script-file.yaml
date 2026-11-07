@@ -1,0 +1,26 @@
+title: The sh script file holds the text as written in UTF-8 without a BOM, is named .sh and not after name
+rules: [SH-11, SH-12, SH-13]
+features: [outputs, script, shell-sh, capture]
+requires:
+  os: [linux, macos]
+  shells: [sh]
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  name: conf-marker
+  shell: sh
+  script: |
+    od -An -tx1 -N3 "$0" | tr -d ' \n'; echo
+    case "$0" in *conf-marker*) echo named ;; *.sh) echo sh-file ;; *) echo other ;; esac
+    tail -n 1 "$0"
+    # é ünïcode last line
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: "6f6420\nsh-file\n# é ünïcode last line"
+notes: >-
+  $0 is the script file (SH-13). Its first three bytes are "od " (no BOM);
+  the file name ends in .sh and doesn't contain the node's name; the last line, with non-ASCII text, comes
+  back unchanged.

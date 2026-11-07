@@ -1,0 +1,19 @@
+title: An exec string (string form) splits words on spaces, tabs and newlines, ignoring leading and trailing whitespace
+rules: [SH-2]
+features: [exec-string]
+plan: |
+  blokky: 1.0
+  exec: "  blokky-testkit\targv  a\t\tb\nc   "
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 0
+      invocation: [blokky-testkit, argv, a, b, c]
+  invocations:
+    - { argv: [argv, a, b, c] }
+notes: >-
+  The plan's double-quoted YAML scalar holds two leading spaces, tabs, runs of
+  spaces, a newline and trailing spaces; none of them ends up in an argument.

@@ -1,0 +1,20 @@
+title: On Windows the raw command line uses the ProcessStartInfo.ArgumentList quoting
+rules: [SH-9]
+features: [outputs, exec, capture-fields]
+requires:
+  os: [windows]
+plan: |
+  blokky: 1.0
+  outputs: [RAW]
+  exec: [blokky-testkit, argv, --raw, plain, 'a b', '', 'q"q', 'e d\']
+  capture: { RAW: . }
+expect:
+  status: succeeded
+  outputs:
+    RAW: { $regex: ' argv --raw plain "a b" "" "q\\"q" "e d\\\\"$' }
+notes: >-
+  argv --raw prints GetCommandLineW as a JSON string (TK-12). How argv[0]
+  appears at the start of the line isn't asserted. The expected tail is what
+  .NET's ArgumentList produces: arguments without whitespace or quotes as
+  they are, others in double quotes with backslashes doubled before a quote
+  or the closing quote, and "" for an empty argument.

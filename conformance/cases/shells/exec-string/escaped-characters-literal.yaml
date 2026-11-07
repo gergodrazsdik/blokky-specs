@@ -1,0 +1,14 @@
+title: A backslash-escaped character in an exec string (string form) is literal, also one SH-7 would reject unescaped
+rules: [SH-5, SH-7]
+features: [exec-string]
+plan: |
+  blokky: 1.0
+  exec: blokky-testkit argv a\|b \*x \$HOME \`id \~x \#x \;
+expect:
+  status: succeeded
+  error: null
+  invocations:
+    - { argv: [argv, 'a|b', '*x', '$HOME', '`id', '~x', '#x', ';'] }
+notes: >-
+  Escaped characters are never rejected by SH-7, `\$` and a
+  backslash-escaped backtick included (ADR 0023).

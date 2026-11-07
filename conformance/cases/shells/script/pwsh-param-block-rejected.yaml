@@ -1,0 +1,26 @@
+title: A param( block, or an attribute before one, where the PowerShell prologue goes is a plan error
+rules: [SH-17]
+features: [do, script, shell-pwsh]
+plan: |
+  blokky: 1.0
+  do:
+    - shell: pwsh
+      script: |
+        param($Name)
+        Write-Output $Name
+    - shell: pwsh
+      script: |
+        # a comment comes first
+        [CmdletBinding()]
+        param()
+        Write-Output done
+expect:
+  plan_errors:
+    - { code: BK_PLAN_INVALID, detail: { rule: SH-17 }, line: 5, column: 7 }
+    - { code: BK_PLAN_INVALID, detail: { rule: SH-17 }, line: 9, column: 7 }   # the block's first content line, the comment (SY-1)
+  exhaustive: true
+notes: >-
+  The error relates the script text to its shell, named by shell: (param( is
+  fine in a bash script), so it is BK_PLAN_INVALID (errors.md §4). An error
+  in a block scalar is located at the first character of its first content
+  line (SY-1). Nothing runs, so pwsh doesn't need to be installed.

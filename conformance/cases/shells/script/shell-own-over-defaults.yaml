@@ -1,0 +1,31 @@
+title: A script's own shell wins over defaults.shell, which wins over detection
+rules: [SH-21]
+spec: [syntax.md§4.3]
+features: [defaults, do, script, shell-zsh, shell-sh]
+requires:
+  os: [linux, macos]
+clock: [real]
+programs:
+  zsh: [argv]
+  sh: [argv]
+  bash: [argv]
+plan: |
+  blokky: 1.0
+  defaults:
+    shell: zsh
+  do:
+    - script: |
+        exit 0
+    - shell: sh
+      script: |
+        exit 0
+expect:
+  status: succeeded
+  error: null
+  invocations:
+    - { name: zsh, argv: [argv, --no-rcs, -o, pipefail, { $regex: '\.zsh$' }] }
+    - { name: sh, argv: [argv, { $regex: '\.sh$' }] }
+notes: >-
+  Testkit aliases stand in for the shells and record which one ran. A bash
+  alias is on PATH too, so detection (which would pick bash, SH-22) can't be
+  confused with defaults.shell.

@@ -1,0 +1,26 @@
+title: A powershell script is run with -NoProfile -NonInteractive -ExecutionPolicy Bypass -File and a .ps1 file
+rules: [SH-11, SH-13, SH-28, SH-29]
+spec: [shells.md§2.2, shells.md§5]
+features: [script, shell-powershell]
+requires:
+  os: [windows]
+clock: [real]
+programs:
+  powershell: [argv]
+plan: |
+  blokky: 1.0
+  shell: powershell
+  script: |
+    exit 0
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 0
+      program: { $regex: '^([A-Za-z]:[/\\]|\\\\).*[/\\]powershell\.exe$' }
+      invocation: [{ $regex: '^([A-Za-z]:[/\\]|\\\\).*[/\\]powershell\.exe$' }, -NoProfile, -NonInteractive, -ExecutionPolicy, Bypass, -File, { $regex: '\.ps1$' }]
+  invocations:
+    - { name: powershell, argv: [argv, -NoProfile, -NonInteractive, -ExecutionPolicy, Bypass, -File, { $regex: '\.ps1$' }] }
+notes: The testkit alias named powershell comes first on PATH (CF-57) and records its arguments.

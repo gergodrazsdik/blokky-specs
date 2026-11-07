@@ -1,0 +1,25 @@
+title: A script for another OS behind a false host condition is pruned before the shell check
+rules: [SH-23, CO-7]
+features: [do, script, shell-powershell, when, cond-host, exec]
+requires:
+  os: [linux, macos]
+clock: [real]
+plan: |
+  blokky: 1.0
+  do:
+    - when: { host: os, equals: windows }
+      shell: powershell
+      script: |
+        Write-Output windows
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0:
+      status: skipped
+      skip_reason: pruned
+    /do/1:
+      status: succeeded
+  invocations:
+    - { argv: [exit, '0'] }

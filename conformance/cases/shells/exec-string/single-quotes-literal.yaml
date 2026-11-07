@@ -1,0 +1,14 @@
+title: Inside single quotes of an exec string (string form) every character is literal
+rules: [SH-3]
+features: [exec-string]
+plan: |
+  blokky: 1.0
+  exec: blokky-testkit argv 'a  "b" \c $d `e` |;&*' x
+expect:
+  status: succeeded
+  error: null
+  invocations:
+    - { argv: [argv, 'a  "b" \c $d `e` |;&*', x] }
+notes: >-
+  Double quotes, backslashes, `$`, backticks and operator characters are all
+  literal until the next single quote, so none of them is a plan error (SH-7).
