@@ -34,7 +34,7 @@ How an implementation reports errors (JSON formats, exit codes) and the errors i
 
 ## 4. Plan errors
 
-Plan errors carry a line and column. `BK_PLAN_INVALID` covers every rule of [reference.md §8](reference.md#8-rules-the-schema-doesnt-express) and the static rules of the other spec files; `detail.rule` names the rule (for example `one-kind`, `bounded-loop`, `shadowing`), so new rules don't need new codes.
+Plan errors carry a line and column. `BK_PLAN_INVALID` covers every rule of [reference.md §8](reference.md#8-rules-the-schema-doesnt-express) and the static rules of the other spec files; `detail.rule` is the ID of the rule that was broken (for example `RF-1`, `RF-5`, `SY-12`), so new rules don't need new codes and every error points at its spec text ([ADR 0018](../adr/0018-review-semantics.md)).
 
 | Code | Meaning |
 |---|---|
@@ -44,7 +44,7 @@ Plan errors carry a line and column. `BK_PLAN_INVALID` covers every rule of [ref
 | `BK_PLAN_YAML` | Not valid YAML, or a rejected YAML feature (anchor, alias, merge key, tag, directive, second document, complex key). |
 | `BK_PLAN_DUPLICATE_KEY` | A key repeated in a mapping. |
 | `BK_PLAN_UNKNOWN_KEY` | A key that isn't valid at its position. `detail.suggestion` from did-you-mean or the synonym table. |
-| `BK_PLAN_NOT_SUPPORTED` | A feature the implementation doesn't support yet. `detail.feature`. |
+| `BK_PLAN_NOT_SUPPORTED` | A feature the implementation doesn't support yet. `detail.feature` is a feature id from the conformance vocabulary ([conformance/README.md §3.2](../conformance/README.md#32-features-and-requirements)). |
 | `BK_PLAN_VERSION` | `blokky:` missing, malformed or naming an unsupported version. `detail.supported` lists the supported versions. |
 | `BK_PLAN_VALUE` | A value that doesn't match its field's type or grammar (a boolean that isn't `true`/`false`, a bad duration, a bare number, an empty value or list, a regex that doesn't compile). |
 | `BK_PLAN_INVALID` | A structural or static semantic rule is violated. `detail.rule`. |
@@ -70,7 +70,7 @@ Plan errors carry a line and column. `BK_PLAN_INVALID` covers every rule of [ref
 
 | Code | Meaning | Retried |
 |---|---|---|
-| `BK_TIMEOUT_TOTAL` | The node's own `timeout` (or `defaults.leaf_timeout`) fired. | never |
+| `BK_TIMEOUT_TOTAL` | The node's own `timeout` (or `defaults.leaf_timeout`) fired. | never for the retrying node's own `timeout`; yes when a descendant's `timeout` fired inside an attempt (reference.md §5.5) |
 | `BK_TIMEOUT_ATTEMPT` | The node's `attempt_timeout` fired for one attempt or iteration. | yes |
 | `BK_CANCELLED` | The node was cancelled from outside: a failing sibling, a decided `any`/`race`, an ancestor's limit, or the runtime stopping the run (run budget, shutdown; `detail.reason`). Its status is `cancelled`. | never |
 

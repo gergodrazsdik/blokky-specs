@@ -70,7 +70,7 @@ conformance/
 **Features** let an implementation that supports only part of the language run the cases it can.
 
 - **CF-11.** `features` lists every language feature the plan uses, with the ids of the table below. A runner MAY derive the list from the plan to check it; the suite's own checks SHOULD.
-- **CF-12.** The adapter declares which feature ids its implementation supports. The vocabulary below is a proposal; pinning it, and using it for `BK_PLAN_NOT_SUPPORTED`'s `detail.feature`, is pending (tracker F-0010). A case whose `features` include one that isn't supported is **skipped** with the reason `not supported: <feature>` (§8.4), and the runner SHOULD run the **not-supported check** instead: the implementation MUST reject the plan in validation with `BK_PLAN_NOT_SUPPORTED`, and no process may start (EM-1). The check passing keeps the case a skip; anything else is a fail.
+- **CF-12.** The adapter declares which feature ids its implementation supports. The vocabulary below is pinned: it is also the value of `BK_PLAN_NOT_SUPPORTED`'s `detail.feature` ([ADR 0018](../adr/0018-review-semantics.md)). A case whose `features` include one that isn't supported is **skipped** with the reason `not supported: <feature>` (§8.4), and the runner SHOULD run the **not-supported check** instead: the implementation MUST reject the plan in validation with `BK_PLAN_NOT_SUPPORTED`, and no process may start (EM-1). The check passing keeps the case a skip; anything else is a fail.
 
 | Group | Feature ids |
 |---|---|
@@ -84,7 +84,7 @@ conformance/
 | Plan-level | `inputs`, `vars`, `outputs`, `defaults` |
 | Runner | `external-stop` (§3.4 `actions`) |
 
-New ids are added with the language features they name; an id is never reused for something else.
+New ids are added with the language features they name, in the same spec release; an id is never reused for something else.
 
 **Requirements** say what the machine must provide, independently of the implementation:
 
@@ -249,7 +249,7 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_INVALID
-      detail: { rule: bounded-loop }
+      detail: { rule: RF-5 }
       line: 2
   invocations: []
 ```
@@ -329,8 +329,8 @@ Most modifiers can be combined on one node, and their order is fixed (EM-4). Tes
 
 ## 7. Rule citations and coverage
 
-- **CF-49.** `rules` lists the IDs of the rules a case **tests**, not every rule it touches: a case that runs an `exec` doesn't cite SH-1 unless it checks argv. IDs use the spec's prefixes: `EM`, `RS`, `ER`, `VA`, `CO`, `SH`, `CP`, `RF` (the static rules of reference.md §8).
-- **CF-50.** Normative text without rule IDs (currently syntax.md; rule IDs for it are pending, tracker F-0010) is cited in `spec` (`syntax.md§3.1`, `syntax.md§6.5`). Plan-error cases also assert `detail.rule` (CF-24).
+- **CF-49.** `rules` lists the IDs of the rules a case **tests**, not every rule it touches: a case that runs an `exec` doesn't cite SH-1 unless it checks argv. IDs use the spec's prefixes: `SY`, `EM`, `RS`, `ER`, `VA`, `CO`, `SH`, `CP`, `RF` (the static rules of reference.md §8).
+- **CF-50.** Every normative statement carries a rule ID, syntax.md's included (`SY-n`). Plan-error cases also assert `detail.rule`, which is a rule ID (CF-24).
 - **CF-51.** **Coverage** is the share of rule IDs in `spec/*.md` that at least one case cites. Every rule ID SHOULD be cited by at least one case before `1.0.0`; execution-model.md §10 requires it for every `EM-n`. A rule that can't be tested through the run result (for example a recommendation to implementations) is listed below with the reason, and counts as covered.
 - **CF-52.** A coverage report lists, per spec file, the uncovered rule IDs and, per rule, the cases that cite it. It is computed from the case files alone.
 

@@ -97,7 +97,7 @@ Runs its children in parallel; succeeds when all succeed.
 
 - **Companion `concurrency`** (integer ≥ 1). Default: all children at once. An implementation MAY cap the effective concurrency of a node (for blokky-cli: `max_concurrency`, default 16); a cap reduces parallelism but never changes start order or results. Children start in declaration order; with a limit, the next child starts when a slot frees.
 - **Companion `fail_fast`** (boolean, default `true`). With `true`, the first failure cancels the running children, prevents unstarted ones from starting, and fails the `all` once the cancelled children are confirmed dead. With `false`, all children run to completion and the `all` fails if any failed; errors are attached as with `do`.
-- Two children MUST NOT capture the same variable name.
+- Two children MUST NOT bind the same variable name anywhere in their subtrees (RF-8).
 
 ### 2.5 `any`
 
@@ -273,7 +273,7 @@ A guard condition, evaluated **once, before anything else, in the parent's scope
 
 The node's **total** wall-clock limit, measured on a monotonic clock. It covers lock wait, tempdir creation, container and service startup, the body and every repetition, but not `finally` (which has its own limit). When it fires, running processes get the graceful signal, then the forced kill after the grace period (5s), and the node fails with `BK_TIMEOUT_TOTAL`, status `timed_out`. The grace period comes after the limit ([ADR 0003](../adr/0003-execution-defaults.md), Q-k). Nested limits combine as the minimum.
 
-There is no implicit `timeout` on groups or the root; `defaults.leaf_timeout` sets one for leaves and probes only. An implementation may also stop a whole run from outside ([execution-model.md §7](execution-model.md#7-external-stops)).
+There is no implicit `timeout` on groups or the root; `defaults.leaf_timeout` sets one for leaves and probes only. On a leaf with `retry`, `while` or `until`, it limits each attempt or iteration, like an implicit `attempt_timeout`, not the whole loop ([ADR 0018](../adr/0018-review-semantics.md)). An implementation may also stop a whole run from outside ([execution-model.md §7](execution-model.md#7-external-stops)).
 
 ### 4.4 `lock`
 
@@ -430,17 +430,18 @@ Using a field where the table says "—" is a plan error.
 | `fail` or `assert` with a user code | no | if the condition matches the code |
 | Condition error | no | if the condition matches the condition-error code |
 | Spawn error (program not found, not executable) | no | if the condition matches the code |
-| `BK_TIMEOUT_TOTAL`, cancellation, external stops | never | never |
+| A descendant's own `timeout` inside the attempt (`BK_TIMEOUT_TOTAL`) | yes | if the condition holds |
+| The retrying node's own `timeout`, an ancestor's limit, cancellation, external stops | never | never |
 
-For a group node with `retry`, "attempt failed" means the group failed, and the group's error code is what the table and condition see.
+For a group node with `retry`, "attempt failed" means the group failed, and the group's error code is what the table and condition see. "Never" is decided by where a limit came from, not by its code: a `timeout` on a node inside the attempt ends only that attempt, while the retrying node's own `timeout` covers all attempts and ends the node ([ADR 0018](../adr/0018-review-semantics.md)).
 
 ### 5.6 `while` and `until`
 
 - **Bounded loops:** `while` and `until` MUST have `max`, `timeout`, or both. An unbounded loop is a plan error.
 - **`while: <condition>`** checks the condition **before** each iteration. The first check sees only the enclosing scope; later checks also see the previous iteration's captures. False ends the loop successfully, so a `while` that is false at the first check succeeds with zero iterations (`ended_by: condition`).
 - **`until: <condition>`** checks the condition **after** each successful iteration; true ends the loop successfully. Polling is `until` with a `result:` condition.
-- **Body failure** (including `BK_TIMEOUT_ATTEMPT`): with `on_body_failure: stop`, the node fails with the body's error. With `continue`, the iteration counts as "not done yet": no condition is checked, and the loop goes on to the next iteration after the delay.
-- **Reaching `max`** without the condition ending the loop fails the node with `BK_LOOP_MAX_REACHED`, with the last iteration's error (if any) nested. Reaching `timeout` fails with `BK_TIMEOUT_TOTAL`.
+- **Body failure** (including `BK_TIMEOUT_ATTEMPT`): with `on_body_failure: stop`, the node fails with the body's error. With `continue`, the iteration counts as "not done yet": no condition is checked, and the loop goes on to the next iteration after the delay. In `until`, a condition error from the `result:` subject (a response that isn't the expected JSON yet) counts as a body failure too (CO-40).
+- **Reaching `max`** without the condition ending the loop fails the node with `BK_LOOP_MAX_REACHED`, with the last iteration's error or condition error (if any) nested. Reaching `timeout` fails with `BK_TIMEOUT_TOTAL`.
 - Captures on the repeating node itself are bound from the terminating iteration; captures in a loop body are scoped to the loop ([variables.md](variables.md)). Values pass from one iteration to the next only through `carry`, and leave the loop only through `collect` (§5.8).
 
 ### 5.7 `for`
@@ -487,7 +488,7 @@ All `for` options live inside the `for:` mapping:
   exec: [gh, pr, checks, { var: NUM }]
 ```
 
-**Glob rules:** ordinal sort of the matches; no dotfiles unless the pattern names them; no symlink following; `/` separators in item values; no `..` escaping the cwd subtree; zero matches is an error unless `allow_empty: true`. Patterns are host paths relative to the node's cwd.
+**Glob rules:** patterns use the glob grammar of [syntax.md §6.9](syntax.md#69-glob-patterns), matched ordinally and case-sensitively on every OS; ordinal sort of the matches; no dotfiles unless the pattern names them; no symlink following; `/` separators in item values; no `..` escaping the cwd subtree; zero matches is an error unless `allow_empty: true`. Patterns are host paths relative to the node's cwd.
 
 **Iterations** never publish captures to the enclosing scope (only through `collect`, §5.8). A for-loop's iteration count and items are in the run result. Item values and inputs used as `exec` arguments should be preceded by `--` where the program supports it.
 
@@ -513,7 +514,7 @@ These sibling fields bind variables around a loop's iterations ([ADR 0017](../ad
 
 - **`index`** (`retry`, `while`, `until`): `index: NAME` binds the attempt or iteration number, 0-based; `{ as: NAME, start: N }` starts at `N` (an integer). It is visible in the body and in the node's own condition, and isn't published. `for` binds its index as `<AS>_INDEX` instead.
 - **`carry`** (`while`, `until`): `carry: { NAME: CAPTURE }` binds `NAME` at the start of each iteration: `''` in the first, then the value `CAPTURE` had at the end of the previous iteration. The long form `{ NAME: { from: CAPTURE, initial: VALUE } }` sets another first value (a literal). `CAPTURE` is a capture bound in the body (or by the node's own `capture`); if the previous iteration didn't bind it (a failed body under `on_body_failure: continue`, or a `return` first), `NAME` keeps its previous value, so a failed page is fetched again. `NAME` is visible in the body and in the condition, isn't published, and is secret if `CAPTURE` is.
-- **`collect`** (`for`, `while`, `until`): `collect: { CAPTURE: LISTVAR }` binds `LISTVAR`, after the loop, to a compact JSON array of each iteration's `CAPTURE` value (bound in that iteration by the node's own `capture`, when the node is a leaf, or by a node in its body), in item or iteration order, with `null` for iterations that failed, were skipped or didn't bind it (`["12 passed",null,"8 passed"]`). The list can feed a `for: { items }`, a `json:` condition or `outputs`.
+- **`collect`** (`for`, `while`, `until`): `collect: { CAPTURE: LISTVAR }` binds `LISTVAR`, after the loop, to a compact JSON array of each iteration's `CAPTURE` value (bound in that iteration by the node's own `capture`, when the node is a leaf, or by a node in its body), in item or iteration order, with `null` for iterations that failed, were skipped, were cancelled or didn't bind it (`["12 passed",null,"8 passed"]`). The list is bound **also when the loop fails**, so a summary in `finally`, after `ignore_errors` or in a `fail_fast: false` sequence can report what happened; this is an exception to captures binding only on success. Items are strings: a JSON capture is collected as its JSON text. The list can feed a `for: { items }`, a `json:` condition or `outputs`.
 
 ## 6. Plan-level keys
 
@@ -539,7 +540,7 @@ Which modifiers and companion groups each kind accepts. ✓ = valid; — = plan 
 | `set` | — | — | — | — | — | — | — |
 | `return` | — | — | — | — | — | — | — |
 
-"`for` only" means the field is valid only inside the `for:` mapping of that node. `index`, `carry` and `collect` are valid wherever the repetition they belong to is (§5.2, §5.8). Companion fields of a kind (`then`/`else`, `shell`, `level`, `message`, `code`) are valid only on their kind.
+"`for` only" means the field is valid only inside the `for:` mapping of that node. On a node that has `for`, node-level `concurrency` and `fail_fast` are plan errors for every kind: they would apply to the inner group, not the loop. The loop's settings go in `for:`; an inner `all` or `any` with its own settings is written as a child node (RF-31). `index`, `carry` and `collect` are valid wherever the repetition they belong to is (§5.2, §5.8). Companion fields of a kind (`then`/`else`, `shell`, `level`, `message`, `code`) are valid only on their kind.
 
 ## 8. Rules the schema doesn't express
 
@@ -552,7 +553,7 @@ Implementations MUST enforce these as plan errors (unless noted) in addition to 
 - **RF-5.** `while` and `until` have `max` or `timeout` (or both).
 - **RF-6.** Modifiers outside repetition (`when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`, `container`, `services`) don't reference variables the node itself introduces (`as`, `tempdir.as`, its own captures): "move it into the body".
 - **RF-7.** Shadowing: no variable name is bound twice in nested scopes; inputs collide with every other binding.
-- **RF-8.** Two `all` children don't capture the same name.
+- **RF-8.** Two children of an `all` don't bind the same name anywhere in their subtrees.
 - **RF-9.** Inputs and variables never reach literal fields; argv[0] of an `exec` array is a literal.
 - **RF-10.** `env` doesn't set a forbidden key; `export` doesn't name a reserved environment name; no name is in both `env` and `export` on one node.
 - **RF-11.** An absolute `cwd` is not combined with `tempdir` on one node.
@@ -566,8 +567,8 @@ Implementations MUST enforce these as plan errors (unless noted) in addition to 
 - **RF-19.** A secret marker is only on references, never on literals.
 - **RF-20.** An input's `default` satisfies its constraint; at most one of `in`/`matches`.
 - **RF-21.** Empty lists only in fields that allow them (`mounts`).
-- **RF-22.** A regex compiles under `RegexOptions.NonBacktracking`.
-- **RF-23.** `${X}` names a variable in scope (a warning when it might be undefined; a run-time error when it is).
+- **RF-22.** A regex stays within the portable subset ([syntax.md §6.7](syntax.md#67-regular-expressions)).
+- **RF-23.** A reference (`${X}`, `{ var: X }`, a `var:` subject, an `outputs` entry) names a variable that some binding can provide before it: a syntactic scope check over the plan. A reference with no possible binding is a plan error; whether a possible binding actually happened is checked at run time ([variables.md §6](variables.md#6-scope-and-binding)).
 - **RF-24.** Service names are present and unique within a node.
 - **RF-25.** `fields` only with `items`; `keep_blank` only with `lines`; `allow_empty` only with `glob`.
 - **RF-26.** A name isn't bound twice: not by two sequential siblings, not by `set` for a bound name, not by `vars` for an input or another `vars` entry.
@@ -575,10 +576,11 @@ Implementations MUST enforce these as plan errors (unless noted) in addition to 
 - **RF-28.** `timeout`, `finally`, `finally_timeout` and `ignore_errors` are not used on `sleep`, `log`, `fail`, `set` or `return`.
 - **RF-29.** A `return`'s nearest enclosing sequence is not reached through an `all`, `any` or `race` (§2.13).
 - **RF-30.** `index` only with `retry`, `while` or `until`; `carry` only with `while` or `until`; `collect` only with `for`, `while` or `until`. `carry` and `collect` name a capture bound by the node or in its body; `index` and `carry` names follow the shadowing rules (RF-7).
+- **RF-31.** Node-level `concurrency` and `fail_fast` don't appear on a node that has `for` (§7).
 
 ## 9. Security considerations
 
-- **Baseline.** Running a plan is equivalent to running the same commands in bash: Blokky grants no capability, bypasses no permission system and hides nothing that will run. Everything a plan can execute is determinable from the plan and its inputs before it runs, so implementations can show it for review (for blokky-cli: [`leaves`](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/contracts/leaves-and-validation.md)).
+- **Baseline.** Running a plan is equivalent to running the same commands in bash: Blokky grants no capability, bypasses no permission system and hides nothing that will run. The programs a plan can start, the shape of every argv and environment, and the source of every value are determinable from the plan, its inputs and the environment it starts with, before it runs; only captured values are known at run time ([ADR 0018](../adr/0018-review-semantics.md)), so implementations can show it for review (for blokky-cli: [`leaves`](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/contracts/leaves-and-validation.md)).
 - **Hygiene is not a control.** Lint, secret masking and display sanitization make plans cleaner and more reviewable; they don't decide what may run. Deciding is the job of controls outside the language: the agent runner's permission system and the implementation's approval mechanisms (for blokky-cli: the hook and validator).
 - **Dynamic code.** A variable used as code (`sh -c` with a variable, `eval`, `iex`), execution-influencing environment variables, dynamic nested plans, dynamic stdin into an interpreter and a dynamic cwd are statically recognizable, so implementations can flag them for review.
 - **Argument injection.** Item values, captures and inputs passed as `exec` arguments can start with `-`; put `--` before them where the program supports it.

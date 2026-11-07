@@ -503,11 +503,24 @@
         { "required": ["return"] }
       ]
     },
+    "forSettings": {
+      "description": "On a node with for, concurrency and fail_fast belong inside for: (reference.md section 7, RF-31).",
+      "if": { "required": ["for"] },
+      "then": {
+        "not": {
+          "anyOf": [
+            { "required": ["concurrency"] },
+            { "required": ["fail_fast"] }
+          ]
+        }
+      }
+    },
     "node": {
       "type": "object",
       "allOf": [
         { "$ref": "#/$defs/nodeProps" },
-        { "$ref": "#/$defs/kindChoice" }
+        { "$ref": "#/$defs/kindChoice" },
+        { "$ref": "#/$defs/forSettings" }
       ],
       "unevaluatedProperties": false
     },
@@ -527,7 +540,8 @@
       "type": "object",
       "allOf": [
         { "$ref": "#/$defs/nodeProps" },
-        { "$ref": "#/$defs/kindChoice" }
+        { "$ref": "#/$defs/kindChoice" },
+        { "$ref": "#/$defs/forSettings" }
       ],
       "properties": {
         "blokky": { "$ref": "#/$defs/specVersion" },

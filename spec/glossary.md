@@ -106,7 +106,7 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 
 ## Review and controls
 
-- **Static view.** Anything an implementation shows about a plan before running it (for example the processes it can start), derived from the plan and its inputs alone. Everything a plan can execute is determinable this way, except values only known at run time.
+- **Static view.** Anything an implementation shows about a plan before running it (for example the processes it can start), derived from the plan, its inputs and the environment the run starts with (`from_env` values). It shows the programs, argv shapes and environments a plan can run and where every value comes from; only captured values are known at run time. Branches pruned by `host:` are shown, marked as pruned.
 - **Warning.** A finding about something legal but likely wrong. Warnings never block a run by themselves.
 - **Runner.** The agent harness that executes tool calls and owns the permission system (for example Claude Code).
 - **Hygiene vs control.** Hygiene (warnings, masking, display sanitization) makes plans cleaner and more reviewable. Controls (the runner's permission system and the implementation's approval mechanisms) decide what may run. The spec never presents hygiene as a control.

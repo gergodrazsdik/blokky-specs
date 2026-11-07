@@ -52,7 +52,7 @@ The declaration syntax (`default`, `description`, `in`, `matches`) and its stati
 - **VA-13.** A value MUST NOT contain NUL, any C0 or C1 control character except TAB (CR and LF included), bidirectional or zero-width characters, or U+FFFD. Multi-line data belongs in the plan or a file.
 - **VA-14.** Implementations limit value sizes and reject larger values with `BK_INPUT_TOO_LARGE` (for blokky-cli: 4 KiB per value and 32 KiB in total, in UTF-8 bytes; [ADR 0007](../adr/0007-syntax-details.md)).
 - **VA-15.** MCP values MUST be JSON strings; numbers, booleans, `null` and duplicate keys are rejected, with no coercion.
-- **VA-16.** A value is checked against its constraint with condition semantics (`in`: exact string match; `matches`: unanchored search, `NonBacktracking`, no trimming).
+- **VA-16.** A value is checked against its constraint with condition semantics (`in`: exact string match; `matches`: unanchored search with the portable regex subset, no trimming).
 
 ### 4.3 Input errors
 
@@ -84,7 +84,7 @@ Static views of a plan (for review, before a run) MAY accept a missing required 
 ```
 
 - **VA-17.** `capture` and `capture_file` are valid only on `exec` and `script` nodes. A node may have one `capture` (either form) and one `capture_file`.
-- **VA-18.** Captures are evaluated after the leaf completes and **bound only if the node succeeds** (exit 0 or in `ok_exit`). A node whose failure is ignored binds nothing.
+- **VA-18.** Captures are evaluated after the leaf completes and **bound only if the node succeeds** (exit 0 or in `ok_exit`). A node whose failure is ignored binds nothing. The one exception is `collect`, which binds its list also when the loop fails (VA-55).
 - **VA-19.** With `stderr: merge`, the captured text includes stderr.
 
 ### 5.2 Text captures
@@ -125,7 +125,7 @@ Static views of a plan (for review, before a run) MAY accept a missing required 
 
 - **VA-56.** A `set` or `vars` value is a literal, a whole-value reference (`{ var: X }`, `{ from_env: NAME }`, optionally `secret: true`), or a **template**: a string containing `${X}` placeholders, with the display-string syntax ([syntax.md §7.3](syntax.md#73-interpolation-in-display-strings)). A literal without `${` is a plain string.
 - **VA-57.** Templates join strings only: `${X}` is replaced by `X`'s value, `$${` produces `${`. There are no functions. Templates appear in `set` and `vars` values and nowhere else in executed fields.
-- **VA-58.** An undefined variable in a template or reference fails the `set` node with `BK_UNDEFINED_VARIABLE` (a plan error for `vars` and for statically certain cases); an unset `from_env` fails with `BK_FROM_ENV_UNSET`.
+- **VA-58.** An undefined variable in a template or reference fails the `set` node with `BK_UNDEFINED_VARIABLE` (a plan error for `vars`, and for references the scope check rules out, VA-38); an unset `from_env` fails with `BK_FROM_ENV_UNSET` (VA-40).
 - **VA-59.** A value is secret if it is a secret reference or a template that uses any secret variable.
 - **VA-60.** `set` entries are bound in order, so a later entry may use an earlier one; the bindings are scoped like a capture of the `set` node (§6).
 - **VA-61.** `vars` entries are bound in the plan scope, in order, after the inputs and before anything runs. Their values may use only inputs, earlier `vars` entries and `from_env`; never a value produced by running something. The caller can't override them.
@@ -133,27 +133,27 @@ Static views of a plan (for review, before a run) MAY accept a missing required 
 ## 6. Scope and binding
 
 - **VA-28.** **Sequences.** In `do`, a capture is visible to later siblings, their descendants and, after the `do`, to the `do`'s later siblings.
-- **VA-29.** **Parallel children.** Two `all` children MUST NOT capture the same name. A capture of an `all` child is visible after the `all` completes.
+- **VA-29.** **Parallel children.** Two `all` children MUST NOT bind the same name anywhere in their subtrees. A binding of an `all` child is visible after the `all` completes.
 - **VA-30.** **`any` and `race`.** Only the deciding child's captures are bound. Different children MAY capture the same name (never an input's name).
-- **VA-31.** **Branches.** A name bound (by `set` or a capture) in **both** `then` and `else` of an `if`, or by **every** child of an `any` or `race`, is definitely bound after the node succeeds. Bound in only some branches or children, it is *possibly undefined* afterwards; using it without a `defined` check gets a static warning ([ADR 0015](../adr/0015-set-and-vars.md)).
+- **VA-31.** **Branches.** A name bound (by `set` or a capture) in **both** `then` and `else` of an `if`, or by **every** child of an `any` or `race`, is definitely bound after the node succeeds. Bound in only some branches or children, it is *possibly undefined* afterwards; using it without a `defined` check SHOULD get a warning ([ADR 0015](../adr/0015-set-and-vars.md)).
 - **VA-32.** **Repetition on the node itself.** A capture on a node with `retry`, `while` or `until` is visible to that attempt's own condition (even if the attempt failed) and is **published** to the enclosing scope from the terminating attempt, only if the node succeeds.
 - **VA-33.** **Loop bodies.** Captures of nodes inside a `while`, `until` or `for` body are scoped to the iteration: later nodes in the same iteration see them, the next iteration's condition sees them (`while`, `until`), but they are never published outside the loop. The next iteration's body sees a value of the previous one only through `carry` (VA-62). The first `while` check sees only the enclosing scope; a `while` condition that reads a body capture without `defined` gets a lint warning.
 - **VA-34.** **Loop iterations never publish.** Values leave a `for`, `while` or `until` body only through `collect`, in item or iteration order, with `null` for failed or skipped iterations.
 - **VA-54.** **Item fields.** `fields` binds its variables per iteration, like `as`, with the conversion of VA-23; they count as declarations for collision and shadowing checks.
-- **VA-55.** **`collect`.** The list variable is bound after the loop, in the loop node's enclosing scope like a capture of the node, as a compact JSON array of strings with `null` entries. It is secret if the collected capture is secret.
+- **VA-55.** **`collect`.** The list variable is bound after the loop, in the loop node's enclosing scope like a capture of the node, as a compact JSON array of strings with `null` entries for iterations that failed, were skipped or cancelled, or didn't bind the capture. It is bound **also when the loop fails**, an exception to VA-18, so summaries after a partial failure work ([ADR 0018](../adr/0018-review-semantics.md)). Items are strings: a JSON capture is collected as its JSON text. The list is secret if the collected capture is secret.
 - **VA-35.** **`finally`.** `finally` nodes see everything the body bound. Captures under `finally` are visible only to later nodes in the same `finally` list and their descendants; referencing one outside is a plan error ([ADR 0002](../adr/0002-language-core.md), Q-s).
 - **VA-36.** **Single assignment.** Binding a name that is already bound is a plan error: in an enclosing scope (shadowing, including loop variables, tempdir names, inputs and `vars`), or earlier in the same scope (two sequential siblings, or a `set` of a bound name). Alternatives (`if` branches, `any`/`race` children) may bind the same name, because only one of them runs to completion.
 - **VA-37.** **Own variables.** The modifiers outside repetition (`when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`, `container`, `services`) MUST NOT reference variables the node itself introduces (`as`, `tempdir.as`, `index`, `carry`, its own captures). The error says "move it into the body".
 - **VA-62.** **`carry`.** `carry: { NAME: CAPTURE }` on a `while` or `until` node binds `NAME` at the start of every iteration: to `''` (or the long form's `initial`) in the first, and to the value `CAPTURE` had at the end of the previous iteration afterwards. `NAME` is bound once per iteration, so single assignment holds (VA-36); it is visible in the body and in the node's condition, never published, and secret if `CAPTURE` is. If the previous iteration didn't bind `CAPTURE` (its body failed under `on_body_failure: continue`, or a `return` came first), `NAME` keeps the value it had in that iteration, so a failed page is fetched again ([ADR 0017](../adr/0017-review-features.md)).
 - **VA-63.** **`index`.** `index: NAME` on a `retry`, `while` or `until` node binds the attempt or iteration number: 0 for the first, or `start` with `{ as: NAME, start: N }`. It is visible in the body and in the node's condition, and never published.
-- **VA-38.** Referencing a variable that isn't bound at that point is a condition error in conditions and a node error in display strings and references. Statically certain cases are plan errors; possible cases are warnings.
+- **VA-38.** **Undefined variables.** Before the run, implementations do a **syntactic scope check**: a reference is a plan error only if no binding of that name can come before it (a typo, a name bound only in an unrelated branch or later in the plan, a capture used before its node, a `finally` capture used outside its list). Whether a possible binding actually happened is checked at run time: an unbound reference is a condition error in conditions and `BK_UNDEFINED_VARIABLE` in display strings, templates and references. Beyond VA-31's SHOULD, warnings about possibly undefined references are optional, so every implementation reports the same plan errors ([ADR 0018](../adr/0018-review-semantics.md)).
 
 ## 7. Environment
 
 ### 7.1 A leaf's environment
 
 - **VA-39.** A leaf's environment is Blokky's own environment, overlaid by the `env` and `export` mappings of every enclosing node from the root down (inner wins), then by the variables Blokky sets (§7.4). `BASH_ENV` and `ENV` are then removed.
-- **VA-40.** `{ from_env: NAME }` reads Blokky's own environment at run start; an unset `NAME` is a node error.
+- **VA-40.** `{ from_env: NAME }` reads the environment the run started with. Because that is known before anything runs, `from_env` values are treated like inputs: they are resolved in the validation phase, and static views show each value next to the inputs (masked when the reference is secret), or that it is unset. An unset `NAME` fails with `BK_FROM_ENV_UNSET` where it is used: in validation for `vars`, which bind before anything runs, and otherwise when the node that uses it runs, so a reference guarded by `when: { env: NAME, defined: true }` stays valid ([ADR 0018](../adr/0018-review-semantics.md)).
 
 ### 7.2 Forbidden and reserved names
 
@@ -191,7 +191,7 @@ The list is versioned with the spec; adding a name is a non-breaking change.
 
 - **VA-51.** Every secret value of at least **6 characters** MUST be replaced with `***` in everything an implementation shows, keeps or passes on about a run: displayed and stored output, the run result, rendered display strings, and data handed to other tools. Output must be masked even when a value is split across chunks.
 - **VA-52.** A secret shorter than 6 characters isn't masked; the implementation warns, naming the reference (never the value) ([ADR 0010](../adr/0010-variables-details.md)).
-- **VA-53.** Static views of a plan never resolve secret references; they show the source, for example `TOKEN ← env GH_TOKEN (secret)`.
+- **VA-53.** Static views of a plan never show a secret value; they show the source, for example `TOKEN ← env GH_TOKEN (secret)`. Non-secret `from_env` values are shown resolved (VA-40).
 
 ### 9.3 Limits
 

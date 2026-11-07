@@ -2,21 +2,21 @@
 
 Status: **draft** (`1.0.0-draft`, not yet finalized)
 
-This document defines how a plan is written: encoding, the YAML subset, the root document, plan inputs, scalar grammars, how values reach fields (literals, references, interpolation), the per-field table, plain-scalar pitfalls and targeted errors. What each node and modifier *does* is in [reference.md](reference.md); terms are defined in the [glossary](glossary.md).
+This document defines how a plan is written: encoding, the YAML subset, the root document, plan inputs, scalar grammars, how values reach fields (literals, references, interpolation), the per-field table, plain-scalar pitfalls and targeted errors. What each node and modifier *does* is in [reference.md](reference.md); terms are defined in the [glossary](glossary.md). Rules carry IDs (`SY-n`) for conformance cases and for `detail.rule` ([ADR 0018](../adr/0018-review-semantics.md)); IDs of removed rules are not reused.
 
 ## 1. Conventions
 
 The key words MUST, MUST NOT, REQUIRED, SHALL, SHALL NOT, SHOULD, SHOULD NOT, RECOMMENDED, MAY and OPTIONAL are to be interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) and [RFC 8174](https://www.rfc-editor.org/rfc/rfc8174) when, and only when, they appear in all capitals.
 
-- A **plan error** is detected before anything runs, and prevents the run. Every plan error carries a code from [errors.md](errors.md), a line and column (of the offending key, or of its value when the value is what is wrong), and, where this document says so, a corrected snippet.
-- A **warning** points at something legal but likely wrong. Warnings never block a run by themselves; implementations decide how they are shown and whether users can tune them (for blokky-cli: lint rules).
-- An implementation MUST report all plan errors it can find in one pass, not just the first.
+- **SY-1.** A **plan error** is detected before anything runs, and prevents the run. Every plan error carries a code from [errors.md](errors.md), a line and column (of the offending key, or of its value when the value is what is wrong), and, where this document says so, a corrected snippet.
+- **SY-2.** A **warning** points at something legal but likely wrong. Warnings never block a run by themselves; implementations decide how they are shown and whether users can tune them (for blokky-cli: lint rules).
+- **SY-3.** An implementation MUST report all plan errors it can find in one pass, not just the first.
 
 ## 2. Plan text
 
 ### 2.1 Sources
 
-A plan is read from a file (`blokky run <path>`, conventionally `*.blokky.yaml` or `*.blokky.yml`) or from standard input. The agent convention for stdin is a bash heredoc with a quoted delimiter:
+**SY-4.** A plan is read from a file (`blokky run <path>`, conventionally `*.blokky.yaml` or `*.blokky.yml`) or from standard input. The agent convention for stdin is a bash heredoc with a quoted delimiter:
 
 ```bash
 blokky run <<'BLOKKY_PLAN_EOF'
@@ -29,14 +29,14 @@ The quoted delimiter stops the caller's shell from expanding `$X` and backticks 
 
 ### 2.2 Encoding
 
-- A plan MUST be UTF-8, with or without a byte-order mark (BOM). A UTF-8 BOM is ignored.
-- A UTF-16 or UTF-32 BOM is a plan error whose message names the likely cause (PowerShell `Out-File` or `>` redirection) and the fix (`-Encoding utf8`, or the file form).
-- Invalid UTF-8 is a plan error that gives the byte offset, line and column.
-- Text that looks mangled by a lossy pipe (for example Windows PowerShell 5.1 replacing non-ASCII characters with `?`) SHOULD get a warning.
+- **SY-5.** A plan MUST be UTF-8, with or without a byte-order mark (BOM). A UTF-8 BOM is ignored.
+- **SY-6.** A UTF-16 or UTF-32 BOM is a plan error whose message names the likely cause (PowerShell `Out-File` or `>` redirection) and the fix (`-Encoding utf8`, or the file form).
+- **SY-7.** Invalid UTF-8 is a plan error that gives the byte offset, line and column.
+- **SY-8.** Text that looks mangled by a lossy pipe (for example Windows PowerShell 5.1 replacing non-ASCII characters with `?`) SHOULD get a warning.
 
 ### 2.3 Size and depth caps
 
-These caps are fixed by the spec, not configurable, so a plan is valid or invalid everywhere ([ADR 0007](../adr/0007-syntax-details.md)). They are checked before the syntax tree is built.
+**SY-9.** These caps are fixed by the spec, not configurable, so a plan is valid or invalid everywhere ([ADR 0007](../adr/0007-syntax-details.md)). They are checked before the syntax tree is built.
 
 | Cap | Value |
 |---|---|
@@ -45,12 +45,12 @@ These caps are fixed by the spec, not configurable, so a plan is valid or invali
 
 ### 2.4 Character lint
 
-Before parsing, one pass over the decoded text, **comments and keys included**, checks every character:
+**SY-10.** Before parsing, one pass over the decoded text, **comments and keys included**, checks every character:
 
-- **Allowed control characters:** TAB (U+0009), LF (U+000A), and CR (U+000D) only when directly followed by LF.
-- **Rejected:** every other C0 control character, DEL (U+007F) and C1 controls (U+0080–U+009F); bidirectional controls (U+061C, U+200E, U+200F, U+202A–U+202E, U+2066–U+2069); zero-width characters (U+200B–U+200D, U+2060) and U+FEFF anywhere except as a leading BOM.
+- **SY-11.** **Allowed control characters:** TAB (U+0009), LF (U+000A), and CR (U+000D) only when directly followed by LF.
+- **SY-12.** **Rejected:** every other C0 control character, DEL (U+007F) and C1 controls (U+0080–U+009F); bidirectional controls (U+061C, U+200E, U+200F, U+202A–U+202E, U+2066–U+2069); zero-width characters (U+200B–U+200D, U+2060) and U+FEFF anywhere except as a leading BOM.
 
-Each rejected character is a plan error with its position and Unicode name. Hidden characters like these are how "Trojan Source" attacks make reviewed text differ from what runs, and comments are not exempt.
+**SY-13.** Each rejected character is a plan error with its position and Unicode name. Hidden characters like these are how "Trojan Source" attacks make reviewed text differ from what runs, and comments are not exempt.
 
 ## 3. YAML subset
 
@@ -60,34 +60,34 @@ A plan is a YAML 1.2 document restricted as follows.
 
 Each of these is a plan error:
 
-- anchors (`&a`), aliases (`*a`) and merge keys (`<<`);
-- explicit tags (`!!str`, `!custom`) and directives (`%YAML`, `%TAG`);
-- more than one document. A single leading `---` is allowed; a second `---` or a `...` followed by more content is an error;
-- complex keys (the `?` indicator) and keys that aren't plain or quoted strings;
-- **duplicate keys** in any mapping;
-- **unknown keys** (§3.4);
-- a key with no value (`timeout:` followed by nothing): an empty value is never "unset". Write `''` where an empty string is allowed;
-- an empty list (`[]`), except in fields whose entry in the per-field table (§7) says an empty list is meaningful. Today only `mounts`;
-- an empty mapping (`{}`).
+- **SY-14.** anchors (`&a`), aliases (`*a`) and merge keys (`<<`);
+- **SY-15.** explicit tags (`!!str`, `!custom`) and directives (`%YAML`, `%TAG`);
+- **SY-16.** more than one document. A single leading `---` is allowed; a second `---` or a `...` followed by more content is an error;
+- **SY-17.** complex keys (the `?` indicator) and keys that aren't plain or quoted strings;
+- **SY-18.** **duplicate keys** in any mapping;
+- **SY-19.** **unknown keys** (§3.4);
+- **SY-20.** a key with no value (`timeout:` followed by nothing): an empty value is never "unset". Write `''` where an empty string is allowed;
+- **SY-21.** an empty list (`[]`), except in fields whose entry in the per-field table (§7) says an empty list is meaningful. Today only `mounts`;
+- **SY-22.** an empty mapping (`{}`).
 
 ### 3.2 Every scalar is a string
 
-There is no implicit typing. YAML 1.1 and 1.2 type resolution doesn't apply: `on`, `yes`, `no`, `null`, `~`, `0x10`, `1e3` and `1.10` are all strings. Each field then parses its string with the grammar in §6:
+**SY-23.** There is no implicit typing. YAML 1.1 and 1.2 type resolution doesn't apply: `on`, `yes`, `no`, `null`, `~`, `0x10`, `1e3` and `1.10` are all strings. Each field then parses its string with the grammar in §6:
 
-- in a **boolean** field, the value MUST be exactly `true` or `false`; `True`, `yes`, `on` and `1` are plan errors with a fix-it;
-- in an **integer**, **duration** or **size** field, the value MUST match that grammar;
-- in a **string** field, any scalar is taken as written (`version: 1.10` is the string `1.10`, not the number 1.1).
+- **SY-24.** in a **boolean** field, the value MUST be exactly `true` or `false`; `True`, `yes`, `on` and `1` are plan errors with a fix-it;
+- **SY-25.** in an **integer**, **duration** or **size** field, the value MUST match that grammar;
+- **SY-26.** in a **string** field, any scalar is taken as written (`version: 1.10` is the string `1.10`, not the number 1.1).
 
-Quoting changes nothing about the type: `max: '3'` and `max: 3` are the same.
+**SY-27.** Quoting changes nothing about the type: `max: '3'` and `max: 3` are the same.
 
 ### 3.3 Keys and order
 
-- Keys are case-sensitive and lowercase (`timeout`, not `Timeout`). Variable names in keys (`env:`, `inputs:`, `capture:` mappings) follow their own grammar.
-- Key order in a mapping has no meaning. For readability, plans SHOULD put `name` first, then the kind, then companion fields, then modifiers.
+- **SY-28.** Keys are case-sensitive and lowercase (`timeout`, not `Timeout`). Variable names in keys (`env:`, `inputs:`, `capture:` mappings) follow their own grammar.
+- **SY-29.** Key order in a mapping has no meaning. For readability, plans SHOULD put `name` first, then the kind, then companion fields, then modifiers.
 
 ### 3.4 Unknown keys, did-you-mean and synonyms
 
-An unknown key is a plan error. The message suggests the closest valid key at that position by edit distance, and also checks a synonym table for habits from other tools:
+**SY-30.** An unknown key is a plan error. The message suggests the closest valid key at that position by edit distance, and also checks a synonym table for habits from other tools:
 
 | Written | Suggestion |
 |---|---|
@@ -107,13 +107,13 @@ An unknown key is a plan error. The message suggests the closest valid key at th
 | `value` (in an input) | `default` |
 | `params`, `parameters`, `args`, `arguments`, `vars`, `variables` (at the root) | `inputs` |
 
-A keyword of a feature the implementation doesn't support yet is not unknown: it is a plan error (`BK_PLAN_NOT_SUPPORTED`) that names the feature.
+**SY-31.** A keyword of a feature the implementation doesn't support yet is not unknown: it is a plan error (`BK_PLAN_NOT_SUPPORTED`) that names the feature.
 
 ## 4. The plan document
 
 ### 4.1 Root
 
-The root MUST be a single mapping. It holds the **plan-only keys** below plus exactly one **root node** (its kind and modifiers sit directly in the root mapping). A bare top-level list is a plan error whose fix-it wraps it in `do:`.
+**SY-32.** The root MUST be a single mapping. It holds the **plan-only keys** below plus exactly one **root node** (its kind and modifiers sit directly in the root mapping). A bare top-level list is a plan error whose fix-it wraps it in `do:`.
 
 | Key | Required | Value |
 |---|---|---|
@@ -123,7 +123,7 @@ The root MUST be a single mapping. It holds the **plan-only keys** below plus ex
 | `outputs` | no | A list of variable names whose final values the run result returns. |
 | `defaults` | no | A closed mapping: `shell`, `leaf_timeout`. |
 
-Plan-only keys anywhere other than the root are plan errors ("`inputs:` is allowed only at the root").
+**SY-33.** Plan-only keys anywhere other than the root are plan errors ("`inputs:` is allowed only at the root").
 
 ```yaml
 blokky: 1.0
@@ -138,28 +138,30 @@ do:
 
 ### 4.2 `blokky:`
 
-- REQUIRED; a missing `blokky:` is a plan error with the fix-it `blokky: 1.0`.
-- The value is the spec version the plan targets (§6.1). A version the implementation doesn't support is a plan error listing the supported versions.
-- Spec patch releases never change the language, so plans never name a patch version.
+- **SY-34.** REQUIRED; a missing `blokky:` is a plan error with the fix-it `blokky: 1.0`.
+- **SY-35.** The value is the spec version the plan targets (§6.1). A version the implementation doesn't support is a plan error listing the supported versions.
+- **SY-36.** Spec patch releases never change the language, so plans never name a patch version.
 
 ### 4.3 `defaults:`
+
+**SY-37.** `defaults:` is a closed mapping with these keys:
 
 | Key | Meaning |
 |---|---|
 | `shell` | The shell for `script` leaves and script probes without their own `shell:` (before the implementation's configuration and detection). |
 | `leaf_timeout` | A `timeout` for every `exec`/`script` leaf and probe that has none. Never applies to groups. |
 
-Any other key under `defaults:` is a plan error. All `defaults` values are literal.
+**SY-38.** Any other key under `defaults:` is a plan error. All `defaults` values are literal.
 
 ### 4.4 `outputs:`
 
-A list of variable names (inputs, `vars`, `set` variables, captures or tempdir paths in the plan's top-level scope). A name that is bound only inside a loop body is a plan error (unless gathered with `collect`). Semantics, including `null` for undefined outputs and the shape of secret outputs, are in [variables.md](variables.md).
+**SY-39.** A list of variable names (inputs, `vars`, `set` variables, captures or tempdir paths in the plan's top-level scope). A name that is bound only inside a loop body is a plan error (unless gathered with `collect`). Semantics, including `null` for undefined outputs and the shape of secret outputs, are in [variables.md](variables.md).
 
 ## 5. Plan inputs
 
 ### 5.1 Shape
 
-`inputs:` is a root-only mapping from input name to a mapping of these keys, all optional and all literal:
+**SY-40.** `inputs:` is a root-only mapping from input name to a mapping of these keys, all optional and all literal:
 
 | Key | Value |
 |---|---|
@@ -180,19 +182,19 @@ inputs:
     default: ''                                    # optional, may be blank
 ```
 
-An input with no keys at all is written `NAME: { description: … }` or given a `default`; `NAME:` with no value is an empty value (§3.1).
+**SY-41.** An input with no keys at all is written `NAME: { description: … }` or given a `default`; `NAME:` with no value is an empty value (§3.1).
 
 ### 5.2 Rules
 
-- Input names follow the variable-name grammar (§6.2).
-- **Strings only.** `default: 3` is the string `3`. There is no `type:` key.
-- **Required is derived.** Without `default:` the input is required and its value MUST NOT be empty. There is no `required:` key.
-- **At most one constraint:** `in:` or `matches:`, not both.
-- **The `default` MUST satisfy the constraint.** A violation is a plan error.
-- **Defaults are literal.** A reference (`default: { from_env: X }`) is a plan error.
-- **No secret inputs.** `secret:` on an input is a plan error with a fix-it to `env: { X: { from_env: X, secret: true } }`.
-- `description` MUST NOT contain `${`.
-- Inputs bind into the plan scope that encloses the root node; they are used only through the variable forms of §7 and never reach literal fields.
+- **SY-42.** Input names follow the variable-name grammar (§6.2).
+- **SY-43.** **Strings only.** `default: 3` is the string `3`. There is no `type:` key.
+- **SY-44.** **Required is derived.** Without `default:` the input is required and its value MUST NOT be empty. There is no `required:` key.
+- **SY-45.** **At most one constraint:** `in:` or `matches:`, not both.
+- **SY-46.** **The `default` MUST satisfy the constraint.** A violation is a plan error.
+- **SY-47.** **Defaults are literal.** A reference (`default: { from_env: X }`) is a plan error.
+- **SY-48.** **No secret inputs.** `secret:` on an input is a plan error with a fix-it to `env: { X: { from_env: X, secret: true } }`.
+- **SY-49.** `description` MUST NOT contain `${`.
+- **SY-50.** Inputs bind into the plan scope that encloses the root node; they are used only through the variable forms of §7 and never reach literal fields.
 
 How values are supplied, the value rules and the input error codes are in [variables.md §4](variables.md#4-plan-inputs).
 
@@ -200,9 +202,11 @@ How values are supplied, the value rules and the input error codes are in [varia
 
 ### 6.1 Spec version
 
-`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`, for example `1.0`. Because every scalar is a string, `blokky: 1.10` is version 1.10, not 1.1.
+**SY-51.** `^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`, for example `1.0`. Because every scalar is a string, `blokky: 1.10` is version 1.10, not 1.1.
 
 ### 6.2 Names
+
+**SY-52.** Names follow these grammars:
 
 | Name | Grammar | Notes |
 |---|---|---|
@@ -213,40 +217,78 @@ How values are supplied, the value rules and the input error codes are in [varia
 
 ### 6.3 Booleans
 
-Exactly `true` or `false`. Unary condition operators (`empty: true`, `exists: true`) accept only `true`.
+**SY-53.** Exactly `true` or `false`. Unary condition operators (`empty: true`, `exists: true`) accept only `true`.
 
 ### 6.4 Integers
 
-`^(0|[1-9][0-9]*)$`: decimal, no sign, no leading zeros, at most 2 147 483 647. Each field states its allowed range in [reference.md](reference.md) (for example `max` ≥ 1, `concurrency` ≥ 1).
+**SY-54.** `^(0|[1-9][0-9]*)$`: decimal, no sign, no leading zeros, at most 2 147 483 647. Each field states its allowed range in [reference.md](reference.md) (for example `max` ≥ 1, `concurrency` ≥ 1).
 
-**Decimals** (`backoff.factor`, `jitter`): `^(0|[1-9][0-9]*)(\.[0-9]+)?$`, no sign, no exponent, invariant culture. Each field states its range.
+**SY-55.** **Decimals** (`backoff.factor`, `jitter`): `^(0|[1-9][0-9]*)(\.[0-9]+)?$`, no sign, no exponent, invariant culture. Each field states its range.
 
 ### 6.5 Durations
 
 ([ADR 0007](../adr/0007-syntax-details.md))
 
-- One or more parts `<integer><unit>`, with units `h`, `m`, `s`, `ms`, in that (descending) order, each unit at most once, with no spaces: `500ms`, `10s`, `2m`, `1h30m`, `1m30s500ms`.
-- Integers have no leading zeros and no sign; there are no fractions (`1500ms`, not `1.5s`) and no bare numbers (`timeout: 30` is a plan error with the fix-it `timeout: 30s`).
-- A duration MUST be positive, except in fields that allow `0s` (`every`, `sleep`, `lock.wait`). Zero is written `0s`.
-- The maximum is 168h (7 days).
+- **SY-56.** One or more parts `<integer><unit>`, with units `h`, `m`, `s`, `ms`, in that (descending) order, each unit at most once, with no spaces: `500ms`, `10s`, `2m`, `1h30m`, `1m30s500ms`.
+- **SY-57.** Integers have no leading zeros and no sign; there are no fractions (`1500ms`, not `1.5s`) and no bare numbers (`timeout: 30` is a plan error with the fix-it `timeout: 30s`).
+- **SY-58.** A duration MUST be positive, except in fields that allow `0s` (`every`, `sleep`, `lock.wait`). Zero is written `0s`.
+- **SY-59.** The maximum is 168h (7 days).
 
 ### 6.6 Sizes
 
-`<integer><unit>`, with units `B`, `KiB`, `MiB`, `GiB` (powers of 1024); for example `100MiB`. There are no bare numbers and no decimal (`MB`) units. No plan field takes a size in 1.0; the grammar is used by the conformance testkit.
+**SY-60.** `<integer><unit>`, with units `B`, `KiB`, `MiB`, `GiB` (powers of 1024); for example `100MiB`. There are no bare numbers and no decimal (`MB`) units. No plan field takes a size in 1.0; the grammar is used by the conformance testkit.
 
 ### 6.7 Regular expressions
 
-Regex values (`matches`, `not_matches`, input `matches`) use .NET syntax with `RegexOptions.NonBacktracking` and the invariant culture ([conditions.md](conditions.md)). A pattern that doesn't compile, or uses a construct NonBacktracking doesn't support (backreferences, lookaround, atomic groups), is a plan error. Patterns SHOULD be single-quoted (§8).
+**SY-61.** Regex values (`matches`, `not_matches`, input `matches`) use a **portable subset**, close to RE2, so a pattern means the same in every implementation ([ADR 0018](../adr/0018-review-semantics.md)). Implementations validate a pattern against it and translate it for their engine (for blokky-cli: .NET with `RegexOptions.NonBacktracking`). A pattern outside the subset is a plan error. Patterns SHOULD be single-quoted (§8).
+
+| Construct | Meaning |
+|---|---|
+| a character | itself; `\` escapes any of `.^$*+?()[]{}\|\/` and `-` |
+| `.` | any character except LF |
+| `[abc]`, `[a-z]`, `[^…]` | a character class; ranges by code point |
+| `\d`, `\w`, `\s` (and `\D`, `\W`, `\S`) | ASCII only: `[0-9]`, `[A-Za-z0-9_]`, space, TAB, LF, CR, FF, VT |
+| `\t`, `\n`, `\r`, `\xHH`, `\u{H…}` | TAB, LF, CR, a code point |
+| `*`, `+`, `?`, `{n}`, `{n,}`, `{n,m}` | greedy repetition; with a trailing `?`, lazy |
+| `(…)`, `(?:…)` | a group (captures have no meaning in Blokky) |
+| `a\|b` | alternation |
+| `^`, `$` | the start and end of the whole value; `$` never matches before a final newline |
+| `\b`, `\B` | an ASCII word boundary, or not one |
+| `(?i)` at the very start | case-insensitive matching, as for `ignore_case` ([conditions.md](conditions.md), CO-12) |
+
+**SY-62.** Everything else is outside the subset: lookahead and lookbehind, backreferences, atomic groups, possessive quantifiers, named groups, Unicode classes (`\p{…}`), other inline options (`(?m)`, `(?s)`) and anchors such as `\A`, `\z`.
+
+### 6.8 JSON paths
+
+**SY-63.** JSON paths (`json:` in conditions and `for: { items }`, field captures, `fields`) are a jq-like subset ([ADR 0002](../adr/0002-language-core.md)):
+
+- **SY-64.** `.` is the whole value;
+- **SY-65.** `.name` selects an object member whose key matches `^[A-Za-z_][A-Za-z0-9_]*$`;
+- **SY-66.** `.["any key"]` (double-quoted, JSON string escapes) selects any other member; after the first segment the leading `.` is optional before a bracket (`.a["b-c"]`, `.[0]`);
+- **SY-67.** `[N]` selects an array element by non-negative decimal index.
+
+**SY-68.** Examples: `.number`, `.head.ref`, `.[0].databaseId`, `.labels[1].name`, `.["weird-key"].x`. Wildcards (`.[]`), negative indices, slices, recursive descent, filters and pipes are plan errors. A path that doesn't resolve at run time is handled where the path is used (a condition error, or a capture failure).
+
+### 6.9 Glob patterns
+
+**SY-69.** `for: { glob }` patterns ([ADR 0018](../adr/0018-review-semantics.md)):
+
+- **SY-70.** `/` separates segments on every OS; a pattern is relative to the node's cwd.
+- **SY-71.** `*` matches any run of characters within one segment, `?` one character, `[abc]`, `[a-z]` and `[!…]` one character from a class.
+- **SY-72.** `**` as a whole segment matches zero or more directories: `docs/**/*.md` matches `docs/README.md` and `docs/a/b.md`. `**` inside a segment (`a**b`) is a plan error.
+- **SY-73.** `\` escapes the next character. There are no braces (`{a,b}`) and no negation patterns.
+- **SY-74.** Matching is **ordinal and case-sensitive on every OS**, so a plan finds the same items everywhere; on case-insensitive file systems, `*.CS` doesn't match `Program.cs`.
+- **SY-75.** The other glob rules (sorting, dotfiles, links, staying under the cwd) are in [reference.md §5.7](reference.md#57-for).
 
 ## 7. Values: literals, references and interpolation
 
 ### 7.1 Literals
 
-Most fields are **literal**: the value is taken from the plan text as written. Literal fields never interpolate `${…}` and never accept a reference or an input. A `${` in a literal field other than `script` text is a plan error (§9). Executed text (`exec` strings, `script` text, probe commands) is always literal. In `script` text, `${…}` is the shell's own syntax (`${VAR:-default}`, `${#arr[@]}`, PowerShell `${env:X}`) and is passed to the shell unchanged; implementations SHOULD warn when `${NAME}` in a POSIX script names a plan variable that the node doesn't export, because the author probably expected interpolation.
+**SY-76.** Most fields are **literal**: the value is taken from the plan text as written. Literal fields never interpolate `${…}` and never accept a reference or an input. A `${` in a literal field other than `script` text is a plan error (§9). Executed text (`exec` strings, `script` text, probe commands) is always literal. In `script` text, `${…}` is the shell's own syntax (`${VAR:-default}`, `${#arr[@]}`, PowerShell `${env:X}`) and is passed to the shell unchanged; implementations SHOULD warn when `${NAME}` in a POSIX script names a plan variable that the node doesn't export, because the author probably expected interpolation.
 
 ### 7.2 Whole-value references
 
-Where a value affects execution and may come from a variable, the field accepts a **reference mapping** instead of a literal:
+**SY-77.** Where a value affects execution and may come from a variable, the field accepts a **reference mapping** instead of a literal:
 
 | Form | Meaning | Allowed in |
 |---|---|---|
@@ -255,24 +297,24 @@ Where a value affects execution and may come from a variable, the field accepts 
 | `stdin: { var: X }` | The variable's value as the leaf's stdin. | `stdin`. |
 | `stdin: { file: P }` | The content of host file `P` (a literal path or `{ var: X }`). | `stdin`. |
 
-- Any `var` or `from_env` reference MAY carry `secret: true`: `{ from_env: GH_TOKEN, secret: true }`. A literal can't be marked secret.
-- A reference replaces the **whole** value. There is no string concatenation; a path is built by nesting relative `cwd` values (a relative child `cwd` resolves against the parent's cwd).
-- argv[0] of an `exec` array MUST be a literal; a reference there is a plan error.
-- Plan variables reach processes only through `env:`, `export:` and `exec` array elements; there is no other way.
+- **SY-78.** Any `var` or `from_env` reference MAY carry `secret: true`: `{ from_env: GH_TOKEN, secret: true }`. A literal can't be marked secret.
+- **SY-79.** A reference replaces the **whole** value. There is no string concatenation; a path is built by nesting relative `cwd` values (a relative child `cwd` resolves against the parent's cwd).
+- **SY-80.** argv[0] of an `exec` array MUST be a literal; a reference there is a plan error.
+- **SY-81.** Plan variables reach processes only through `env:`, `export:` and `exec` array elements; there is no other way.
 
 ### 7.3 Interpolation in display strings and templates
 
-`${X}` interpolation exists only in **display strings** (`name`, and the messages of `log`, `fail` and `assert`) and in **templates**, the values of `set` and `vars` ([variables.md §5.6](variables.md#56-set-and-vars)). Templates are how a plan builds a string from variables; every other executed field takes a literal or one whole variable.
+**SY-82.** `${X}` interpolation exists only in **display strings** (`name`, and the messages of `log`, `fail` and `assert`) and in **templates**, the values of `set` and `vars` ([variables.md §5.6](variables.md#56-set-and-vars)). Templates are how a plan builds a string from variables; every other executed field takes a literal or one whole variable.
 
-- `${X}` is replaced by the value of plan variable `X`; process environment variables are never interpolated.
-- `$${` produces a literal `${`.
-- A `${X}` whose variable might be undefined is a warning; at run time an undefined variable is an error of the node.
-- Non-scalar values (multi-field captures of objects or arrays) render as compact JSON; a `capture_file` variable renders as its path.
-- Secret values are masked in the rendered text.
+- **SY-83.** `${X}` is replaced by the value of plan variable `X`; process environment variables are never interpolated.
+- **SY-84.** `$${` produces a literal `${`.
+- **SY-85.** A `${X}` whose variable can't be bound at that point is a plan error; one that might be undefined MAY get a warning ([variables.md](variables.md), VA-38); at run time an undefined variable is an error of the node.
+- **SY-86.** Non-scalar values (multi-field captures of objects or arrays) render as compact JSON; a `capture_file` variable renders as its path.
+- **SY-87.** Secret values are masked in the rendered text.
 
 ### 7.4 Per-field table
 
-Legend: **L** = literal only; **`${}`** = display string with interpolation; **T** = literal, whole-value reference or template (§7.3); **R** = literal or whole-value reference (forms in §7.2); **C** = a condition ([conditions.md](conditions.md)); **N** = a list of nodes. The type column refers to §6. Every field of the language is listed.
+**SY-88.** Legend: **L** = literal only; **`${}`** = display string with interpolation; **T** = literal, whole-value reference or template (§7.3); **R** = literal or whole-value reference (forms in §7.2); **C** = a condition ([conditions.md](conditions.md)); **N** = a list of nodes. The type column refers to §6. Every field of the language is listed.
 
 #### Root and inputs
 
@@ -404,7 +446,7 @@ Legend: **L** = literal only; **`${}`** = display string with interpolation; **T
 
 ## 8. Plain-scalar pitfalls
 
-YAML plain (unquoted) scalars have traps. Implementations MUST detect the cases below with the stated error or warning.
+**SY-89.** YAML plain (unquoted) scalars have traps. Implementations MUST detect the cases below with the stated error or warning.
 
 | Pitfall | Example | Result | Detection |
 |---|---|---|---|
@@ -416,11 +458,11 @@ YAML plain (unquoted) scalars have traps. Implementations MUST detect the cases 
 | Flow mappings with `,` `[` `]` `{` `}` | `{ probe: { exec: a,b } }` | The probe breaks apart. | Plan error that suggests a block mapping. |
 | `script:` not a block scalar | `script: npm test && npm run lint` | Works, but fragile. | Warning. |
 
-Plans and examples SHOULD use: plain scalars only for simple `exec` strings; `script:` text always as a `|` or `|-` block scalar; regexes always single-quoted; block mappings for non-trivial probes.
+**SY-90.** Plans and examples SHOULD use: plain scalars only for simple `exec` strings; `script:` text always as a `|` or `|-` block scalar; regexes always single-quoted; block mappings for non-trivial probes.
 
 ## 9. Targeted errors
 
-Each of these plan errors names the problem and includes a corrected snippet. Codes are assigned in [errors.md](errors.md).
+**SY-91.** Each of these plan errors names the problem and includes a corrected snippet. Codes are assigned in [errors.md](errors.md).
 
 | Mistake | Fix-it |
 |---|---|
@@ -439,7 +481,7 @@ Each of these plan errors names the problem and includes a corrected snippet. Co
 
 ## 10. Versioning
 
-- A plan names the spec version it targets in `blokky:` (§4.2).
-- Unknown keys are errors (§3.4), so an older implementation fails clearly on a plan that uses newer keys.
-- An implementation that doesn't support a feature yet rejects every plan that uses it with `BK_PLAN_NOT_SUPPORTED` before anything runs ([errors.md](errors.md)).
-- The plan schema (`schema/blokky.schema.json`) is normative for structure; its `$id` is versioned per spec release. Rules the schema can't express are listed in [reference.md](reference.md).
+- **SY-92.** A plan names the spec version it targets in `blokky:` (§4.2).
+- **SY-93.** Unknown keys are errors (§3.4), so an older implementation fails clearly on a plan that uses newer keys.
+- **SY-94.** An implementation that doesn't support a feature yet rejects every plan that uses it with `BK_PLAN_NOT_SUPPORTED` before anything runs ([errors.md](errors.md)).
+- **SY-95.** The plan schema (`schema/blokky.schema.json`) is normative for structure; its `$id` is versioned per spec release. Rules the schema can't express are listed in [reference.md](reference.md).

@@ -1,6 +1,6 @@
 # 0002: Language core (open-question batch 1)
 
-- Status: accepted
+- Status: accepted; the regex dialect is superseded by [ADR 0018](0018-review-semantics.md)
 - Date: 2026-11-04
 - Questions: Q1, Q2, Q3, Q12, Q13, Q-m, Q-n, Q-s
 
