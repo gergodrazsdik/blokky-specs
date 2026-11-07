@@ -1,0 +1,15 @@
+title: Keys are case-sensitive; Timeout is unknown and suggests timeout
+rules: [SY-28, SY-30]
+features: [do, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - Timeout: 5s
+      exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_UNKNOWN_KEY
+      detail: { suggestion: timeout }   # distance 0 after uppercase mapping
+      line: 3
+      column: 5
+  exhaustive: true

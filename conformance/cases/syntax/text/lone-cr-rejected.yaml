@@ -1,0 +1,9 @@
+title: A CR that isn't directly followed by LF is a rejected character
+rules: [SY-11, SY-12, SY-13]
+features: [log]
+plan_base64: Ymxva2t5OiAxLjAKbG9nOiAnYQ1iJwo=
+expect:
+  plan_errors:
+    - code: BK_PLAN_CHARACTER
+      line: 2
+      column: 8   # the CR inside the quoted value

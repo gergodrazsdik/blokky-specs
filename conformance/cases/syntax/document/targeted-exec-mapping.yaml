@@ -1,0 +1,11 @@
+title: A mapping as the value of exec is a value error at the value
+rules: [SY-91]
+features: [exec]
+plan: |
+  blokky: 1.0
+  exec: { cmd: blokky-testkit exit 0, timeout: 5m }
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      line: 2
+      column: 7

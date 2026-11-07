@@ -1,0 +1,10 @@
+title: Zero-width characters are rejected in keys as well as values
+rules: [SY-3, SY-10, SY-12, SY-13]
+features: [log]
+plan_base64: Ymxva2t5OiAxLjAKbmHigIttZTogZ3JlZXRpbmcKbG9nOiAnYeKBoGInCmZhaWxfZmFzdDogJ3jigI0nCg==
+expect:
+  plan_errors:
+    - { code: BK_PLAN_CHARACTER, line: 2, column: 3 }    # U+200B ZERO WIDTH SPACE, in the key
+    - { code: BK_PLAN_CHARACTER, line: 3, column: 8 }    # U+2060 WORD JOINER
+    - { code: BK_PLAN_CHARACTER, line: 4, column: 14 }   # U+200D ZERO WIDTH JOINER
+notes: The plan has other errors too (the key isn't name; fail_fast isn't a boolean); they aren't asserted.

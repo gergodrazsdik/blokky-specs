@@ -1,0 +1,16 @@
+title: A plan-only key on a node below the root is not valid at its position
+rules: [SY-33]
+features: [do, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - outputs: [RESULT]
+      exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_UNKNOWN_KEY
+      line: 3
+      column: 5
+notes: >-
+  errors.md defines BK_PLAN_UNKNOWN_KEY as a key that isn't valid at its position;
+  SY-33 names no other code. No suggestion is asserted.

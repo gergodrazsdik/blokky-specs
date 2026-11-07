@@ -1,0 +1,13 @@
+title: A single leading --- is allowed
+rules: [SY-16]
+features: [log]
+plan: |
+  ---
+  blokky: 1.0
+  log: hello
+expect:
+  status: succeeded
+  nodes:
+    /:
+      status: succeeded
+      messages: [{ text: hello }]

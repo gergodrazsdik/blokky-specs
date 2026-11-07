@@ -1,0 +1,9 @@
+title: DEL (U+007F) is a rejected character
+rules: [SY-12, SY-13]
+features: [log]
+plan_base64: Ymxva2t5OiAxLjAKbG9nOiAnYX9iJwo=
+expect:
+  plan_errors:
+    - code: BK_PLAN_CHARACTER
+      line: 2
+      column: 8   # U+007F DELETE

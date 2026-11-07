@@ -1,0 +1,17 @@
+title: When two keys are equally close, the suggestion is the one the schema lists first
+rules: [SY-30]
+features: [exec]
+plan: |
+  blokky: 1.0
+  lo: hello
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_UNKNOWN_KEY
+      detail: { suggestion: do }
+      line: 2
+      column: 1
+  exhaustive: true
+notes: >-
+  lo is at distance 1 from both do and log; the plan schema's root mapping lists
+  do before log.

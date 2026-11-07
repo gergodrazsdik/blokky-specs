@@ -1,0 +1,9 @@
+title: A C1 control character in a comment is rejected; comments aren't exempt
+rules: [SY-10, SY-12, SY-13]
+features: [log]
+plan_base64: Ymxva2t5OiAxLjAKbG9nOiBoZWxsbwojIHjCm3kK
+expect:
+  plan_errors:
+    - code: BK_PLAN_CHARACTER
+      line: 3
+      column: 4   # U+009B, in a comment

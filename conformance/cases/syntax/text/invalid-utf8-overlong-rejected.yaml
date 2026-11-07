@@ -1,0 +1,9 @@
+title: An overlong UTF-8 encoding is invalid UTF-8
+rules: [SY-7]
+features: [log]
+plan_base64: Ymxva2t5OiAxLjAKbG9nOiBhwK9iCg==
+expect:
+  plan_errors:
+    - code: BK_PLAN_ENCODING
+      line: 2
+      column: 7   # C0 AF, an overlong '/'

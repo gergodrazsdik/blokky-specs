@@ -1,0 +1,17 @@
+title: "A script value starting with [ is a flow sequence, so script isn't a string (pitfall)"
+rules: [SY-89]
+features: [script, shell-sh]
+plan: |
+  blokky: 1.0
+  shell: sh
+  script: [ -f x ]
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      line: 3
+      column: 9
+  exhaustive: true
+notes: >-
+  The value is a list where script needs a string: a value that doesn't match its
+  field's type (errors.md, BK_PLAN_VALUE). The fix-it is in the message, which
+  isn't matched.

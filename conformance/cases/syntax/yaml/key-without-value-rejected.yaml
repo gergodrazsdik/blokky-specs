@@ -1,0 +1,15 @@
+title: A key with no value is an error, not an unset field
+rules: [SY-20]
+features: [exec, timeout]
+plan: |
+  blokky: 1.0
+  timeout:
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      line: 2
+  exhaustive: true
+notes: >-
+  errors.md lists an empty value under BK_PLAN_VALUE. The column isn't asserted:
+  the value is what is wrong, but an empty value has no token of its own.

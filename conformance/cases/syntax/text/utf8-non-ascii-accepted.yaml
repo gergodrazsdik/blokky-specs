@@ -1,0 +1,11 @@
+title: Non-ASCII UTF-8 text, including U+00A0 just past the C1 range, is accepted
+rules: [SY-5, SY-12]
+features: [log]
+plan_base64: Ymxva2t5OiAxLjAKbG9nOiAnR3LDvMOfZcKg5LiW55WMJwo=
+expect:
+  status: succeeded
+  nodes:
+    /:
+      status: succeeded
+      messages: [{ text: "Gr\u00fc\u00dfe\u00a0\u4e16\u754c" }]
+notes: U+00A0 (no-break space) is the first code point after the C1 controls that SY-12 rejects.

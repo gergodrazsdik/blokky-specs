@@ -1,0 +1,10 @@
+title: CRLF line endings and TAB characters in a comment and a value are allowed
+rules: [SY-11]
+features: [log]
+plan_base64: Ymxva2t5OiAxLjANCiMgYQljb21tZW50DQpsb2c6ICdhCWInDQo=
+expect:
+  status: succeeded
+  nodes:
+    /:
+      status: succeeded
+      messages: [{ text: "a\tb" }]

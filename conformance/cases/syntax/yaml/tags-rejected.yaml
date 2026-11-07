@@ -1,0 +1,16 @@
+title: A standard tag and a custom tag are each a YAML error
+rules: [SY-3, SY-15]
+features: [log]
+plan: |
+  blokky: 1.0
+  name: !custom greeting
+  log: !!str hello
+expect:
+  plan_errors:
+    - code: BK_PLAN_YAML
+      line: 2
+      column: 7
+    - code: BK_PLAN_YAML
+      line: 3
+      column: 6
+  exhaustive: true

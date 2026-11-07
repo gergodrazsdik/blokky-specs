@@ -1,0 +1,13 @@
+title: A bare number as a duration is a value error at the value
+rules: [SY-25, SY-57, SY-91]
+features: [exec, timeout]
+plan: |
+  blokky: 1.0
+  timeout: 30
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      line: 2
+      column: 10
+  exhaustive: true

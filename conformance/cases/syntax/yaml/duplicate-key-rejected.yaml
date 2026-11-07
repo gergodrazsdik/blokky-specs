@@ -1,0 +1,14 @@
+title: A key repeated in the root mapping is reported at the repetition
+rules: [SY-18]
+features: [log]
+plan: |
+  blokky: 1.0
+  name: first
+  log: hello
+  name: second
+expect:
+  plan_errors:
+    - code: BK_PLAN_DUPLICATE_KEY
+      line: 4      # the second name, the offending key (SY-1)
+      column: 1
+  exhaustive: true

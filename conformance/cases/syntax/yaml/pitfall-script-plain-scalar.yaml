@@ -1,0 +1,15 @@
+title: A script given as a plain scalar instead of a block scalar still runs (pitfall)
+rules: [SY-2, SY-89]
+features: [script, shell-sh]
+requires: { shells: [sh] }
+clock: [real]
+plan: |
+  blokky: 1.0
+  shell: sh
+  script: blokky-testkit argv a && blokky-testkit argv b
+expect:
+  status: succeeded
+  invocations:
+    - { argv: [argv, a] }
+    - { argv: [argv, b] }
+notes: SY-89 asks for a warning; it isn't observable in the result document, and it doesn't block the run (SY-2).

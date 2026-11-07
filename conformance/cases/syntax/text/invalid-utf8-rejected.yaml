@@ -1,0 +1,11 @@
+title: A byte that isn't valid UTF-8 is an encoding error at its line and column
+rules: [SY-7]
+features: [log]
+plan_base64: Ymxva2t5OiAxLjAKbG9nOiBhYmP/Cg==
+expect:
+  plan_errors:
+    - code: BK_PLAN_ENCODING
+      line: 2
+      column: 9   # 0xFF after 'log: abc', byte offset 20
+  exhaustive: true
+notes: Only ASCII precedes the bad byte on its line, so the column is the same in any unit.

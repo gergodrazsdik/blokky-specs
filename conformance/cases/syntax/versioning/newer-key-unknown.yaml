@@ -1,0 +1,15 @@
+title: A key the spec version doesn't define is an unknown-key error, not ignored
+rules: [SY-19, SY-93]
+features: [exec]
+plan: |
+  blokky: 1.0
+  sandbox: true
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_UNKNOWN_KEY
+      detail: { suggestion: { $absent: true } }
+      line: 2
+      column: 1
+  exhaustive: true
+notes: An implementation of 1.0 fails clearly on a plan written for a later version that adds such a key.

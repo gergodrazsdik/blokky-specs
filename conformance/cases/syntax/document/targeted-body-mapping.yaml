@@ -1,0 +1,14 @@
+title: A single node instead of a body list is a value error at the value
+rules: [SY-91]
+features: [do]
+plan: |
+  blokky: 1.0
+  do: { exec: [blokky-testkit, exit, '0'] }
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      line: 2
+      column: 5
+notes: >-
+  A mapping where a list is required doesn't match the field's type (errors.md,
+  BK_PLAN_VALUE). The fix-it is in the message, which isn't matched.

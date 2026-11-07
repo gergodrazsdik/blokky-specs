@@ -1,0 +1,13 @@
+title: An unsupported spec version is an error that lists the supported versions
+rules: [SY-35]
+features: [log]
+plan: |
+  blokky: 99.0
+  log: hello
+expect:
+  plan_errors:
+    - code: BK_PLAN_VERSION
+      detail: { supported: { $contains: ['1.0'] } }
+      line: 1
+      column: 9
+  exhaustive: true

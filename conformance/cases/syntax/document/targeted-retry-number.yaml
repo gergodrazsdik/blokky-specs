@@ -1,0 +1,13 @@
+title: retry with a number is a value error at the value
+rules: [SY-91]
+features: [exec, retry]
+plan: |
+  blokky: 1.0
+  retry: 3
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      line: 2
+      column: 8
+notes: retry takes true or a condition; 3 is neither (errors.md, BK_PLAN_VALUE).

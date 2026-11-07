@@ -1,0 +1,14 @@
+title: An unknown key with no valid key within edit distance 2 has no suggestion
+rules: [SY-30]
+features: [exec]
+plan: |
+  blokky: 1.0
+  xyzzy: plugh
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_UNKNOWN_KEY
+      detail: { suggestion: { $absent: true } }
+      line: 2
+      column: 1
+  exhaustive: true

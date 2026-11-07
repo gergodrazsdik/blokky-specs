@@ -1,0 +1,12 @@
+title: An exec string starting with a double-quoted word is a YAML error (pitfall)
+rules: [SY-89]
+features: [exec, exec-string]
+plan: |
+  blokky: 1.0
+  exec: "blokky-testkit" exit 0
+expect:
+  plan_errors:
+    - code: BK_PLAN_YAML
+      line: 2
+  exhaustive: true
+notes: The column isn't asserted; YAML fails after the closing quote, and SY-89 doesn't say which token the error points at.

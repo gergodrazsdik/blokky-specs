@@ -1,0 +1,11 @@
+title: A second byte-order mark after the leading one is a rejected character
+rules: [SY-5, SY-12, SY-13]
+features: [log]
+plan_base64: 77u/77u/Ymxva2t5OiAxLjAKbG9nOiBoZWxsbwo=
+expect:
+  plan_errors:
+    - code: BK_PLAN_CHARACTER
+      line: 1
+notes: >-
+  Only the first BOM is ignored (SY-5). The column isn't asserted: SY-1 doesn't say
+  whether an ignored BOM counts.

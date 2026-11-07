@@ -1,0 +1,18 @@
+title: Bidirectional controls in comments and in values are each reported
+rules: [SY-3, SY-10, SY-12, SY-13]
+features: [log]
+plan_base64: Ymxva2t5OiAxLjAKIyDigK5hZG1pbiBvbmx5Cm5hbWU6ICdh4oGmYicKbG9nOiAnYeKAj2InCiMgeNicCg==
+expect:
+  plan_errors:
+    - code: BK_PLAN_CHARACTER
+      line: 2
+      column: 3   # U+202E RIGHT-TO-LEFT OVERRIDE, in a comment
+    - code: BK_PLAN_CHARACTER
+      line: 3
+      column: 9   # U+2066 LEFT-TO-RIGHT ISOLATE
+    - code: BK_PLAN_CHARACTER
+      line: 4
+      column: 8   # U+200F RIGHT-TO-LEFT MARK
+    - code: BK_PLAN_CHARACTER
+      line: 5
+      column: 4   # U+061C ARABIC LETTER MARK, in a comment

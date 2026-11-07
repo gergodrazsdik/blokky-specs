@@ -1,0 +1,18 @@
+title: defaults.leaf_timeout gives a leaf without its own timeout a limit
+rules: [SY-37]
+features: [defaults, exec]
+plan: |
+  blokky: 1.0
+  defaults:
+    leaf_timeout: 1s
+  exec: [blokky-testkit, sleep, 30s]
+expect:
+  status: failed
+  error: { code: BK_TIMEOUT_TOTAL, node: / }
+  nodes:
+    /:
+      status: timed_out
+      killed_by: timeout
+      duration: { $min: 1s, $max: 10s }
+  invocations:
+    - { argv: [sleep, 30s] }

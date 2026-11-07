@@ -1,0 +1,12 @@
+title: An explicit '' is an empty string where one is allowed
+rules: [SY-20]
+features: [do, set, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - set: { NOTE: '' }
+    - exec: [blokky-testkit, argv, { var: NOTE }]
+expect:
+  status: succeeded
+  invocations:
+    - { argv: [argv, ''] }

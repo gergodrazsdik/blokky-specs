@@ -1,0 +1,20 @@
+title: defaults.leaf_timeout never applies to groups
+rules: [SY-37]
+features: [defaults, do, exec]
+clock: [real]
+plan: |
+  blokky: 1.0
+  defaults:
+    leaf_timeout: 3s
+  do:
+    - exec: [blokky-testkit, sleep, 2s]
+    - exec: [blokky-testkit, sleep, 2s]
+expect:
+  status: succeeded
+  nodes:
+    /:
+      status: succeeded
+      duration: { $min: 4s, $max: 10s }
+    /do/0: { status: succeeded }
+    /do/1: { status: succeeded }
+notes: The do group runs for over 4s, longer than leaf_timeout, and isn't limited by it.

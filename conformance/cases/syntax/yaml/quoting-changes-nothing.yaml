@@ -1,0 +1,31 @@
+title: Quoted and plain scalars mean the same; '3', 'true' and '1.0' parse as their fields' types
+rules: [SY-27]
+features: [do, exec, retry, ignore-errors]
+plan: |
+  blokky: '1.0'
+  do:
+    - retry: true
+      max: '3'
+      every: '0s'
+      exec: [blokky-testkit, flaky, --state, attempts.txt, --fail-times, '2']
+    - ignore_errors: 'true'
+      exec: [blokky-testkit, exit, '1']
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  nodes:
+    /do/0:
+      status: succeeded
+      repetition: { count: 3 }
+    /do/1:
+      status: failed
+      ignored: true
+    /do/2:
+      status: succeeded
+  invocations:
+    - { argv: [flaky, --state, attempts.txt, --fail-times, '2'] }
+    - { argv: [flaky, --state, attempts.txt, --fail-times, '2'] }
+    - { argv: [flaky, --state, attempts.txt, --fail-times, '2'] }
+    - { argv: [exit, '1'] }
+    - { argv: [exit, '0'] }
+notes: The flaky leaf fails twice, so the third attempt (max '3') succeeds.

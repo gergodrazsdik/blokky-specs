@@ -1,0 +1,16 @@
+title: Empty lists are errors in fields that don't allow them
+rules: [SY-3, SY-21]
+features: [outputs, do]
+plan: |
+  blokky: 1.0
+  outputs: []
+  do: []
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      line: 2
+      column: 10
+    - code: BK_PLAN_VALUE
+      line: 3
+      column: 5
+notes: errors.md lists an empty list under BK_PLAN_VALUE.

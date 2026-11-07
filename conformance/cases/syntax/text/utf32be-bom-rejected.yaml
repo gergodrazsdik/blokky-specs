@@ -1,0 +1,11 @@
+title: A plan encoded as UTF-32BE with a byte-order mark is an encoding error
+rules: [SY-5, SY-6]
+features: [log]
+plan_base64: AAD+/wAAAGIAAABsAAAAbwAAAGsAAABrAAAAeQAAADoAAAAgAAAAMQAAAC4AAAAwAAAACgAAAGwAAABvAAAAZwAAADoAAAAgAAAAaAAAAGUAAABsAAAAbAAAAG8AAAAK
+expect:
+  plan_errors:
+    - code: BK_PLAN_ENCODING
+  exhaustive: true
+notes: >-
+  The plan is otherwise valid. No position is asserted: SY-1 doesn't say where an
+  error about the whole text points.

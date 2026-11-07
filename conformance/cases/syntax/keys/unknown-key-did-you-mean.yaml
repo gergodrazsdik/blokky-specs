@@ -1,0 +1,14 @@
+title: An unknown key is an error at the key, with the closest valid key as suggestion
+rules: [SY-19, SY-30]
+features: [exec]
+plan: |
+  blokky: 1.0
+  timeoutt: 5s
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_UNKNOWN_KEY
+      detail: { suggestion: timeout }   # edit distance 1
+      line: 2
+      column: 1
+  exhaustive: true

@@ -1,0 +1,19 @@
+title: Key order has no meaning (non-canonical order, blokky last)
+rules: [SY-29]
+features: [do, exec]
+plan: |
+  do:
+    - exec: [blokky-testkit, argv, first]
+      name: name after kind
+    - exec: [blokky-testkit, argv, second]
+  name: root name last
+  blokky: 1.0
+expect:
+  status: succeeded
+  nodes:
+    /: { kind: do, name: root name last, status: succeeded }
+    /do/0: { kind: exec, name: name after kind, status: succeeded }
+    /do/1: { kind: exec, status: succeeded }
+  invocations:
+    - { argv: [argv, first] }
+    - { argv: [argv, second] }

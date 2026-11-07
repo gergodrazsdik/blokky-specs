@@ -1,0 +1,11 @@
+title: A UTF-8 byte-order mark is ignored and the plan runs
+rules: [SY-5]
+features: [log]
+plan_base64: 77u/Ymxva2t5OiAxLjAKbG9nOiBoZWxsbwo=
+expect:
+  status: succeeded
+  nodes:
+    /:
+      kind: log
+      status: succeeded
+      messages: [{ text: hello }]
