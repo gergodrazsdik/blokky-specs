@@ -205,6 +205,11 @@ DISPLAY = ("name", "log", "fail", "message", "return")
 UNDERIVED = {"shell-bash", "shell-sh", "shell-pwsh", "shell-powershell", "shell-zsh"}
 
 
+def _mapping(value: Any) -> dict:
+    """The value if it is a mapping, else an empty one (malformed plans are expected)."""
+    return value if isinstance(value, dict) else {}
+
+
 def derive_features(plan: Any) -> set[str]:
     found: set[str] = set()
     if not isinstance(plan, dict):
@@ -214,7 +219,7 @@ def derive_features(plan: Any) -> set[str]:
             found.add(key)
     if isinstance(plan.get("defaults"), dict) and "shell" in plan["defaults"]:
         found.add("shell-" + plan["defaults"]["shell"])
-    for value in (plan.get("vars") or {}).values():
+    for value in _mapping(plan.get("vars")).values():
         _values(value, found, template=True)
     _node(plan, found)
     return found
@@ -261,7 +266,7 @@ def _process(spec: dict, found: set[str]) -> None:
     argv = spec.get("exec")
     for item in argv if isinstance(argv, list) else []:
         _values(item, found)
-    for value in (spec.get("env") or {}).values():
+    for value in _mapping(spec.get("env")).values():
         _values(value, found)
     if "export" in spec:
         found.add("export")
@@ -271,8 +276,9 @@ def _node(node: Any, found: set[str]) -> None:
     if not isinstance(node, dict):
         return
     for kind in KINDS:
-        if kind in node:
-            found.add("exec" if kind == "exec" and isinstance(node["exec"], list) else kind)
+        # the string form of exec is exec-string (added in _process)
+        if kind in node and (kind != "exec" or isinstance(node["exec"], list)):
+            found.add(kind)
     _process(node, found)
     for key, feature in LEAF_OPTIONS.items():
         if key in node:
@@ -300,13 +306,15 @@ def _node(node: Any, found: set[str]) -> None:
             found.add("for-concurrency")
     for key in DISPLAY:
         _values(node.get(key), found, template=True)
-    for value in (node.get("set") or {}).values() if isinstance(node.get("set"), dict) else []:
+    for value in _mapping(node.get("set")).values():
         _values(value, found, template=True)
     for key in ("cwd", "stdin"):
         _values(node.get(key), found)
     for service in node.get("services") or []:
         if isinstance(service, dict):
             _process(service, found)
+            if isinstance(service.get("exec"), list):
+                found.add("exec")
             _condition(service.get("ready"), found)
     for key in ("do", "all", "any", "race", "then", "else", "finally"):
         for child in node.get(key) or []:
@@ -435,7 +443,7 @@ def check_case(
         if error["code"] == "BK_PLAN_INVALID" and "rule" not in (error.get("detail") or {}):
             finding(path, "every BK_PLAN_INVALID asserts detail.rule (CF-24)")
         rule = (error.get("detail") or {}).get("rule")
-        if rule and rule not in rules:
+        if isinstance(rule, str) and rule not in rules:
             finding(path, f"detail.rule {rule} names no rule")
 
     for feature in case["features"]:
@@ -479,6 +487,8 @@ def check_case(
             if action.get(a.replace("external-", "")) is True
         }
         declared = set(case["features"])
+        if not isinstance(plan, dict):  # a root that isn't a mapping uses no derivable feature
+            derived = declared
         if missing := derived - declared:
             finding(path, f"features: the plan uses {sorted(missing)}, which the case doesn't list (CF-11)")
         if extra := declared - derived - UNDERIVED:

@@ -137,6 +137,7 @@ New ids are added with the language features they name, in the same spec release
 | `status` | The run status: `succeeded`, `failed` or `stopped` (required for a run outcome). |
 | `error` | The run's primary error (§3.6), or `null` for none. |
 | `outputs` | Expected outputs by name: a string, `null` (unbound) or `{ $secret: true }`. |
+| `inputs` | Expected inputs by name: `{ value, source }` (§3.6). |
 | `nodes` | Expected node results, keyed by path id (§3.6). |
 | `invocations` | Expected testkit invocations from the invocation log (TK-5). |
 | `files` | Expected files in the work directory after the run: `{ exists: false }`, or `text`/`base64`/`contains`. |
@@ -345,6 +346,17 @@ Most modifiers can be combined on one node, and their order is fixed (EM-4). Tes
 | EM-11 | A concurrency cap is implementation configuration; it changes no observable result. |
 | EM-56 | How far an implementation shortens `finally` during an external stop is its own choice. |
 | CP-7 | Which engines an implementation supports is implementation-defined. |
+| SY-4 | How the plan text reaches the implementation is the adapter's concern (CF-53). |
+| SY-8 | Warnings have no codes and no result key in 1.0, so they can't be asserted. |
+| SY-31 | Covered by the runner's not-supported check (CF-12) for every case. |
+| SY-60 | No plan field takes a size; only the testkit uses the grammar (TK-2). |
+| SY-75 | Points to reference.md §5.7; the glob cases cite the rules there. |
+| SY-90 | A style recommendation for plan authors. |
+| SY-94 | Covered by the runner's not-supported check (CF-12) for every case. |
+| SY-95 | The suite's checker compares the schema's verdict with every case (`just check`). |
+| SY-97 | A style recommendation for plan authors (canonical forms). |
+| VA-15 | Transport-specific input checks are out of scope (CF-18). |
+| ER-2 | Code stability and how consumers treat unknown codes aren't observable in a run. |
 
 The list grows as cases are written.
 

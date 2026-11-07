@@ -28,6 +28,7 @@ ADRs are **grouped**: a baseline ADR, then one ADR per batch of answered open qu
 | [0018](0018-review-semantics.md) | Review decisions on semantics | accepted | — (council review of draft.3: S-1 to S-14) |
 | [0019](0019-review-corrections.md) | Review corrections | accepted | — (council review of draft.3: C-1 to C-8) |
 | [0020](0020-conformance-gaps.md) | Gaps found by the first conformance cases | accepted | — (F-0015) |
+| [0021](0021-wave-a-gaps.md) | Gaps found by the wave A conformance cases | accepted | — (F-0016) |
 
 ## Format
 

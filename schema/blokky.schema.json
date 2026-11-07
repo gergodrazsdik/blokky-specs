@@ -398,7 +398,7 @@
         "while": { "allOf": [ { "not": { "$ref": "#/$defs/noProcessKind" } }, { "anyOf": [ { "required": ["max"] }, { "required": ["timeout"] } ] } ] },
         "until": { "allOf": [ { "not": { "$ref": "#/$defs/noProcessKind" } }, { "anyOf": [ { "required": ["max"] }, { "required": ["timeout"] } ] } ] },
         "for": { "not": { "anyOf": [ { "required": ["sleep"] }, { "required": ["fail"] }, { "required": ["set"] }, { "required": ["return"] } ] } },
-        "attempt_timeout": { "anyOf": [ { "required": ["retry"] }, { "required": ["while"] }, { "required": ["until"] }, { "required": ["for"] } ] },
+        "attempt_timeout": { "allOf": [ { "not": { "$ref": "#/$defs/noProcessKind" } }, { "anyOf": [ { "required": ["retry"] }, { "required": ["while"] }, { "required": ["until"] }, { "required": ["for"] } ] } ] },
         "max": { "anyOf": [ { "required": ["retry"] }, { "required": ["while"] }, { "required": ["until"] } ] },
         "every": { "anyOf": [ { "required": ["retry"] }, { "required": ["while"] }, { "required": ["until"] } ] },
         "index": { "anyOf": [ { "required": ["retry"] }, { "required": ["while"] }, { "required": ["until"] } ] },
