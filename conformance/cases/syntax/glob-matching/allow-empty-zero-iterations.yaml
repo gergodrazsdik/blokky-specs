@@ -1,0 +1,18 @@
+title: A glob with no matches succeeds with zero iterations when allow_empty is true
+spec: [reference.md§5.7]
+features: [for-glob, exec]
+files:
+  src/main.cs: code
+plan: |
+  blokky: 1.0
+  for: { glob: 'src/*.md', as: FILE, allow_empty: true }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      repetition: { count: 0 }
+  invocations: []
+notes: Without allow_empty the node fails with BK_GLOB_EMPTY (syntax/grammars/glob-case-sensitive).

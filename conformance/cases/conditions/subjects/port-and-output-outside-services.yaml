@@ -1,0 +1,19 @@
+title: port and output are plan errors outside a service's ready condition
+rules: [CO-44]
+features: [do, when, log, until, exec]
+requires:
+  ports: [47002]   # a literal port in the plan (CF-14)
+plan: |
+  blokky: 1.0
+  do:
+    - when: { port: 47002, open: true }
+      log: port in when
+    - until: { output: stdout, contains: ready }
+      max: 3
+      exec: [blokky-testkit, print, --out, ready]
+expect:
+  plan_errors:
+    - { code: BK_PLAN_INVALID, detail: { rule: CO-44 }, line: 3, column: 13 }
+    - { code: BK_PLAN_INVALID, detail: { rule: CO-44 }, line: 5, column: 14 }
+  exhaustive: true
+notes: The subjects are language keys in the wrong place, so the code is BK_PLAN_INVALID (errors.md §4), at the subject key.

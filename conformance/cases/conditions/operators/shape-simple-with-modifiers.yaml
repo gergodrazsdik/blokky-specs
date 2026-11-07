@@ -1,0 +1,22 @@
+title: A simple condition is one subject and one operator, plus the optional json and ignore_case modifiers
+rules: [CO-1]
+features: [vars, do, log, when, cond-var, cond-json]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    DOC: '{"state":"OPEN"}'
+  do:
+    - when: { var: DOC, json: .state, equals: open, ignore_case: true }
+      log: open
+    - when: { var: DOC, json: .state, equals: open }
+      log: case matters
+    - when: { var: DOC, contains: OPEN }
+      log: plain
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1: { status: skipped, skip_reason: condition }
+    /do/2: { status: succeeded }

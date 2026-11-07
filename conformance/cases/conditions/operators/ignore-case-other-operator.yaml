@@ -1,0 +1,20 @@
+title: ignore_case on an operator other than equals, in, contains and matches is a plan error
+rules: [CO-12]
+features: [vars, do, when, log, cond-var, cond-numeric, cond-path]
+plan: |
+  blokky: 1.0
+  vars:
+    COUNT: '3'
+  do:
+    - when: { var: COUNT, gt: '1', ignore_case: true }
+      log: numeric
+    - when: { path: Build, exists: true, ignore_case: true }
+      log: path
+expect:
+  plan_errors:
+    - { code: BK_PLAN_INVALID, detail: { rule: CO-12 }, line: 5, column: 34 }
+    - { code: BK_PLAN_INVALID, detail: { rule: CO-12 }, line: 7, column: 40 }
+  exhaustive: true
+notes: >-
+  The rule relates two keys, so the code is BK_PLAN_INVALID, located at the
+  later key in document order (SY-1).

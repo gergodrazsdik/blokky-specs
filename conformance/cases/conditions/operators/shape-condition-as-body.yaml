@@ -1,0 +1,19 @@
+title: A condition where a node list is expected is one targeted value error at the value
+rules: [CO-4, SY-91]
+features: [vars, if, cond-var]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: fast
+  if: { var: MODE, equals: fast }
+  then: { var: MODE, equals: slow }
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: SY-91 }
+      line: 5
+      column: 7
+  exhaustive: true
+notes: >-
+  CO-4 names the mistake, and since SY-91 has a targeted error for a mapping
+  where a body list is expected, it is reported as SY-91 (CO-4, SY-3).

@@ -1,0 +1,18 @@
+title: A node where a condition is expected is a plan error at the node's kind key
+rules: [CO-4]
+features: [when, log]
+plan: |
+  blokky: 1.0
+  when: { exec: [blokky-testkit, exit, '0'] }
+  log: guarded
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: CO-4 }
+      line: 2
+      column: 9   # exec, a language key in the wrong place
+  exhaustive: true
+notes: >-
+  CO-4 reports a node used as a condition as BK_PLAN_INVALID at the kind key.
+  The fix-it is a probe,
+  { probe: { exec: … } }.

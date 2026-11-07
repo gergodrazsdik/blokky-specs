@@ -1,0 +1,26 @@
+title: An if on host runs the branch for this OS, and the other branch is pruned, not not_taken
+rules: [CO-7]
+spec: [reference.md§2.7]
+features: [if, log, cond-host]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  if: { host: os, equals: windows }
+  then:
+    - log: windows
+  else:
+    - log: unix
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { kind: if, status: succeeded }
+    /then/0: { status: skipped, skip_reason: pruned }
+    /else/0: { status: succeeded }
+platforms:
+  windows:
+    expect:
+      nodes:
+        /then/0: { status: succeeded, skip_reason: { $absent: true } }
+        /else/0: { status: skipped, skip_reason: pruned }
+notes: A branch decided statically by host is pruned; pruned wins over not_taken (CO-7).

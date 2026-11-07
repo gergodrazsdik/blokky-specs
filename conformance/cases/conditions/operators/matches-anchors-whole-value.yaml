@@ -1,0 +1,40 @@
+title: ^ and $ anchor at the whole value, and $ never matches before a final newline
+rules: [CO-14]
+spec: [syntax.md§6.7]
+features: [vars, do, when, log, cond-var]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    ENDS_IN_LF: |
+      abc
+    TWO_LINES: |-
+      first
+      second
+  do:
+    - when: { var: ENDS_IN_LF, matches: 'abc$' }
+      log: $ before the final newline
+    - when: { var: ENDS_IN_LF, matches: 'abc\n$' }
+      log: $ after the final newline
+    - when: { var: TWO_LINES, matches: '^second' }
+      log: ^ at a line start
+    - when: { var: TWO_LINES, matches: 'first$' }
+      log: $ at a line end
+    - when: { var: TWO_LINES, matches: '^first\nsecond$' }
+      log: whole value
+    - when: { var: TWO_LINES, matches: '(?i)^FIRST' }
+      log: (?i) is the only inline option
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: skipped, skip_reason: condition }
+    /do/1: { status: succeeded }
+    /do/2: { status: skipped, skip_reason: condition }
+    /do/3: { status: skipped, skip_reason: condition }
+    /do/4: { status: succeeded }
+    /do/5: { status: succeeded }
+notes: >-
+  ENDS_IN_LF is "abc" and an LF (a literal block scalar keeps the final line
+  break; vars values are never trimmed); TWO_LINES is "first", LF, "second".
+  There is no multiline mode, so ^ and $ never match at inner line breaks.

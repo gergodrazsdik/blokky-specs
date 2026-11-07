@@ -1,0 +1,47 @@
+title: json extracts a value before the operator applies, converted to a string as in field captures
+rules: [CO-20, CO-21]
+features: [vars, do, when, log, cond-var, cond-json, cond-numeric]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    PR: '{"head":{"ref":"main"},"n":1.50,"draft":false,"merged_by":null,"labels":[{"name":"ci"},{"name":"bug"}],"quote":"a\"bé","weird-key":{"k": [1, 2]}}'
+  do:
+    - when: { var: PR, json: .head.ref, equals: main }
+      log: nested member
+    - when: { var: PR, json: .n, equals: '1.50' }
+      log: number as written
+    - when: { var: PR, json: .n, gt: '1.4' }
+      log: number compared numerically
+    - when: { var: PR, json: .draft, equals: 'false' }
+      log: boolean
+    - when: { var: PR, json: .merged_by, empty: true }
+      log: null is the empty string
+    - when: { var: PR, json: '.labels[1].name', equals: bug }
+      log: array index
+    - when: { var: PR, json: .quote, equals: 'a"bé' }
+      log: string unescaped
+    - when: { var: PR, json: '.["weird-key"]', equals: '{"k":[1,2]}' }
+      log: object as compact JSON
+    - when: { var: PR, json: .labels, contains: '[{"name":"ci"},' }
+      log: array as compact JSON
+    - when: { var: PR, json: ., contains: '"k": [1, 2]' }
+      log: the whole value
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1: { status: succeeded }
+    /do/2: { status: succeeded }
+    /do/3: { status: succeeded }
+    /do/4: { status: succeeded }
+    /do/5: { status: succeeded }
+    /do/6: { status: succeeded }
+    /do/7: { status: succeeded }
+    /do/8: { status: succeeded }
+    /do/9: { status: skipped, skip_reason: condition }
+notes: >-
+  Conversion follows VA-23 and compact JSON follows SY-86. The path . selects
+  the whole object, which is converted to compact JSON, so the spaces of the
+  original text are gone and /do/9 is false.

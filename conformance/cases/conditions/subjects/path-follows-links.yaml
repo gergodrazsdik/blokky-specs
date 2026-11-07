@@ -1,0 +1,33 @@
+title: Path operators follow symbolic links, and a dangling link doesn't exist
+rules: [CO-18]
+features: [do, exec, when, log, cond-path]
+requires:
+  os: [linux, macos]   # symlink is Unix-only (TK-22)
+files:
+  target.txt: target
+  target-dir: { dir: true }
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, symlink, target.txt, file-link]
+    - exec: [blokky-testkit, symlink, target-dir, dir-link]
+    - exec: [blokky-testkit, symlink, missing.txt, dangling]
+    - when: { path: file-link, is_file: true }
+      log: a link to a file is a file
+    - when: { path: dir-link, is_dir: true }
+      log: a link to a dir is a dir
+    - when: { path: dangling, exists: true }
+      log: dangling exists
+    - when: { path: dangling, not_exists: true }
+      log: dangling doesn't exist
+    - when: { path: dangling, is_file: true }
+      log: dangling isn't a file
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/3: { status: succeeded }
+    /do/4: { status: succeeded }
+    /do/5: { status: skipped, skip_reason: condition }
+    /do/6: { status: succeeded }
+    /do/7: { status: skipped, skip_reason: condition }

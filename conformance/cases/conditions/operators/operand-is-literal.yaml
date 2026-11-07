@@ -1,0 +1,22 @@
+title: Operator values are literals; a reference or an interpolation there is a plan error
+rules: [RF-9]
+features: [vars, do, when, log, cond-var]
+plan: |
+  blokky: 1.0
+  vars:
+    WANT: fast
+    MODE: fast
+  do:
+    - when: { var: MODE, equals: { var: WANT } }
+      log: reference
+    - when: { var: MODE, equals: '${WANT}' }
+      log: interpolation
+expect:
+  plan_errors:
+    - { code: BK_PLAN_INVALID, detail: { rule: RF-9 }, line: 6, column: 32 }
+    - { code: BK_PLAN_INVALID, detail: { rule: RF-9 }, line: 8, column: 32 }
+  exhaustive: true
+notes: >-
+  RF-9 (variables never reach literal fields) is the canonical rule, and it
+  wins over RF-27 for ${…} in a literal field (ADR 0021, D-1). To compare two
+  variables, bind one with set and use a probe, or compare against a literal.

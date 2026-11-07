@@ -1,0 +1,34 @@
+title: matches is an unanchored search over the whole value, and not_matches is its negation
+rules: [CO-13, CO-50]
+features: [vars, do, when, log, cond-var]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    TAG: build-123-ok
+  do:
+    - when: { var: TAG, matches: '\d+' }
+      log: digits anywhere
+    - when: { var: TAG, matches: '^\d+$' }
+      log: anchored to the whole value
+    - when: { var: TAG, matches: '^build' }
+      log: start
+    - when: { var: TAG, matches: 'ok$' }
+      log: end
+    - when: { var: TAG, matches: '123-o' }
+      log: middle
+    - when: { var: TAG, not_matches: 'fail|error' }
+      log: negation
+    - when: { var: TAG, not_matches: '\d' }
+      log: negation false
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1: { status: skipped, skip_reason: condition }
+    /do/2: { status: succeeded }
+    /do/3: { status: succeeded }
+    /do/4: { status: succeeded }
+    /do/5: { status: succeeded }
+    /do/6: { status: skipped, skip_reason: condition }

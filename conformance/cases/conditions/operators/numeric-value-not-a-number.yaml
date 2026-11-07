@@ -1,0 +1,89 @@
+title: A value that doesn't match the number grammar is a condition error for a numeric operator
+rules: [CO-19]
+features: [vars, do, when, log, ignore-errors, cond-var, cond-numeric]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    PLUS: '+5'
+    EXP: '1e3'
+    HEX: '0x10'
+    SEP: '1_000'
+    LEAD_SPACE: ' 5'
+    TRAIL_SPACE: '5 '
+    NO_INT: '.5'
+    NO_FRAC: '5.'
+    NAN: 'NaN'
+    INF: 'Infinity'
+    COMMA: '1,5'
+    EMPTY: ''
+  do:
+    - when: { var: PLUS, gt: '0' }
+      ignore_errors: true
+      do:
+        - log: plus
+    - when: { var: EXP, gt: '0' }
+      ignore_errors: true
+      do:
+        - log: exp
+    - when: { var: HEX, gt: '0' }
+      ignore_errors: true
+      do:
+        - log: hex
+    - when: { var: SEP, gt: '0' }
+      ignore_errors: true
+      do:
+        - log: sep
+    - when: { var: LEAD_SPACE, gt: '0' }
+      ignore_errors: true
+      do:
+        - log: lead space
+    - when: { var: TRAIL_SPACE, gt: '0' }
+      ignore_errors: true
+      do:
+        - log: trail space
+    - when: { var: NO_INT, gt: '0' }
+      ignore_errors: true
+      do:
+        - log: no int
+    - when: { var: NO_FRAC, gt: '0' }
+      ignore_errors: true
+      do:
+        - log: no frac
+    - when: { var: NAN, gt: '0' }
+      ignore_errors: true
+      do:
+        - log: nan
+    - when: { var: INF, gt: '0' }
+      ignore_errors: true
+      do:
+        - log: inf
+    - when: { var: COMMA, gt: '0' }
+      ignore_errors: true
+      do:
+        - log: comma
+    - when: { var: EMPTY, gt: '0' }
+      ignore_errors: true
+      do:
+        - log: empty
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: failed, ignored: true, error: { code: BK_CONDITION_ERROR, detail: { reason: not_a_number } } }
+    /do/1: { status: failed, ignored: true, error: { code: BK_CONDITION_ERROR, detail: { reason: not_a_number } } }
+    /do/2: { status: failed, ignored: true, error: { code: BK_CONDITION_ERROR, detail: { reason: not_a_number } } }
+    /do/3: { status: failed, ignored: true, error: { code: BK_CONDITION_ERROR, detail: { reason: not_a_number } } }
+    /do/4: { status: failed, ignored: true, error: { code: BK_CONDITION_ERROR, detail: { reason: not_a_number } } }
+    /do/5: { status: failed, ignored: true, error: { code: BK_CONDITION_ERROR, detail: { reason: not_a_number } } }
+    /do/6: { status: failed, ignored: true, error: { code: BK_CONDITION_ERROR, detail: { reason: not_a_number } } }
+    /do/7: { status: failed, ignored: true, error: { code: BK_CONDITION_ERROR, detail: { reason: not_a_number } } }
+    /do/8: { status: failed, ignored: true, error: { code: BK_CONDITION_ERROR, detail: { reason: not_a_number } } }
+    /do/9: { status: failed, ignored: true, error: { code: BK_CONDITION_ERROR, detail: { reason: not_a_number } } }
+    /do/10: { status: failed, ignored: true, error: { code: BK_CONDITION_ERROR, detail: { reason: not_a_number } } }
+    /do/11: { status: failed, ignored: true, error: { code: BK_CONDITION_ERROR, detail: { reason: not_a_number } } }
+notes: >-
+  Values must match ^-?[0-9]+(\.[0-9]+)?$ (CO-19): a leading +, an exponent,
+  hex, separators, whitespace, .5, 5., NaN and Infinity don't, and neither
+  does the empty string. A condition error in when fails the node, and its
+  ignore_errors applies (CO-41).

@@ -1,0 +1,21 @@
+title: A subject without an operator, and an operator without a subject, are plan errors
+rules: [CO-4]
+features: [vars, do, when, log, cond-var]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: fast
+  do:
+    - when: { var: MODE }
+      log: no operator
+    - when: { equals: fast }
+      log: no subject
+expect:
+  plan_errors:
+    - { code: BK_PLAN_INVALID, detail: { rule: CO-4 }, line: 5, column: 13 }   # the subject key (SY-1)
+    - { code: BK_PLAN_INVALID, detail: { rule: CO-4 }, line: 7, column: 11 }   # no key requires a subject: the mapping (SY-1)
+  exhaustive: true
+notes: >-
+  Only a probe may stand without an operator (CO-2). SY-1 puts a missing
+  operator at the subject key, and a missing key that no key requires at the
+  mapping that lacks it.

@@ -1,0 +1,52 @@
+title: empty is true only for the empty string, and defined is true for a bound variable or a set environment variable
+rules: [CO-16, CO-50]
+features: [vars, do, when, log, exec, capture, cond-var, cond-env]
+env:
+  EMPTY_ENV: ''
+  UNSET_ENV: null
+plan: |
+  blokky: 1.0
+  vars:
+    BLANK: ''
+    SPACE: ' '
+  do:
+    - when: { var: BLANK, not_empty: true }
+      exec: [blokky-testkit, print, --out, never]
+      capture: SKIPPED_CAPTURE
+    - when: { var: BLANK, empty: true }
+      log: empty string
+    - when: { var: SPACE, empty: true }
+      log: a space is not empty
+    - when: { var: SPACE, not_empty: true }
+      log: not_empty
+    - when: { var: BLANK, defined: true }
+      log: bound to the empty string
+    - when: { var: SKIPPED_CAPTURE, not_defined: true }
+      log: never bound
+    - when: { env: EMPTY_ENV, defined: true }
+      log: set, though empty
+    - when: { env: EMPTY_ENV, empty: true }
+      log: set to the empty string
+    - when: { env: UNSET_ENV, not_defined: true }
+      log: unset
+    - when: { env: UNSET_ENV, defined: true }
+      log: unset is not defined
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: skipped, skip_reason: condition }
+    /do/1: { status: succeeded }
+    /do/2: { status: skipped, skip_reason: condition }
+    /do/3: { status: succeeded }
+    /do/4: { status: succeeded }
+    /do/5: { status: succeeded }
+    /do/6: { status: succeeded }
+    /do/7: { status: succeeded }
+    /do/8: { status: succeeded }
+    /do/9: { status: skipped, skip_reason: condition }
+  invocations: []
+notes: >-
+  SKIPPED_CAPTURE could be bound by /do/0 (so the plan is valid, RF-23), but
+  /do/0 is skipped, so it is unbound at run time. UNSET_ENV is removed from
+  the base environment (CF-19).

@@ -1,0 +1,47 @@
+title: ignore_case makes equals, in, contains, matches and their negations ignore case
+rules: [CO-12, CO-50]
+features: [vars, do, when, log, cond-var]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    STATE: In_Progress
+  do:
+    - when: { var: STATE, equals: in_progress, ignore_case: true }
+      log: equals
+    - when: { var: STATE, in: [queued, IN_PROGRESS], ignore_case: true }
+      log: in
+    - when: { var: STATE, contains: PROG, ignore_case: true }
+      log: contains
+    - when: { var: STATE, matches: '^in_[a-z]+$', ignore_case: true }
+      log: matches
+    - when: { var: STATE, not_equals: in_progress, ignore_case: true }
+      log: not_equals
+    - when: { var: STATE, equals: in_progress, ignore_case: false }
+      log: case kept
+    - when: { var: STATE, matches: '(?i)^in_[a-z]+$' }
+      log: inline option
+    - when: { var: STATE, not_in: [queued, IN_PROGRESS], ignore_case: true }
+      log: not_in
+    - when: { var: STATE, not_contains: PROG, ignore_case: true }
+      log: not_contains
+    - when: { var: STATE, not_matches: '^IN_', ignore_case: true }
+      log: not_matches
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1: { status: succeeded }
+    /do/2: { status: succeeded }
+    /do/3: { status: succeeded }
+    /do/4: { status: skipped, skip_reason: condition }
+    /do/5: { status: skipped, skip_reason: condition }
+    /do/6: { status: succeeded }
+    /do/7: { status: skipped, skip_reason: condition }
+    /do/8: { status: skipped, skip_reason: condition }
+    /do/9: { status: skipped, skip_reason: condition }
+notes: >-
+  matches with ignore_case behaves as the pattern with a leading (?i) (CO-12,
+  SY-61). On a not_* operator, ignore_case applies to the operator it negates
+  (CO-12, CO-50), so /do/4 and /do/7 to /do/9 are false.

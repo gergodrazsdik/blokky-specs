@@ -1,0 +1,34 @@
+title: A symbolic link is matched by its own name, but ** doesn't descend through it
+rules: [SY-101]
+features: [do, exec, for-glob]
+requires:
+  os: [linux, macos]   # symlink is Unix-only (TK-22)
+files:
+  tree/real/a.txt: a
+  outside/b.txt: b
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, symlink, ../outside, tree/link]
+    - for: { glob: 'tree/**/*.txt', as: FILE }
+      exec: [blokky-testkit, exit, '0']
+    - for: { glob: 'tree/*', as: FILE }
+      exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  nodes:
+    /do/1:
+      repetition:
+        count: 1
+        entries:
+          - { item: { $regex: '(^|/)tree/real/a\.txt$' } }
+    /do/2:
+      repetition:
+        count: 2
+        entries:
+          - { item: { $regex: '(^|/)tree/link$' } }
+          - { item: { $regex: '(^|/)tree/real$' } }
+notes: >-
+  tree/link points at ../outside, which holds b.txt. Following the link would
+  add tree/link/b.txt. tree/* matches the link itself, by its own name, and
+  the directory real (SY-99), sorted ordinally.

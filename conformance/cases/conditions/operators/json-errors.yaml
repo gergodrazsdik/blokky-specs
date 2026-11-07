@@ -1,0 +1,67 @@
+title: Invalid JSON or a path that doesn't resolve is a condition error, but with defined a missing path is just undefined
+rules: [CO-22, CO-38]
+features: [vars, do, when, log, ignore-errors, cond-var, cond-json]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    DOC: '{"state":"open","labels":["ci"]}'
+    BROKEN: '{"state":'
+  do:
+    - when: { var: BROKEN, json: .state, equals: open }
+      ignore_errors: true
+      do:
+        - log: invalid JSON
+    - when: { var: DOC, json: .missing, equals: open }
+      ignore_errors: true
+      do:
+        - log: missing member
+    - when: { var: DOC, json: '.labels[3]', equals: ci }
+      ignore_errors: true
+      do:
+        - log: index out of range
+    - when: { var: DOC, json: .state.name, equals: open }
+      ignore_errors: true
+      do:
+        - log: member of a string
+    - when: { var: DOC, json: .missing, defined: true }
+      log: missing path is undefined
+    - when: { var: DOC, json: .missing, not_defined: true }
+      log: not_defined
+    - when: { var: DOC, json: .state, defined: true }
+      log: present path is defined
+    - when: { var: BROKEN, json: .state, not_defined: true }
+      ignore_errors: true
+      do:
+        - log: invalid JSON is an error also with not_defined
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0:
+      status: failed
+      ignored: true
+      error: { code: BK_CONDITION_ERROR, detail: { reason: json_invalid } }
+    /do/1:
+      status: failed
+      ignored: true
+      error: { code: BK_CONDITION_ERROR, detail: { reason: json_path } }
+    /do/2:
+      status: failed
+      ignored: true
+      error: { code: BK_CONDITION_ERROR, detail: { reason: json_path } }
+    /do/3:
+      status: failed
+      ignored: true
+      error: { code: BK_CONDITION_ERROR, detail: { reason: json_path } }
+    /do/4: { status: skipped, skip_reason: condition }
+    /do/5: { status: succeeded }
+    /do/6: { status: succeeded }
+    /do/7:
+      status: failed
+      ignored: true
+      error: { code: BK_CONDITION_ERROR, detail: { reason: json_invalid } }
+notes: >-
+  A condition error in when fails the node, and its ignore_errors applies
+  (CO-41). With defined and not_defined only a path that doesn't resolve
+  counts as undefined; invalid JSON stays a json_invalid error (CO-22).

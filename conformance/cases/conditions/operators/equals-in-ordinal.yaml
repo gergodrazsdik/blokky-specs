@@ -1,0 +1,46 @@
+title: equals, in and their negations compare strings ordinally, with no trimming or normalization
+rules: [CO-11, CO-50]
+features: [vars, do, when, log, cond-var]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    BRANCH: Main
+    PADDED: 'main '
+    COMPOSED: 'é'
+    DECOMPOSED: 'é'
+  do:
+    - when: { var: BRANCH, equals: Main }
+      log: exact
+    - when: { var: BRANCH, equals: main }
+      log: other case
+    - when: { var: PADDED, equals: main }
+      log: trailing space
+    - when: { var: COMPOSED, equals: 'é' }
+      log: other normalization form
+    - when: { var: BRANCH, not_equals: main }
+      log: not equal
+    - when: { var: BRANCH, in: [main, Main] }
+      log: in list
+    - when: { var: BRANCH, in: [main, MAIN] }
+      log: not in list
+    - when: { var: BRANCH, not_in: [main, MAIN] }
+      log: not_in
+    - when: { var: DECOMPOSED, equals: 'é' }
+      log: same code points
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1: { status: skipped, skip_reason: condition }
+    /do/2: { status: skipped, skip_reason: condition }
+    /do/3: { status: skipped, skip_reason: condition }
+    /do/4: { status: succeeded }
+    /do/5: { status: succeeded }
+    /do/6: { status: skipped, skip_reason: condition }
+    /do/7: { status: succeeded }
+    /do/8: { status: succeeded }
+notes: >-
+  COMPOSED is U+00E9; DECOMPOSED, and the operand of /do/3, are U+0065 U+0301.
+  An ordinal comparison doesn't normalize, so /do/3 is false and /do/8 true.

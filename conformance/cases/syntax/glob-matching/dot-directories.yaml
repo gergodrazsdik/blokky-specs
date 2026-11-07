@@ -1,0 +1,36 @@
+title: '** doesn''t enter a dot-directory unless a pattern segment starting with a dot names it'
+rules: [SY-100]
+features: [do, for-glob, exec]
+files:
+  r/a.md: a
+  r/docs/b.md: b
+  r/.github/c.md: c
+plan: |
+  blokky: 1.0
+  do:
+    - for: { glob: 'r/**/*.md', as: FILE }
+      exec: [blokky-testkit, exit, '0']
+    - for: { glob: 'r/.github/*.md', as: FILE }
+      exec: [blokky-testkit, exit, '0']
+    - for: { glob: 'r/.*/*.md', as: FILE }
+      exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  nodes:
+    /do/0:
+      repetition:
+        count: 2
+        entries:
+          $unordered:
+            - { item: { $regex: '(^|/)r/a\.md$' } }
+            - { item: { $regex: '(^|/)r/docs/b\.md$' } }
+    /do/1:
+      repetition:
+        count: 1
+        entries:
+          - { item: { $regex: '(^|/)r/\.github/c\.md$' } }
+    /do/2:
+      repetition:
+        count: 1
+        entries:
+          - { item: { $regex: '(^|/)r/\.github/c\.md$' } }

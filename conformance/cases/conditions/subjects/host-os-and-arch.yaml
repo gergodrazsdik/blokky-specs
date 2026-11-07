@@ -1,0 +1,27 @@
+title: host os and arch name the machine with the spec's values; a false host condition prunes on every OS
+rules: [CO-7]
+features: [do, when, log, cond-host]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  do:
+    - when: { host: os, in: [linux, macos, windows] }
+      log: some OS
+    - when: { host: arch, in: [x64, arm64] }
+      log: some arch
+    - when: { host: os, not_in: [linux, macos, windows] }
+      log: no OS
+    - when: { host: arch, not_in: [x64, arm64] }
+      log: no arch
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1: { status: succeeded }
+    /do/2: { status: skipped, skip_reason: pruned }
+    /do/3: { status: skipped, skip_reason: pruned }
+notes: >-
+  The suite's platforms are linux, macos and windows, on x64 or arm64
+  (conditions.md §2), so the first two are true and the last two false
+  everywhere.

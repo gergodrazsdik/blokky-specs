@@ -1,0 +1,28 @@
+title: After an attempt_timeout, result error is BK_TIMEOUT_ATTEMPT
+rules: [CO-6]
+spec: [reference.md§5.4]
+features: [exec, retry-condition, cond-result, attempt-timeout]
+clock: [real]
+plan: |
+  blokky: 1.0
+  retry: { result: error, equals: BK_TIMEOUT_ATTEMPT }
+  max: 2
+  every: 0s
+  attempt_timeout: 1s
+  exec: [blokky-testkit, sleep, 30s]
+expect:
+  status: failed
+  error:
+    code: BK_RETRIES_EXHAUSTED
+    node: /
+    causes:
+      - { code: BK_TIMEOUT_ATTEMPT }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 2, ended_by: max }
+      duration: { $min: 2s, $max: 20s }
+  invocations:
+    - { argv: [sleep, 30s] }
+    - { argv: [sleep, 30s] }
+notes: The bound allows the grace period of each attempt's stop (EM-26).

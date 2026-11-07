@@ -1,0 +1,29 @@
+title: contains tests a plain substring, never a pattern, and not_contains is its negation
+rules: [CO-11, CO-50]
+features: [vars, do, when, log, cond-var]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    GLOBBY: 'a.*b'
+    PLAIN: axxb
+  do:
+    - when: { var: GLOBBY, contains: '.*' }
+      log: literal dot star
+    - when: { var: PLAIN, contains: '.*' }
+      log: not a pattern
+    - when: { var: PLAIN, contains: xx }
+      log: substring
+    - when: { var: PLAIN, contains: XX }
+      log: case matters
+    - when: { var: PLAIN, not_contains: '.*' }
+      log: negation
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1: { status: skipped, skip_reason: condition }
+    /do/2: { status: succeeded }
+    /do/3: { status: skipped, skip_reason: condition }
+    /do/4: { status: succeeded }

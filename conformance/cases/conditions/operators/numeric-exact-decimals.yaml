@@ -1,0 +1,51 @@
+title: gt, ge, lt and le compare exact decimals, with leading zeros allowed
+rules: [CO-19]
+features: [vars, do, when, log, cond-var, cond-numeric]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    TEN: '10'
+    V110: '1.10'
+    PADDED: '007'
+    NEG: '-1.5'
+    THIRTY: '0.30'
+    BIG: '12345678901234567890123'
+  do:
+    - when: { var: TEN, gt: '9' }
+      log: numeric, not string order
+    - when: { var: V110, gt: '1.9' }
+      log: 1.10 is less than 1.9
+    - when: { var: PADDED, ge: '7' }
+      log: leading zeros
+    - when: { var: PADDED, gt: '7' }
+      log: 007 is not greater than 7
+    - when: { var: NEG, lt: '0' }
+      log: negative
+    - when: { var: NEG, lt: '-1.5' }
+      log: not less than itself
+    - when: { var: THIRTY, ge: '0.3' }
+      log: trailing zero, equal
+    - when: { var: THIRTY, le: '0.3' }
+      log: equal both ways
+    - when: { var: BIG, gt: '12345678901234567890122' }
+      log: exact beyond double precision
+    - when: { var: TEN, le: '010.0' }
+      log: operand with leading zero and fraction
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1: { status: skipped, skip_reason: condition }
+    /do/2: { status: succeeded }
+    /do/3: { status: skipped, skip_reason: condition }
+    /do/4: { status: succeeded }
+    /do/5: { status: skipped, skip_reason: condition }
+    /do/6: { status: succeeded }
+    /do/7: { status: succeeded }
+    /do/8: { status: succeeded }
+    /do/9: { status: succeeded }
+notes: >-
+  BIG and its operand differ only in the last digit; as binary doubles they
+  would be equal.

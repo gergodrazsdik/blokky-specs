@@ -1,0 +1,17 @@
+title: A condition with two operators is a plan error at the later operator
+rules: [CO-4]
+features: [vars, when, log, cond-var]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: fast
+  when: { var: MODE, equals: fast, contains: as }
+  log: never
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: CO-4 }
+      line: 4
+      column: 34   # contains, the later of the two conflicting keys (SY-1)
+  exhaustive: true
+notes: "Two checks are written as a composite, { all: [ … ] } (CO-3)."

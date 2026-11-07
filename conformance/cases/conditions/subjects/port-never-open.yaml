@@ -1,0 +1,26 @@
+title: A port that never opens leaves the service not ready, and the body doesn't run
+rules: [CO-42]
+spec: [reference.md§4.9]
+features: [exec, services]
+clock: [real]
+requires:
+  ports: [47001]
+plan: |
+  blokky: 1.0
+  services:
+    - name: api
+      exec: [blokky-testkit, sleep, 1m]
+      ready: { port: 47001, open: true }
+      ready_timeout: 2s
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: failed
+  error: { code: BK_SERVICE_NOT_READY, node: /, detail: { service: api } }
+  nodes:
+    /:
+      status: failed
+      services:
+        - { name: api, ended: never_ready }
+  invocations:
+    - { argv: [sleep, 1m] }
+notes: The port is reserved for this case (CF-14), so nothing else listens on it.

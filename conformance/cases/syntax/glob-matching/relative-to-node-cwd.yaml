@@ -1,0 +1,20 @@
+title: A glob pattern is relative to the node's cwd
+spec: [reference.md§5.7]
+rules: [SY-70]
+features: [for-glob, cwd, exec]
+files:
+  top.txt: top
+  sub/inner.txt: inner
+plan: |
+  blokky: 1.0
+  cwd: sub
+  for: { glob: '*.txt', as: FILE }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  nodes:
+    /:
+      repetition:
+        count: 1
+        entries:
+          - { item: { $regex: '(^|/)inner\.txt$' } }

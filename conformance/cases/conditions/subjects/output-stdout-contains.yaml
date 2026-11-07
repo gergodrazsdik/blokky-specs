@@ -1,0 +1,24 @@
+title: A service is ready once its stdout so far contains the text
+rules: [CO-43]
+spec: [reference.md§4.9]
+features: [exec, services]
+clock: [real]
+plan: |
+  blokky: 1.0
+  services:
+    - name: web
+      exec: [blokky-testkit, print, --out, starting, --sleep, 2s, --out, 'Now listening on 5000', --hang]
+      ready: { output: stdout, contains: Now listening }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      services:
+        - { name: web, ready_after: { $min: 2s, $max: 10s }, ended: stopped }
+  invocations:
+    - { argv: [print, --out, starting, --sleep, 2s, --out, 'Now listening on 5000', --hang] }
+    - { argv: [exit, '0'] }
+notes: The text is in the second line, so the test sees everything written so far, not only the last line.

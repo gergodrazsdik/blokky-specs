@@ -1,0 +1,23 @@
+title: command looks a bare name up on PATH only, never in the cwd
+rules: [CO-45]
+spec: [shells.md§4]
+features: [do, when, log, cond-command]
+clock: [real, scaled, virtual]
+requires:
+  os: [linux, macos]   # the executable bit
+files:
+  localtool: { text: "#!/bin/sh\nexit 0\n", executable: true }
+plan: |
+  blokky: 1.0
+  do:
+    - when: { command: localtool, exists: true }
+      log: bare name
+    - when: { command: ./localtool, exists: true }
+      log: path
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: skipped, skip_reason: condition }
+    /do/1: { status: succeeded }
+  invocations: []

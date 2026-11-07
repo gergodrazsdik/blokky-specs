@@ -1,0 +1,23 @@
+title: output stdout doesn't see what a service writes to stderr
+rules: [CO-43]
+spec: [reference.md§4.9]
+features: [exec, services]
+clock: [real]
+plan: |
+  blokky: 1.0
+  services:
+    - name: worker
+      exec: [blokky-testkit, print, --err, ready, --hang]
+      ready: { output: stdout, contains: ready }
+      ready_timeout: 2s
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: failed
+  error: { code: BK_SERVICE_NOT_READY, node: /, detail: { service: worker } }
+  nodes:
+    /:
+      status: failed
+      services:
+        - { name: worker, ended: never_ready }
+  invocations:
+    - { argv: [print, --err, ready, --hang] }

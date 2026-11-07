@@ -1,0 +1,24 @@
+title: '? and * match within one segment, never across a /'
+rules: [SY-71]
+features: [do, for-glob, exec]
+files:
+  s/ab/c.txt: nested
+  s/abc.txt: flat
+plan: |
+  blokky: 1.0
+  do:
+    - for: { glob: 's/ab?c.txt', as: FILE, allow_empty: true }
+      exec: [blokky-testkit, exit, '0']
+    - for: { glob: 's/a*.txt', as: FILE }
+      exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  nodes:
+    /do/0:
+      repetition: { count: 0 }
+    /do/1:
+      repetition:
+        count: 1
+        entries:
+          - { item: { $regex: '(^|/)s/abc\.txt$' } }
+notes: s/ab/c.txt would match both patterns if ? or * could match a /.

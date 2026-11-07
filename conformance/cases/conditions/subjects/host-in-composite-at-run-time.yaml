@@ -1,0 +1,19 @@
+title: A host condition inside a composite with other subjects is evaluated at run time, so a false one is skip_reason condition
+rules: [CO-7]
+features: [vars, do, when, log, cond-host, cond-var, cond-composite]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    TARGET: staging
+  do:
+    - when: { all: [ { host: os, not_in: [linux, macos, windows] }, { var: TARGET, equals: staging } ] }
+      log: impossible OS
+    - when: { any: [ { host: os, in: [linux, macos, windows] }, { var: TARGET, equals: prod } ] }
+      log: any OS
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: skipped, skip_reason: condition }
+    /do/1: { status: succeeded }
