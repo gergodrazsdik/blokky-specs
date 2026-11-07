@@ -1,0 +1,31 @@
+title: A program path the OS refuses to start fails the leaf with BK_SPAWN_FAILED
+rules: [SH-26]
+spec: [errors.md§5.1, results.md§3.1]
+features: [exec]
+files:
+  tool.exe: not a program
+plan: |
+  blokky: 1.0
+  exec: [./tool.exe]
+expect:
+  status: failed
+  error:
+    code: BK_SPAWN_FAILED
+    node: /
+    detail: { reason: not_executable }
+  nodes:
+    /:
+      status: failed
+      program: { $regex: '[/\\]tool\.exe$' }
+      exit_code: { $absent: true }
+      error: { code: BK_SPAWN_FAILED, node: / }
+  invocations: []
+platforms:
+  windows:
+    expect:
+      error:
+        detail: { reason: bad_format }   # a text file is no valid executable image
+notes: >-
+  The path contains a separator, so it is resolved against the cwd (SH-26) and
+  exists. On Unix the file isn't executable (no executable bit); on Windows it
+  isn't a valid executable image. Either way the OS refuses to start it.

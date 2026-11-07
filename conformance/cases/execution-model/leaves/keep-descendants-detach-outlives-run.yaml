@@ -1,0 +1,23 @@
+title: keep_descendants detach leaves descendants running after the run ends
+rules: [EM-21, EM-22]
+spec: [reference.md§3]
+features: [exec, keep-descendants-detach]
+clock: [real]
+plan: |
+  blokky: 1.0
+  exec: [blokky-testkit, spawn, --release-output, --pids, pids.txt, --, sleep, 20s]
+  keep_descendants: detach
+after_run:
+  - { argv: [alive, pids.txt], exit_code: 1 }
+expect:
+  status: succeeded
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 0
+      left_running:
+        - { program: { $regex: 'blokky-testkit(\.exe)?$' }, pid: { $present: true } }
+notes: >-
+  The detached sleep ends on its own after 20s. clock is real only, because a
+  scaled testkit sleep could end before the after_run check.
+  The one descendant is the testkit running sleep; its pid isn't deterministic.

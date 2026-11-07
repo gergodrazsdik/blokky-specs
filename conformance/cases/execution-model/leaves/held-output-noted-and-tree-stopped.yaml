@@ -1,0 +1,29 @@
+title: A descendant holding the output is noted, stopped at completion, and gone before the next node starts
+rules: [EM-20, EM-21, EM-68]
+features: [do, exec]
+clock: [real]   # spawn (CF-40)
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, spawn, --pids, pids.txt, --, sleep, 1m]
+    - exec: [blokky-testkit, alive, pids.txt]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0:
+      status: succeeded
+      exit_code: 0
+      descendants_held_output: true
+    /do/1:
+      status: succeeded
+      exit_code: 0             # alive: none of the recorded pids is alive (TK-16)
+  invocations:
+    $contains:
+      - { argv: [spawn, --pids, pids.txt, --, sleep, 1m] }
+      - { argv: [alive, pids.txt] }
+notes: >-
+  spawn exits as soon as its child started; the child inherits stdout and
+  stderr and sleeps for a minute. The drain ends at its bound, then the
+  remaining tree is stopped (EM-21), and only then does /do/1 start (EM-68).
+  The child's own log line isn't asserted: it may be stopped before writing it.

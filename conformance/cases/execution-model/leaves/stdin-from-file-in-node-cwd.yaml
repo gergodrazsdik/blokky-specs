@@ -1,0 +1,18 @@
+title: stdin from a file passes its content, with a relative path resolved against the node's cwd
+rules: [EM-17]
+spec: [reference.md§3]
+features: [outputs, exec, cwd, stdin, capture]
+files:
+  in/data.txt: "line 1\nline 2\n"
+  data.txt: wrong file
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  cwd: in
+  exec: [blokky-testkit, cat]
+  stdin: { file: data.txt }
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: "line 1\nline 2"   # trailing LF removed by the capture (VA-20)

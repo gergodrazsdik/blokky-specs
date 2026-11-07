@@ -1,0 +1,27 @@
+title: A capture is bound after an ok_exit success, and not bound when the leaf fails
+rules: [EM-24, VA-18]
+features: [outputs, do, exec, ok-exit, capture, ignore-errors]
+plan: |
+  blokky: 1.0
+  outputs: [KEPT, DROPPED]
+  do:
+    - exec: [blokky-testkit, print, --out, kept, --exit, '3']
+      ok_exit: [3]
+      capture: KEPT
+    - ignore_errors: true
+      exec: [blokky-testkit, print, --out, dropped, --exit, '4']
+      capture: DROPPED
+expect:
+  status: succeeded
+  outputs:
+    KEPT: kept
+    DROPPED: null
+  nodes:
+    /do/0:
+      status: succeeded
+      exit_code: 3
+    /do/1:
+      status: failed
+      ignored: true
+      exit_code: 4
+      error: { code: BK_EXIT, node: /do/1, detail: { exit_code: 4 } }

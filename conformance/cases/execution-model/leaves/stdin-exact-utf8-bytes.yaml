@@ -1,0 +1,29 @@
+title: stdin text and variable values are passed as their exact UTF-8 bytes, with no newline added
+rules: [EM-17]
+spec: [reference.md§3]
+features: [vars, outputs, do, exec, stdin, encoding, capture]
+plan: |
+  blokky: 1.0
+  vars:
+    MESSAGE: hié
+  outputs: [FROM_TEXT, FROM_VAR]
+  do:
+    - exec: [blokky-testkit, cat]
+      stdin: hié
+      encoding: utf-16le
+      capture: FROM_TEXT
+    - exec: [blokky-testkit, cat]
+      stdin: { var: MESSAGE }
+      encoding: utf-16le
+      capture: FROM_VAR
+expect:
+  status: succeeded
+  outputs:
+    FROM_TEXT: "楨꧃"
+    FROM_VAR: "楨꧃"
+notes: >-
+  cat copies stdin byte for byte (TK-11). "hié" in UTF-8 is the four bytes
+  68 69 c3 a9, which read as UTF-16LE are U+6968 U+A9C3. Capture trimming
+  would hide an added LF, so the output is decoded as UTF-16LE instead: an
+  added LF makes the byte count odd (BK_CAPTURE_ENCODING), an added CRLF adds
+  U+0A0D, and any other encoding of the text gives other characters.

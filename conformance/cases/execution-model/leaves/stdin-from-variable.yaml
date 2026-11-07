@@ -1,0 +1,16 @@
+title: stdin with a variable reference passes the variable's value to the leaf
+rules: [EM-17]
+spec: [reference.md§3]
+features: [vars, outputs, exec, stdin, capture]
+plan: |
+  blokky: 1.0
+  vars:
+    MESSAGE: from a variable
+  outputs: [SEEN]
+  exec: [blokky-testkit, cat]
+  stdin: { var: MESSAGE }
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: from a variable

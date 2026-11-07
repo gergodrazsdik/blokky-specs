@@ -1,0 +1,27 @@
+title: A leaf gets the run's environment overlaid by every enclosing env, with BASH_ENV and ENV removed
+rules: [EM-16, VA-39]
+features: [outputs, env, do, exec, capture]
+env:
+  CONF_RUN: run
+  CONF_OVER: run
+  BASH_ENV: /nonexistent/bash-env
+  ENV: /nonexistent/env
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  env:
+    CONF_ROOT: root
+    CONF_OVER: root
+  do:
+    - env:
+        CONF_OVER: leaf
+      exec: [blokky-testkit, env, CONF_RUN, CONF_ROOT, CONF_OVER, BASH_ENV, ENV]
+      capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: '{"CONF_RUN":"run","CONF_ROOT":"root","CONF_OVER":"leaf","BASH_ENV":null,"ENV":null}'
+notes: >-
+  The case's env is part of the environment the run starts with (CF-19,
+  CF-57). The innermost env wins; BASH_ENV and ENV are removed even though the
+  run's environment sets them.

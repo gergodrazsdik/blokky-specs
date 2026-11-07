@@ -1,0 +1,17 @@
+title: A leaf without cwd runs in the directory the run was started in
+spec: [reference.md§4.6]
+features: [outputs, exec, capture]
+files:
+  marker.txt: in the run's cwd
+plan: |
+  blokky: 1.0
+  outputs: [CONTENT]
+  exec: [blokky-testkit, read-file, marker.txt]
+  capture: CONTENT
+expect:
+  status: succeeded
+  outputs:
+    CONTENT: in the run's cwd
+  invocations:
+    - { argv: [read-file, marker.txt] }
+notes: The runner uses the work directory as the run's cwd (CF-56).

@@ -1,0 +1,23 @@
+title: argv[0] is resolved on PATH and the run result records the absolute path
+rules: [EM-14]
+spec: [results.md§3.1]
+features: [outputs, exec, capture]
+programs:
+  conf-tool: [argv, from-alias]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  exec: [conf-tool, extra]
+  capture: SEEN
+expect:
+  status: succeeded
+  error: null
+  outputs:
+    SEEN: '["from-alias","extra"]'   # alias arguments come first (TK-6, TK-12)
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 0
+      program: { $regex: '^(/|[A-Za-z]:[/\\]|\\\\).*[/\\]conf-tool(\.exe)?$' }
+  invocations:
+    - { name: conf-tool, argv: [argv, from-alias, extra] }

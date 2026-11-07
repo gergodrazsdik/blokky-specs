@@ -1,0 +1,31 @@
+title: Removing a run's tempdir doesn't follow a symbolic link inside it
+rules: [EM-69]
+spec: [reference.md§4.5]
+features: [do, exec, capture-fields, set, interpolation, tempdir]
+requires:
+  os: [linux, macos]   # symlink is Unix-only (TK-22)
+files:
+  keep/precious.txt: precious
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, info]
+      capture: { RUN_CWD: .cwd }
+    - set:
+        TARGET: ${RUN_CWD}/keep
+    - tempdir: { remove: true }
+      exec: [blokky-testkit, symlink, { var: TARGET }, outside]
+expect:
+  status: succeeded
+  nodes:
+    /do/2:
+      status: succeeded
+      exit_code: 0
+  files:
+    keep/precious.txt: { text: precious }
+notes: >-
+  The leaf runs in the fresh tempdir and leaves a link there pointing at the
+  work directory's keep/. Removing the tempdir at node end must delete the
+  link, not the directory it points at. The creation half of EM-69 (never at
+  an existing path or through a link) isn't testable: a case can't know the
+  path a run will choose.

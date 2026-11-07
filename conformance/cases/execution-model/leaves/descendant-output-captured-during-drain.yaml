@@ -1,0 +1,22 @@
+title: Output a descendant writes shortly after the leaf exits is drained into the capture
+rules: [EM-20, EM-68]
+features: [outputs, exec, capture]
+clock: [real]   # spawn (CF-40); the 200ms must stay well under the 1s drain minimum
+plan: |
+  blokky: 1.0
+  outputs: [LATE]
+  exec: [blokky-testkit, spawn, --, print, --sleep, 200ms, --out, late]
+  capture: LATE
+expect:
+  status: succeeded
+  outputs:
+    LATE: late
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 0
+      descendants_held_output: true
+notes: >-
+  spawn writes nothing and exits once its child started; the child keeps
+  stdout open and writes "late" about 200ms later, then exits. The drain lasts
+  at least 1s (EM-20) and captures are fixed after it (EM-68).

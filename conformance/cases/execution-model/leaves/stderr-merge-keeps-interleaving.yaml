@@ -1,0 +1,19 @@
+title: With stderr merge both streams share one pipe in write order; without it captures hold stdout only
+rules: [EM-19, VA-19, VA-20]
+spec: [reference.md§3]
+features: [outputs, do, exec, stderr-merge, capture]
+plan: |
+  blokky: 1.0
+  outputs: [MERGED, SEPARATE]
+  do:
+    - exec: [blokky-testkit, print, --out, a, --err, b, --out, c]
+      stderr: merge
+      capture: MERGED
+    - exec: [blokky-testkit, print, --out, a, --err, b, --out, c]
+      capture: SEPARATE
+expect:
+  status: succeeded
+  outputs:
+    MERGED: "a\nb\nc"
+    SEPARATE: "a\nc"
+notes: The testkit flushes every write at once (TK-4), so the write order is the order on the merged pipe.

@@ -1,0 +1,18 @@
+title: A descendant that released the output isn't noted, and is still stopped at leaf completion
+rules: [EM-20, EM-21]
+features: [do, exec]
+clock: [real]   # spawn (CF-40)
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, spawn, --release-output, --pids, pids.txt, --, sleep, 1m]
+    - exec: [blokky-testkit, alive, pids.txt]
+expect:
+  status: succeeded
+  nodes:
+    /do/0:
+      status: succeeded
+      descendants_held_output: false
+    /do/1:
+      status: succeeded
+      exit_code: 0

@@ -1,0 +1,23 @@
+title: encoding decides how stdout is decoded for captures
+rules: [VA-20]
+spec: [reference.md§3]
+features: [outputs, do, exec, encoding, capture]
+plan: |
+  blokky: 1.0
+  outputs: [LATIN, LE, BE]
+  do:
+    - exec: [blokky-testkit, print, --out-hex, '6ae9']
+      encoding: latin1
+      capture: LATIN
+    - exec: [blokky-testkit, print, --out-hex, '6800e9000a00']
+      encoding: utf-16le
+      capture: LE
+    - exec: [blokky-testkit, print, --out-hex, '006800e9']
+      encoding: utf-16be
+      capture: BE
+expect:
+  status: succeeded
+  outputs:
+    LATIN: jé
+    LE: hé   # the trailing LF (0a00) is removed after decoding
+    BE: hé

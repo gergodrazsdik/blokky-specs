@@ -1,0 +1,22 @@
+title: Descendants kept with keep_descendants true are stopped when the run is stopped from outside
+rules: [EM-22]
+features: [do, exec, keep-descendants, external-stop]
+clock: [real]   # a scaled stop could come before spawn writes pids.txt
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, spawn, --release-output, --pids, pids.txt, --, sleep, 1m]
+      keep_descendants: true
+    - exec: [blokky-testkit, sleep, 1m]
+actions:
+  - { after: 2s, stop: true }
+after_run:
+  - { argv: [alive, pids.txt], exit_code: 0 }
+expect:
+  status: stopped
+  nodes:
+    /do/0:
+      status: succeeded
+    /do/1:
+      status: cancelled
+      error: { code: BK_CANCELLED, node: /do/1 }

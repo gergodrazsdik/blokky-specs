@@ -1,0 +1,23 @@
+title: Output that isn't valid in the leaf's encoding fails the capture, which isn't bound
+rules: [VA-21, EM-24]
+spec: [reference.md§3, errors.md§5.3]
+features: [outputs, do, exec, encoding, capture, ignore-errors]
+plan: |
+  blokky: 1.0
+  outputs: [TEXT]
+  do:
+    - ignore_errors: true
+      exec: [blokky-testkit, print, --out-hex, '680000d8']
+      encoding: utf-16le
+      capture: TEXT
+expect:
+  status: succeeded
+  outputs:
+    TEXT: null
+  nodes:
+    /do/0:
+      status: failed
+      ignored: true
+      exit_code: 0
+      error: { code: BK_CAPTURE_ENCODING, node: /do/0 }
+notes: 00d8 is a lone high surrogate (U+D800) in UTF-16LE. The process exited with 0; the capture fails the node.
