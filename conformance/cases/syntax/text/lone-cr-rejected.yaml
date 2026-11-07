@@ -1,9 +1,16 @@
-title: A CR that isn't directly followed by LF is a rejected character
-rules: [SY-11, SY-12, SY-13]
+title: A CR that isn't directly followed by LF is a rejected character, and ends its line
+rules: [SY-1, SY-11, SY-12, SY-13]
 features: [log]
-plan_base64: Ymxva2t5OiAxLjAKbG9nOiAnYQ1iJwo=
+plan_base64: Ymxva2t5OiAxLjAKbG9nOiAnYQ1iJwpuYW1lOiAneAcnCg==
 expect:
   plan_errors:
     - code: BK_PLAN_CHARACTER
+      detail: { codepoint: U+000D }
       line: 2
       column: 8   # the CR inside the quoted value
+    - code: BK_PLAN_CHARACTER
+      detail: { codepoint: U+0007 }
+      line: 4
+      column: 9   # line 4: the lone CR ended line 2 (SY-1)
+  exhaustive: true
+notes: Character-lint errors end processing before YAML parsing (SY-10), so no other error follows.

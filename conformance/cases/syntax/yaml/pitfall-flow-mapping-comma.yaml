@@ -1,0 +1,18 @@
+title: A comma in a flow-mapping value splits it into another key (pitfall)
+rules: [SY-3, SY-89]
+features: [exec, exec-string, when, cond-probe]
+plan: |
+  blokky: 1.0
+  when: { probe: { exec: blokky-testkit exit 0,1 } }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_UNKNOWN_KEY
+      line: 2
+      column: 46
+  exhaustive: true
+notes: >-
+  The flow mapping reads as exec 'blokky-testkit exit 0' plus a key 1 with no
+  value. The targeted error (fix-it: a block mapping) replaces the generic errors
+  for the same mistake (SY-3); 1 is a key no probe accepts, so the code is
+  BK_PLAN_UNKNOWN_KEY (errors.md §4).

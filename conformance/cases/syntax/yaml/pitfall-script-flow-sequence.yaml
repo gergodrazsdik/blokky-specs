@@ -8,10 +8,8 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE
+      detail: { rule: SY-89 }   # the targeted error replaces the generic type error (SY-3)
       line: 3
       column: 9
   exhaustive: true
-notes: >-
-  The value is a list where script needs a string: a value that doesn't match its
-  field's type (errors.md, BK_PLAN_VALUE). The fix-it is in the message, which
-  isn't matched.
+notes: The fix-it is in the message, which isn't matched.

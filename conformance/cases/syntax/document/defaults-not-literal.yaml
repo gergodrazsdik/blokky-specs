@@ -1,0 +1,17 @@
+title: A variable reference in defaults is a variable reaching a literal field
+rules: [SY-38, RF-9]
+features: [vars, defaults, exec]
+plan: |
+  blokky: 1.0
+  vars:
+    LIMIT: 10s
+  defaults:
+    leaf_timeout: { var: LIMIT }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-9 }   # SY-38's "values are literal" restates RF-9 (errors.md §4)
+      line: 5
+      column: 17
+  exhaustive: true

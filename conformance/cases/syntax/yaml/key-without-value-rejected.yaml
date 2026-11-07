@@ -8,8 +8,7 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE
-      line: 2
+      detail: { rule: SY-20 }
+      line: 2      # a missing value is located at its key (SY-1)
+      column: 1
   exhaustive: true
-notes: >-
-  errors.md lists an empty value under BK_PLAN_VALUE. The column isn't asserted:
-  the value is what is wrong, but an empty value has no token of its own.

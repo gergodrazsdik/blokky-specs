@@ -10,5 +10,5 @@ expect:
   plan_errors:
     - code: BK_PLAN_YAML
       line: 4
+      column: 32   # the opening quote of the scalar (SY-1)
   exhaustive: true
-notes: The column isn't asserted; SY-89 doesn't say whether it points at the scalar or the escape.

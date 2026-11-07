@@ -5,12 +5,12 @@ plan: |
   blokky: 1.0
   defaults:
     leaf_timeout: 10s
-    timeout: 5s
+    cache: false
   exec: [blokky-testkit, exit, '0']
 expect:
   plan_errors:
     - code: BK_PLAN_UNKNOWN_KEY
-      detail: { suggestion: { $absent: true } }   # leaf_timeout is at distance 5
+      detail: { suggestion: { $absent: true } }   # no key within distance 2
       line: 4
       column: 3
   exhaustive: true

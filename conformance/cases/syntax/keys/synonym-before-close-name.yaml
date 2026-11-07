@@ -11,14 +11,11 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_UNKNOWN_KEY
-      detail: { suggestion: { $regex: '^return' } }   # not exec (distance 2)
+      detail: { suggestion: return }   # not exec (distance 2)
       line: 3
       column: 5
     - code: BK_PLAN_UNKNOWN_KEY
-      detail: { suggestion: { $regex: '^for' } }      # not log (distance 2)
+      detail: { suggestion: for }      # the key the snippet names; not log (distance 2)
       line: 5
       column: 5
   exhaustive: true
-notes: >-
-  The synonym table gives return and a for: snippet; only their start is matched,
-  because SY-30 doesn't fix how a multi-part suggestion is written.

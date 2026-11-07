@@ -8,6 +8,8 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE
+      detail: { rule: SY-91 }
       line: 2
       column: 8
-notes: retry takes true or a condition; 3 is neither (errors.md, BK_PLAN_VALUE).
+  exhaustive: true
+notes: The targeted error replaces the generic type error (SY-3).

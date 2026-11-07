@@ -5,5 +5,8 @@ plan_base64: Ymxva2t5OiAxLjAKbG9nOiAnYRtbMzFtcmVkJwo=
 expect:
   plan_errors:
     - code: BK_PLAN_CHARACTER
+      detail: { codepoint: U+001B }
       line: 2
-      column: 8   # U+001B ESCAPE
+      column: 8   # ESCAPE
+  exhaustive: true
+notes: Character-lint errors end processing before YAML parsing (SY-10), so no other error follows.

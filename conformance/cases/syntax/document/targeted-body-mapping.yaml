@@ -7,8 +7,8 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE
+      detail: { rule: SY-91 }
       line: 2
       column: 5
-notes: >-
-  A mapping where a list is required doesn't match the field's type (errors.md,
-  BK_PLAN_VALUE). The fix-it is in the message, which isn't matched.
+  exhaustive: true
+notes: The targeted error replaces the generic type error (SY-3); its fix-it is in the message.

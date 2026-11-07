@@ -1,9 +1,11 @@
-title: An overlong UTF-8 encoding is invalid UTF-8
+title: An overlong UTF-8 encoding is one encoding error at the first bad byte
 rules: [SY-7]
 features: [log]
 plan_base64: Ymxva2t5OiAxLjAKbG9nOiBhwK9iCg==
 expect:
   plan_errors:
     - code: BK_PLAN_ENCODING
+      detail: { offset: 18 }
       line: 2
       column: 7   # C0 AF, an overlong '/'
+  exhaustive: true

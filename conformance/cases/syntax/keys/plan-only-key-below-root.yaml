@@ -1,4 +1,4 @@
-title: A plan-only key on a node below the root is not valid at its position
+title: A plan-only key on a node below the root is a key in the wrong place
 rules: [SY-33]
 features: [do, exec]
 plan: |
@@ -8,9 +8,9 @@ plan: |
       exec: [blokky-testkit, exit, '0']
 expect:
   plan_errors:
-    - code: BK_PLAN_UNKNOWN_KEY
+    - code: BK_PLAN_INVALID
+      detail: { rule: SY-33 }
       line: 3
       column: 5
-notes: >-
-  errors.md defines BK_PLAN_UNKNOWN_KEY as a key that isn't valid at its position;
-  SY-33 names no other code. No suggestion is asserted.
+  exhaustive: true
+notes: A language key in the wrong place is BK_PLAN_INVALID, not unknown (errors.md §4).

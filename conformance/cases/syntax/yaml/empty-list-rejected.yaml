@@ -1,5 +1,5 @@
 title: Empty lists are errors in fields that don't allow them
-rules: [SY-3, SY-21]
+rules: [SY-3, SY-21, RF-21]
 features: [outputs, do]
 plan: |
   blokky: 1.0
@@ -8,9 +8,11 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE
+      detail: { rule: RF-21 }   # SY-21 restates RF-21 (errors.md §4)
       line: 2
       column: 10
     - code: BK_PLAN_VALUE
+      detail: { rule: RF-21 }
       line: 3
       column: 5
-notes: errors.md lists an empty list under BK_PLAN_VALUE.
+  exhaustive: true

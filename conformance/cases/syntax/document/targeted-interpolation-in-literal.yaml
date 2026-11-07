@@ -1,0 +1,17 @@
+title: ${X} in a literal field is one error at the value's start
+rules: [SY-1, SY-91, RF-9]
+features: [vars, for-each, exec]
+plan: |
+  blokky: 1.0
+  vars:
+    X: one
+  for: { each: ['${X}', two], as: ITEM }
+  exec: [blokky-testkit, argv, { var: ITEM }]
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-9 }   # RF-9 wins over RF-27 (errors.md §4)
+      line: 4
+      column: 15
+  exhaustive: true
+notes: for.each is a literal list of strings; the error is located at the opening quote of the value.

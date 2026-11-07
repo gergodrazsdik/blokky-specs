@@ -1,11 +1,12 @@
 title: A second byte-order mark after the leading one is a rejected character
-rules: [SY-5, SY-12, SY-13]
+rules: [SY-1, SY-5, SY-12, SY-13]
 features: [log]
 plan_base64: 77u/77u/Ymxva2t5OiAxLjAKbG9nOiBoZWxsbwo=
 expect:
   plan_errors:
     - code: BK_PLAN_CHARACTER
+      detail: { codepoint: U+FEFF }
       line: 1
-notes: >-
-  Only the first BOM is ignored (SY-5). The column isn't asserted: SY-1 doesn't say
-  whether an ignored BOM counts.
+      column: 1   # the ignored leading BOM isn't counted (SY-1)
+  exhaustive: true
+notes: Character-lint errors end processing before YAML parsing (SY-10), so no other error follows.

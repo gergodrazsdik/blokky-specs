@@ -1,6 +1,6 @@
 title: A bare top-level list is a plan error; the root must be a mapping
 rules: [SY-32]
-features: [shell-sh]   # scripts/check.py derives no features from a list root; see notes
+features: [script, shell-sh]
 plan: |
   - blokky: 1.0
   - shell: sh
@@ -8,12 +8,10 @@ plan: |
       echo hello
 expect:
   plan_errors:
-    - code: BK_PLAN_INVALID
+    - code: BK_PLAN_VALUE
       detail: { rule: SY-32 }
       line: 1
       column: 1
 notes: >-
-  No specific code covers the root's shape, so it is BK_PLAN_INVALID with the
-  rule (errors.md §4). Other errors (no blokky: at the root) may be reported too.
-  The plan uses script as well, but check.py only accepts underived shell ids for
-  a plan whose root isn't a mapping.
+  The root's type is decided by the value alone, so BK_PLAN_VALUE (errors.md §4).
+  Other errors (no blokky: at the root) may be reported too.

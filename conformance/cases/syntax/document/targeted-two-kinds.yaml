@@ -9,5 +9,6 @@ expect:
   plan_errors:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-1 }
+      line: 3      # the later of the two conflicting keys (SY-1)
+      column: 1
   exhaustive: true
-notes: No position is asserted; SY-1 doesn't say which of the two kind keys is the offending one.

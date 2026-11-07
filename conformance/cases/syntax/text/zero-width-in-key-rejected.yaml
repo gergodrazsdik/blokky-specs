@@ -4,7 +4,19 @@ features: [log]
 plan_base64: Ymxva2t5OiAxLjAKbmHigIttZTogZ3JlZXRpbmcKbG9nOiAnYeKBoGInCmZhaWxfZmFzdDogJ3jigI0nCg==
 expect:
   plan_errors:
-    - { code: BK_PLAN_CHARACTER, line: 2, column: 3 }    # U+200B ZERO WIDTH SPACE, in the key
-    - { code: BK_PLAN_CHARACTER, line: 3, column: 8 }    # U+2060 WORD JOINER
-    - { code: BK_PLAN_CHARACTER, line: 4, column: 14 }   # U+200D ZERO WIDTH JOINER
-notes: The plan has other errors too (the key isn't name; fail_fast isn't a boolean); they aren't asserted.
+    - code: BK_PLAN_CHARACTER
+      detail: { codepoint: U+200B }
+      line: 2
+      column: 3   # ZERO WIDTH SPACE, in the key
+    - code: BK_PLAN_CHARACTER
+      detail: { codepoint: U+2060 }
+      line: 3
+      column: 8   # WORD JOINER
+    - code: BK_PLAN_CHARACTER
+      detail: { codepoint: U+200D }
+      line: 4
+      column: 14   # ZERO WIDTH JOINER
+  exhaustive: true
+notes: >-
+  Parsed, the plan would have other errors (the key isn't name; fail_fast isn't a
+  boolean), but character-lint errors end processing before YAML parsing (SY-10).

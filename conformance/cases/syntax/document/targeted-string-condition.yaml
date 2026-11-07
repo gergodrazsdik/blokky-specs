@@ -1,0 +1,17 @@
+title: A string condition is one targeted value error at its opening quote
+rules: [SY-1, SY-3, SY-91]
+features: [vars, if, exec]
+plan: |
+  blokky: 1.0
+  vars:
+    X: '1'
+  if: "$X == 1"
+  then:
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: SY-91 }
+      line: 4
+      column: 5
+  exhaustive: true

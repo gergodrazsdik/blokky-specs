@@ -1,0 +1,20 @@
+title: A list where a string or a path is required is a value error at the value
+rules: [SY-3, SY-88]
+features: [cwd, exec]
+plan: |
+  blokky: 1.0
+  name: [build, test]
+  cwd: [build, test]
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      line: 2
+      column: 7
+    - code: BK_PLAN_VALUE
+      line: 3
+      column: 6
+  exhaustive: true
+notes: >-
+  The type is decided by the value alone (errors.md §4). detail.rule isn't
+  asserted: the spec doesn't say which rule a type mismatch reports.

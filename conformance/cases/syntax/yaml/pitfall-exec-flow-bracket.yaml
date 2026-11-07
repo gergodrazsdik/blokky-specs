@@ -1,0 +1,16 @@
+title: An exec written like a shell test, [ ... ], is a one-element argv (pitfall)
+rules: [SY-2, SY-89]
+features: [exec]
+plan: |
+  blokky: 1.0
+  exec: [ blokky-testkit argv x ]
+expect:
+  status: failed
+  error:
+    code: BK_SPAWN_NOT_FOUND
+    node: /
+    detail: { program: blokky-testkit argv x }
+  invocations: []
+notes: >-
+  The flow sequence holds one plain scalar, so the program is 'blokky-testkit argv x'
+  and nothing runs. SY-89 asks for a warning, which isn't observable (SY-2).

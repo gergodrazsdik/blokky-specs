@@ -6,6 +6,7 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_VERSION
+      detail: { supported: { $contains: ['1.0'] } }
       line: 1      # no key requires blokky, so the mapping that lacks it (SY-1)
       column: 1
   exhaustive: true

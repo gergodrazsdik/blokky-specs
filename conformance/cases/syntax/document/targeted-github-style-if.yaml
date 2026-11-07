@@ -1,0 +1,19 @@
+title: An if next to another kind (GitHub Actions style) is one error at the later key
+rules: [SY-1, SY-3, SY-91, RF-1]
+features: [vars, exec, if, cond-var]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: fast
+  exec: [blokky-testkit, exit, '0']
+  if: { var: MODE, equals: fast }
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-1 }
+      line: 5
+      column: 1
+  exhaustive: true
+notes: >-
+  The targeted error (fix-it: use when) replaces both generic errors, two kinds
+  (RF-1) and if without then (RF-32). It is two kinds in one node, so RF-1.
