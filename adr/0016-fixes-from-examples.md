@@ -56,5 +56,5 @@ All three answers follow the recommendation.
 
 ## More information
 
-- Applied in: `spec/execution-model.md` (EM-43, EM-45, EM-52, EM-66), `spec/reference.md` (§1, §2.5, §2.6, §4.6, §5.7, §8), `spec/conditions.md` (§2.4), `spec/syntax.md` (§1, §7.1, per-field table), `spec/shells.md` (SH-14), `spec/containers-and-privilege.md` (CP-16), `spec/glossary.md`, `schema/blokky.schema.json`.
+- Applied in: `spec/execution-model.md` (EM-43, EM-45, EM-52, EM-66), `spec/reference.md` (§1, §2.5, §2.6, §4.6, §5.7, §8), `spec/conditions.md` (§2.4), `spec/syntax.md` (§1, §7.1, per-field table), `spec/shells.md` (SH-14), `spec/containers.md` (CP-16), `spec/glossary.md`, `schema/blokky.schema.json`.
 - Tracker: T-0057; findings F-0008 to F-0010.

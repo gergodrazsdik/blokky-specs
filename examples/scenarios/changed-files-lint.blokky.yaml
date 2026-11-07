@@ -21,85 +21,84 @@ do:
     exec: [git, diff, --name-only, --diff-filter=ACMR, { var: RANGE }, --]
     capture: CHANGED
 
-  - if: { var: CHANGED, empty: true }
-    then:
-      - log: "No files changed since ${BASE}; nothing to lint"
-    else:
-      - name: choose how to run ruff
-        any:
-          - name: ruff on PATH
-            do:
-              - assert:
-                  probe:
-                    script: |
-                      command -v ruff
-                    shell: sh
-              - set: { PY_LINT: ruff }
-          - name: ruff through uvx
-            do:
-              - assert:
-                  probe:
-                    script: |
-                      command -v uvx
-                    shell: sh
-              - set: { PY_LINT: uvx }
-          - name: no Python linter
-            set: { PY_LINT: none }
+  - when: { var: CHANGED, empty: true }
+    return: "No files changed since ${BASE}; nothing to lint"
 
-      - name: lint and summarize
-        fail_fast: false    # the summary runs even when a file fails
+  - name: choose how to run ruff
+    any:
+      - name: ruff on PATH
+        do:
+          - assert:
+              probe:
+                script: |
+                  command -v ruff
+                shell: sh
+          - set: { PY_LINT: ruff }
+      - name: ruff through uvx
+        do:
+          - assert:
+              probe:
+                script: |
+                  command -v uvx
+                shell: sh
+          - set: { PY_LINT: uvx }
+      - name: no Python linter
+        set: { PY_LINT: none }
+
+  - name: lint and summarize
+    fail_fast: false    # the summary runs even when a file fails
+    do:
+      - name: lint ${FILE}
+        for:
+          lines: { var: CHANGED }
+          as: FILE
+          max_items: 500
+          concurrency: 4
+          fail_fast: false
+        collect: { TODOS: TODO_COUNTS }
         do:
           - name: lint ${FILE}
-            for:
-              lines: { var: CHANGED }
-              as: FILE
-              max_items: 500
-              concurrency: 4
-              fail_fast: false
-            collect: { TODOS: TODO_COUNTS }
+            when: { path: { var: FILE }, is_file: true }    # submodules show up as directories
+            fail_fast: false
             do:
-              - name: lint ${FILE}
-                when: { path: { var: FILE }, is_file: true }    # submodules show up as directories
-                fail_fast: false
-                do:
-                  - name: ruff ${FILE}
-                    when:
-                      all:
-                        - { var: FILE, matches: '\.py$' }
-                        - { var: PY_LINT, equals: ruff }
-                    exec: [ruff, check, --, { var: FILE }]
-                  - name: uvx ruff ${FILE}
-                    when:
-                      all:
-                        - { var: FILE, matches: '\.py$' }
-                        - { var: PY_LINT, equals: uvx }
-                    exec: [uvx, ruff, check, --, { var: FILE }]
-                  - when:
-                      all:
-                        - { var: FILE, matches: '\.py$' }
-                        - { var: PY_LINT, equals: none }
-                    log: "Neither ruff nor uvx is installed; ${FILE} isn't linted"
-                    level: warn
-                  - name: shellcheck ${FILE}
-                    when: { var: FILE, matches: '\.(sh|bash)$' }
-                    exec: [shellcheck, --, { var: FILE }]
-                  - name: yamllint ${FILE}
-                    when: { var: FILE, matches: '\.ya?ml$' }
-                    exec: [yamllint, --strict, --, { var: FILE }]
-                  - name: jq ${FILE}
-                    when: { var: FILE, matches: '\.json$' }
-                    exec: [jq, empty, { var: FILE }]
-                  - name: markdownlint ${FILE} (advisory)
-                    when: { var: FILE, matches: '\.(md|markdown)$', ignore_case: true }
-                    exec: [markdownlint-cli2, { var: FILE }]
-                    ignore_errors: true
-                  - name: count TODO markers in ${FILE}
-                    exec: [grep, -c, -e, TODO, --, { var: FILE }]
-                    ok_exit: [1]    # grep exits 1 when nothing matches; the count is then 0
-                    capture: TODOS
-                  - when: { var: TODOS, gt: 0 }
-                    log: "${FILE} has ${TODOS} TODO markers"
-                    level: warn
+              - name: ruff ${FILE}
+                when:
+                  all:
+                    - { var: FILE, matches: '\.py$' }
+                    - { var: PY_LINT, equals: ruff }
+                exec: [ruff, check, --, { var: FILE }]
+              - name: uvx ruff ${FILE}
+                when:
+                  all:
+                    - { var: FILE, matches: '\.py$' }
+                    - { var: PY_LINT, equals: uvx }
+                exec: [uvx, ruff, check, --, { var: FILE }]
+              - when:
+                  all:
+                    - { var: FILE, matches: '\.py$' }
+                    - { var: PY_LINT, equals: none }
+                log: "Neither ruff nor uvx is installed; ${FILE} isn't linted"
+                level: warn
+              - name: shellcheck ${FILE}
+                when: { var: FILE, matches: '\.(sh|bash)$' }
+                exec: [shellcheck, --, { var: FILE }]
+              - name: yamllint ${FILE}
+                when: { var: FILE, matches: '\.ya?ml$' }
+                exec: [yamllint, --strict, --, { var: FILE }]
+              - name: jq ${FILE}
+                when: { var: FILE, matches: '\.json$' }
+                exec: [jq, empty, { var: FILE }]
+              - name: markdownlint ${FILE} (advisory)
+                when: { var: FILE, matches: '\.(md|markdown)$', ignore_case: true }
+                exec: [markdownlint-cli2, { var: FILE }]
+                ignore_errors: true
+              - name: count TODO markers in ${FILE}
+                exec: [grep, -c, -e, TODO, --, { var: FILE }]
+                ok_exit: [1]    # grep exits 1 when nothing matches; the count is then 0
+                capture: TODOS
+              - when: { var: TODOS, gt: 0 }
+                log: "${FILE} has ${TODOS} TODO markers"
+                level: warn
 
-          - when: { var: TODO_COUNTS, defined: true }
-            log: "TODO markers per changed file: ${TODO_COUNTS}"
+      - when: { var: TODO_COUNTS, defined: true }
+        log: "TODO markers per changed file: ${TODO_COUNTS}"

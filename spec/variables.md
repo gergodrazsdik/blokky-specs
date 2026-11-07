@@ -27,11 +27,12 @@ This document is normative for plan variables: names, the kinds of bindings, pla
 | Field capture | `capture: { NAME: .path, … }` | a JSON field of stdout | §6 |
 | File capture | `capture_file: NAME` | the absolute path of a file holding stdout | §6 |
 | Loop item | `for: { …, as: NAME }` | the item | the loop body, per iteration |
-| Loop index | `<AS>_INDEX`, `MATRIX_INDEX` | the 0-based index | the loop body, per iteration |
+| Loop index | `<AS>_INDEX`, `MATRIX_INDEX`; `index: NAME` on `retry`, `while`, `until` | the 0-based index (or from `start`) | the loop body and the node's condition, per iteration or attempt |
+| Carried variable | `carry: { NAME: CAPTURE }` on `while`, `until` | `''` or `initial`, then the previous iteration's `CAPTURE` | the loop body and the node's condition, per iteration |
 | Matrix key | `for: { matrix: { KEY: [...] } }` | the combination's value | the loop body, per iteration |
 | Item field | `for: { items: …, fields: { NAME: .path } }` | a JSON field of the item | the loop body, per iteration |
 | Temp dir | `tempdir: { as: NAME }` | the directory's absolute path | the node's body |
-| Collected list | `collect: { CAPTURE: LIST }` | a JSON array of per-iteration values | like a capture of the `for` node |
+| Collected list | `collect: { CAPTURE: LIST }` on `for`, `while`, `until` | a JSON array of per-iteration values | like a capture of the loop node |
 
 ## 4. Plan inputs
 
@@ -136,13 +137,15 @@ Static views of a plan (for review, before a run) MAY accept a missing required 
 - **VA-30.** **`any` and `race`.** Only the deciding child's captures are bound. Different children MAY capture the same name (never an input's name).
 - **VA-31.** **Branches.** A name bound (by `set` or a capture) in **both** `then` and `else` of an `if`, or by **every** child of an `any` or `race`, is definitely bound after the node succeeds. Bound in only some branches or children, it is *possibly undefined* afterwards; using it without a `defined` check gets a static warning ([ADR 0015](../adr/0015-set-and-vars.md)).
 - **VA-32.** **Repetition on the node itself.** A capture on a node with `retry`, `while` or `until` is visible to that attempt's own condition (even if the attempt failed) and is **published** to the enclosing scope from the terminating attempt, only if the node succeeds.
-- **VA-33.** **Loop bodies.** Captures of nodes inside a `while`, `until` or `for` body are scoped to the iteration: later nodes in the same iteration see them, the next iteration's condition sees them (`while`, `until`), but they are never published outside the loop. The first `while` check sees only the enclosing scope; a `while` condition that reads a body capture without `defined` gets a lint warning.
-- **VA-34.** **`for` iterations never publish.** Values leave a `for` only through `collect`, ordered by item index, with `null` for failed or skipped iterations.
+- **VA-33.** **Loop bodies.** Captures of nodes inside a `while`, `until` or `for` body are scoped to the iteration: later nodes in the same iteration see them, the next iteration's condition sees them (`while`, `until`), but they are never published outside the loop. The next iteration's body sees a value of the previous one only through `carry` (VA-62). The first `while` check sees only the enclosing scope; a `while` condition that reads a body capture without `defined` gets a lint warning.
+- **VA-34.** **Loop iterations never publish.** Values leave a `for`, `while` or `until` body only through `collect`, in item or iteration order, with `null` for failed or skipped iterations.
 - **VA-54.** **Item fields.** `fields` binds its variables per iteration, like `as`, with the conversion of VA-23; they count as declarations for collision and shadowing checks.
-- **VA-55.** **`collect`.** The list variable is bound after the loop, in the `for` node's enclosing scope like a capture of the node, as a compact JSON array of strings with `null` entries. It is secret if the collected capture is secret.
+- **VA-55.** **`collect`.** The list variable is bound after the loop, in the loop node's enclosing scope like a capture of the node, as a compact JSON array of strings with `null` entries. It is secret if the collected capture is secret.
 - **VA-35.** **`finally`.** `finally` nodes see everything the body bound. Captures under `finally` are visible only to later nodes in the same `finally` list and their descendants; referencing one outside is a plan error ([ADR 0002](../adr/0002-language-core.md), Q-s).
 - **VA-36.** **Single assignment.** Binding a name that is already bound is a plan error: in an enclosing scope (shadowing, including loop variables, tempdir names, inputs and `vars`), or earlier in the same scope (two sequential siblings, or a `set` of a bound name). Alternatives (`if` branches, `any`/`race` children) may bind the same name, because only one of them runs to completion.
-- **VA-37.** **Own variables.** The modifiers outside repetition (`when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`, `container`, `become`, `services`) MUST NOT reference variables the node itself introduces (`as`, `tempdir.as`, its own captures). The error says "move it into the body".
+- **VA-37.** **Own variables.** The modifiers outside repetition (`when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`, `container`, `services`) MUST NOT reference variables the node itself introduces (`as`, `tempdir.as`, `index`, `carry`, its own captures). The error says "move it into the body".
+- **VA-62.** **`carry`.** `carry: { NAME: CAPTURE }` on a `while` or `until` node binds `NAME` at the start of every iteration: to `''` (or the long form's `initial`) in the first, and to the value `CAPTURE` had at the end of the previous iteration afterwards. `NAME` is bound once per iteration, so single assignment holds (VA-36); it is visible in the body and in the node's condition, never published, and secret if `CAPTURE` is. If the previous iteration didn't bind `CAPTURE` (its body failed under `on_body_failure: continue`, or a `return` came first), `NAME` keeps the value it had in that iteration, so a failed page is fetched again ([ADR 0017](../adr/0017-review-features.md)).
+- **VA-63.** **`index`.** `index: NAME` on a `retry`, `while` or `until` node binds the attempt or iteration number: 0 for the first, or `start` with `{ as: NAME, start: N }`. It is visible in the body and in the node's condition, and never published.
 - **VA-38.** Referencing a variable that isn't bound at that point is a condition error in conditions and a node error in display strings and references. Statically certain cases are plan errors; possible cases are warnings.
 
 ## 7. Environment

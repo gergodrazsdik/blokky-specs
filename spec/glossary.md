@@ -22,13 +22,13 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 ## Nodes
 
 - **Node.** One element of the plan tree. Every node has exactly one **kind** and any number of **modifiers**. See [reference.md](reference.md).
-- **Kind.** What a node does: `exec`, `script`, `do`, `all`, `any`, `race`, `if`, `sleep`, `log`, `fail`, `assert`, `set`.
+- **Kind.** What a node does: `exec`, `script`, `do`, `all`, `any`, `race`, `if`, `sleep`, `log`, `fail`, `assert`, `set`, `return`.
 - **Leaf.** A node that runs a process: an `exec` or `script` node. Probes and services also run processes but are not leaves.
 - **`exec` leaf.** Runs a program directly, without a shell, from an argv array (canonical) or a string split with POSIX shell-like rules and no expansion. See [shells.md](shells.md).
 - **`script` leaf.** Writes shell text to a script file owned by the run and runs it with the chosen shell. It compiles to an `exec` of that shell.
 - **Group.** A node whose kind runs child nodes: `do` (sequence), `all` (parallel, all must succeed), `any` (first success wins), `race` (first completion decides).
 - **Modifier.** A key that scopes, repeats, limits or labels a node, such as `when`, `timeout`, `cwd`, `env`, `finally`, `retry` or `capture`. Modifiers apply in a fixed order. See [execution-model.md](execution-model.md).
-- **Modifier order.** The normative nesting of modifiers, outermost to innermost: `when` → `timeout` → `lock` → `tempdir` → `cwd` → `env` → `container`/`become` → `services` → `finally` → repetition → `attempt_timeout` → kind.
+- **Modifier order.** The normative nesting of modifiers, outermost to innermost: `when` → `timeout` → `lock` → `tempdir` → `cwd` → `env` → `container` → `services` → `finally` → repetition → `attempt_timeout` → kind.
 - **Companion field.** A field that belongs to one kind or modifier, such as `then`/`else` for `if`, `shell` for `script`, or `concurrency` and `fail_fast` for `all`.
 - **Body field.** A field that holds a list of nodes: `do`, `then`, `else`, `finally`, `all`, `any`, `race`. Body fields take lists only.
 - **Path id.** The stable identifier of a node, built from its position in the tree: the root is `/`, and a node in a body field adds `/<field>/<index>` (`/do/2/all/0`, `/then/1`, `/finally/0`). See [reference.md §1](reference.md#1-node-anatomy). Run results and errors use it; `name` values need not be unique.
@@ -44,7 +44,7 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 
 ## Variables, inputs and secrets
 
-- **Plan variable.** A named value bound by the plan: an input, a plan constant (`vars`), a `set` variable, a capture, a loop variable (`as`, `<AS>_INDEX`, `fields`) or a tempdir path (`tempdir.as`). Every variable is bound once. Names match `^[A-Z][A-Z0-9_]*$`; the `BLOKKY_` prefix is reserved. See [variables.md](variables.md).
+- **Plan variable.** A named value bound by the plan: an input, a plan constant (`vars`), a `set` variable, a capture, a loop variable (`as`, `<AS>_INDEX`, `fields`, `index`, `carry`) or a tempdir path (`tempdir.as`). Every variable is bound once. Names match `^[A-Z][A-Z0-9_]*$`; the `BLOKKY_` prefix is reserved. See [variables.md](variables.md).
 - **Environment variable.** A process environment entry. Plan variables and environment variables are separate namespaces.
 - **Explicit mapping.** The only ways a plan variable reaches a command: `env:` (`env: { RUN: { var: RUN_ID } }`), `export: [NAME]`, or a whole `{ var: X }` element of an `exec` array.
 - **Reference.** A whole-value form that stands for a value: `{ var: X }` (a plan variable) or `{ from_env: NAME }` (an environment variable). There is no string concatenation.
@@ -65,7 +65,10 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 - **`outputs`.** The root key that names the variables a plan publishes in its run result.
 - **Secret.** A value marked as sensitive: from `{ from_env: NAME, secret: true }`, a `var` reference to a secret, or a capture with `secret: true`. Secrets come only by reference, never as inputs or literals.
 - **Masking.** Replacing secret values with `***` in everything an implementation shows, keeps or passes on about a run. Masking is hygiene, not secrecy.
-- **`collect`**. Gathers one captured value per `for` iteration into a list variable, ordered by item index.
+- **`collect`**. Gathers one captured value per iteration of a `for`, `while` or `until` into a list variable, in iteration order.
+- **`carry`.** A `while`/`until` field that passes a capture from one iteration to the next: the carried variable is bound once per iteration, to `''` (or `initial`) first and then to the previous iteration's value. It is how a loop follows a cursor.
+- **`index`.** A `retry`/`while`/`until` field that binds the attempt or iteration number to a named variable.
+- **`return`.** A node kind that ends the nearest enclosing sequence successfully; the remaining nodes are `skipped` (`returned`). See [reference.md §2.13](reference.md#213-return).
 
 ## Conditions
 
@@ -88,16 +91,16 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 - **Cancellation.** Stopping nodes early because a sibling failed (`fail_fast`), an `any` or `race` was decided, a limit fired, or the run is stopped from outside. Cancelled processes get the graceful signal, then the forced kill.
 - **External stop.** The implementation stopping a whole run from outside the plan (for example a run budget or an interrupt): running nodes are cancelled, `finally` runs as time allows, and the run's status is `stopped` ([execution-model.md §7](execution-model.md#7-external-stops)).
 - **Process tree kill.** Stopping a leaf together with everything it started.
-- **Descendants.** Processes a leaf started. By default the leaf's remaining process tree is stopped when the leaf completes; `keep_descendants: true` opts out. Every descendant dies no later than run end.
+- **Descendants.** Processes a leaf started. By default the leaf's remaining process tree is stopped when the leaf completes; `keep_descendants: true` keeps it until the run ends, and `detach` leaves it running after the run (a daemon).
 - **Invocation.** The exact command line run for a leaf, including the shell flags and prologue for `script` leaves. It is determined statically ([shells.md](shells.md)).
-- **Shell.** A program that runs `script` leaves: `bash`, `sh`, `pwsh`, `powershell`, `zsh`, `fish`. `cmd` is not supported.
+- **Shell.** A program that runs `script` leaves: `bash`, `sh`, `pwsh`, `powershell`, `zsh`. `cmd` and `fish` are not supported.
 - **Prologue.** Setup applied to every script of a shell, part of the invocation: `-o pipefail` for bash, `$ErrorActionPreference = 'Stop'` for PowerShell, none for `sh`.
 
 ## Runs and results
 
 - **Run result.** The abstract outcome of a run: its status, inputs, outputs, errors and one result per node in plan order. Conformance cases assert on it; implementations serialize it (for blokky-cli: the JSON run report). See [results.md](results.md).
 - **Run-owned files.** Files a run creates for itself: script files, capture files and tempdirs. They are readable only by the run's user, outlive the run, and are removed by the implementation when asked (for blokky-cli: `blokky clean`).
-- **`tempdir`.** A run-owned temporary directory created for a node (0700, unpredictable name). It always becomes the node's cwd.
+- **`tempdir`.** A run-owned temporary directory created for a node (0700, unpredictable name). It always becomes the node's cwd; `remove` deletes it at node end.
 - **`killed_by`.** Why a run stopped a leaf: `timeout`, `attempt_timeout`, `cancel`, or the cause of an external stop.
 - **Error code.** The machine-readable code of an error. Built-in codes start with `BK_` (see [errors.md](errors.md)); user codes (from `fail` and `assert`) match `^[A-Z][A-Z0-9_]*$` and must not start with `BK_`.
 
@@ -109,14 +112,12 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 - **Hygiene vs control.** Hygiene (warnings, masking, display sanitization) makes plans cleaner and more reviewable. Controls (the runner's permission system and the implementation's approval mechanisms) decide what may run. The spec never presents hygiene as a control.
 - **Implementation terms.** The report, event log, `leaves` document, hook, validator, approval records, run budget, configuration and lint rules belong to the implementation, not the language; for blokky-cli see [`docs/contracts/`](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/contracts/) and its configuration docs.
 
-## Containers, privilege and locks
+## Containers, services and locks
 
-- **`container`.** A modifier that runs a node's leaves in an ephemeral container started for the node and stopped afterwards. By default the cwd is mounted read-write at the same path. See [containers-and-privilege.md](containers-and-privilege.md).
+- **`container`.** A modifier that runs a node's leaves in an ephemeral container started for the node and stopped afterwards. By default the cwd is mounted read-write at the same path. See [containers.md](containers.md).
 - **Mount.** A host path made visible in a container: `{ host, path, read_only }`.
-- **`become`.** A modifier that runs a node's leaves as another user, through `sudo -n` or `doas -n`, or by dropping privileges when the run has root privileges.
-- **`invoker`.** A special `become` value: the user who invoked sudo or doas (from `SUDO_UID` or the doas equivalent), or the current user when not elevated.
 - **`lock`.** A named, exclusive lock a node holds while it runs, shared by all runs of the same user on the machine. Locks don't nest. See [reference.md §4.4](reference.md#44-lock).
-- **`services`.** Background processes started before a node (in parallel, honouring `depends_on`), each checked with a required `ready:` condition, and stopped (whole tree, reverse dependency order) after it. See [reference.md §4.10](reference.md#410-services).
+- **`services`.** Background processes started before a node (one at a time, in list order, each ready before the next), each checked with a required `ready:` condition, and stopped (whole tree, reverse order) after it. See [reference.md §4.9](reference.md#49-services).
 - **`fields`.** A `for: { items }` option that binds variables from each JSON item per iteration.
 
 ## Project

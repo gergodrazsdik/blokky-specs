@@ -47,9 +47,9 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 
 ### 2.3 `port` and `output` (services)
 
-- **CO-42.** `{ port: N, open: true }` is true when a TCP connection to port N succeeds on `127.0.0.1` or `::1`; the connection is closed at once. Nothing else is sent. Ports on other hosts can't be checked.
+- **CO-42.** `{ port: N, open: true }` is true when a TCP connection to port N succeeds on `127.0.0.1` or `::1`; the connection is closed at once. Nothing else is sent. Ports on other hosts can't be checked. A port a container engine publishes is often open before the service inside is ready (the engine's proxy accepts the connection), so for a containerized service a probe such as `pg_isready` is the better readiness check.
 - **CO-43.** `output: stdout` or `stderr` is everything the service has written to that stream so far (decoded as UTF-8, trailing CR/LF removed, at most `max_capture_bytes`, the latest output kept). It is tested with `contains` or `matches`.
-- **CO-44.** Both subjects are valid only in a service's `ready:` condition, where they refer to that service ([reference.md §4.10](reference.md#410-services)).
+- **CO-44.** Both subjects are valid only in a service's `ready:` condition, where they refer to that service ([reference.md §4.9](reference.md#49-services)).
 
 ### 2.4 `command`
 
@@ -153,13 +153,13 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 | `when` | once, before the node | the **parent's** scope |
 | `if` | once | the node's own scope |
 | `assert` | once | the node's own scope |
-| `while` | before each iteration | the node's own scope; the first check sees only the enclosing bindings |
-| `until` | after each successful iteration | the node's own scope, plus the iteration's captures |
-| `retry: <condition>` | after each failed attempt | the node's own scope, plus the attempt's captures and `result:` |
+| `while` | before each iteration | the node's own scope, plus `index` and `carry` variables; the first check sees only the enclosing bindings and those |
+| `until` | after each successful iteration | the node's own scope, plus the iteration's captures and its `index` and `carry` variables |
+| `retry: <condition>` | after each failed attempt | the node's own scope, plus the attempt's captures, its `index` and `result:` |
 | `ready` | polled until true | the service's scope |
 
-- **CO-36.** "The node's own scope" means after the node's `tempdir`, `cwd`, `env`, `container` and `become` apply ([execution-model.md](execution-model.md), EM-8).
-- **CO-37.** Implementations SHOULD warn about a `when` that uses a relative `path:` or a probe on a node that sets `cwd`, `container` or `become`, because those apply only inside the node.
+- **CO-36.** "The node's own scope" means after the node's `tempdir`, `cwd`, `env` and `container` apply ([execution-model.md](execution-model.md), EM-8).
+- **CO-37.** Implementations SHOULD warn about a `when` that uses a relative `path:` or a probe on a node that sets `cwd` or `container`, because those apply only inside the node.
 
 ## 7. Condition errors
 
@@ -181,4 +181,4 @@ A condition error makes a condition **neither true nor false**. The node that ow
 
 ## 8. Out of scope
 
-Conditions don't do arithmetic, string manipulation, templating, semver comparison or HTTP checks, and there is no "end the plan successfully" construct. A check that needs more than a subject and an operator is a probe.
+Conditions don't do arithmetic, string manipulation, templating, semver comparison or HTTP checks, and they don't end anything early: ending a sequence successfully is the `return` node's job ([reference.md §2.13](reference.md#213-return)). A check that needs more than a subject and an operator is a probe.

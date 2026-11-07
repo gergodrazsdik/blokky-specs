@@ -19,7 +19,7 @@ A run goes through two phases:
 
 **EM-4.** Modifiers apply in this order, outermost first:
 
-`when` → `timeout` → `lock` → `tempdir` → `cwd` → `env` → `container`/`become` → `services` → `finally` → repetition (`retry` | `while` | `until` | `for`) → `attempt_timeout` → kind (including `capture`).
+`when` → `timeout` → `lock` → `tempdir` → `cwd` → `env` → `container` → `services` → `finally` → repetition (`retry` | `while` | `until` | `for`) → `attempt_timeout` → kind (including `capture`).
 
 Entering a node means applying each layer in this order; leaving it unwinds them in reverse.
 
@@ -28,9 +28,9 @@ Entering a node means applying each layer in this order; leaving it unwinds them
 | `when` | Evaluate the condition in the **parent's** scope. False: the node is `skipped` and nothing below happens. | — |
 | `timeout` | Start the node's total timer. | Stop the timer. |
 | `lock` | Acquire the lock, waiting at most `wait`. | Release the lock. |
-| `tempdir` | Create the directory; it becomes the cwd. | Keep the directory (it isn't deleted). |
+| `tempdir` | Create the directory; it becomes the cwd. | Keep the directory, unless `remove` says to delete it. |
 | `cwd`, `env` | Set the scope for everything inside. | — |
-| `container`/`become` | Start the container / select the user. | Stop the container. |
+| `container` | Start the container. | Stop the container. |
 | `services` | Start services and wait until ready. | Stop services (whole tree). |
 | `finally` | — | Run the `finally` list once. |
 | repetition | Run attempts or iterations. | — |
@@ -40,20 +40,21 @@ Entering a node means applying each layer in this order; leaving it unwinds them
 - **EM-5.** A node skipped by `when` takes no lock, creates no tempdir, starts no container or service, and runs no `finally`.
 - **EM-6.** `timeout` covers everything from lock wait to the end of the last attempt, but not `finally`.
 - **EM-7.** `finally` runs once per node, inside the node's tempdir, cwd, env, container and services, under its own `finally_timeout`, even after `timeout` fired.
-- **EM-8.** Probes in `if`, `while`, `until` and `retry` conditions run in the node's own scope (after `cwd`, `env`, `container`, `become`); `when` probes run in the parent's scope.
+- **EM-8.** Probes in `if`, `while`, `until` and `retry` conditions run in the node's own scope (after `cwd`, `env`, `container`); `when` probes run in the parent's scope.
 
 ### 2.1 Locks and services
 
 - **EM-60.** A `lock` is acquired after the node's `timeout` starts and before anything else in the node; waiting counts against `timeout`. It is held until the node ends (after `finally`) and released when the run's process dies.
-- **EM-61.** `services` start after `container`/`become` and before `finally` and the body. They start in parallel, in list order, except that a service with `depends_on` starts only once the services it names are ready. The body starts when every service is ready.
+- **EM-61.** `services` start after `container` and before `finally` and the body. They start one at a time, in list order, each after the previous one is ready. The body starts when every service is ready.
 - **EM-62.** Readiness is polled every 250ms until the `ready:` condition holds, for at most `ready_timeout` (default 30s), within the node's `timeout`.
 - **EM-63.** If a service exits before it is ready or isn't ready in time, the services already started are stopped and the node fails (`BK_SERVICE_EXITED`, `BK_SERVICE_NOT_READY`). The body and the node's `finally` don't run, because `finally` sits inside `services` in the modifier order.
-- **EM-64.** If a ready service with `on_exit: fail` exits on its own, the body is cancelled (§6) and the node fails with `BK_SERVICE_EXITED`; `finally` still runs, with the remaining services. With `on_exit: ignore`, the exit is recorded and nothing else happens.
-- **EM-65.** After `finally`, services are stopped in reverse dependency order, each as a whole process tree (graceful, then forced, EM-26). An exit caused by stopping is not a failure.
+- **EM-64.** If a ready service with `on_exit: fail` exits on its own, the body is cancelled (§6) and the node fails with `BK_SERVICE_EXITED`; `finally` still runs, with the remaining services. With `on_exit: ignore`, the exit is recorded and nothing else happens. A service that exits after the body ended (during `finally`) is recorded and is not a failure.
+- **EM-65.** After `finally`, services are stopped in reverse list order, each as a whole process tree (graceful, then forced, EM-26). An exit caused by stopping is not a failure.
 
 ## 3. Start order and concurrency
 
 - **EM-9.** Children of `do` start one at a time, in declaration order.
+- **EM-67.** A `return` ends its nearest enclosing sequence (a `do` list, a loop body or a `finally` list; `then` and `else` are transparent): its remaining nodes don't start and are `skipped` with `skip_reason: returned`, and the node that owns the sequence completes normally, including its `finally` ([reference.md §2.13](reference.md#213-return)).
 - **EM-10.** Children of `all` and `any` and iterations of `for` start **in declaration (item) order**. With a concurrency limit N, at most N run at once, and the next one starts as soon as a slot frees, still in order.
 - **EM-11.** An implementation MAY cap the effective concurrency of a node below its `concurrency` (or its default), for example to protect the machine (for blokky-cli: `max_concurrency`, default 16). A cap reduces parallelism only; it never changes start order, statuses or results.
 - **EM-12.** `race` starts all children immediately, in declaration order.
@@ -78,8 +79,8 @@ Entering a node means applying each layer in this order; leaving it unwinds them
 ### 4.3 Completion
 
 - **EM-20.** A leaf **completes when its direct child process exits**. Output its descendants write after that is read for a bounded, implementation-defined time (for blokky-cli: `drain_timeout`, default 2s); if a descendant still holds the output open, the run result notes it.
-- **EM-21.** At completion, the leaf's remaining process tree is stopped (graceful, then forced), unless the leaf sets `keep_descendants: true`.
-- **EM-22.** Every descendant of every leaf is stopped no later than the end of the run, including when the run is stopped from outside (§7). Processes that deliberately escape (double-fork daemons, Windows breakaway) are handled on a best-effort basis. *Provisional — verify in spike #1*, including when the implementation itself is killed.
+- **EM-21.** At completion, the leaf's remaining process tree is stopped (graceful, then forced), unless the leaf sets `keep_descendants: true` or `detach`.
+- **EM-22.** Every descendant of every leaf is stopped no later than the end of the run, except those of a leaf with `keep_descendants: detach`, which the run never stops and lists in the run result, including when the run is stopped from outside (§7). Processes that deliberately escape (double-fork daemons, Windows breakaway) are handled on a best-effort basis. *Provisional — verify in spike #1*, including when the implementation itself is killed.
 - **EM-23.** The leaf succeeds if its exit code is 0 or listed in `ok_exit`. A leaf killed by a signal (Unix) fails. The run result gives the exit code (an unsigned 32-bit value on Windows), the signal, and, if the run stopped the leaf, why (`killed_by`).
 - **EM-24.** Captures are evaluated after completion and bound only if the leaf succeeded ([variables.md](variables.md)).
 
@@ -136,7 +137,7 @@ An implementation can stop a whole run from outside the plan, for example when a
 |---|---|
 | `succeeded` | The node finished without failing. |
 | `failed` | The node failed. With `ignore_errors: true` it also carries `ignored: true`. |
-| `skipped` | The node didn't start: its `when` was false (`skip_reason: condition`), or it was never reached because its parent ended early (`skip_reason: not_reached`). |
+| `skipped` | The node didn't start: its `when` was false (`skip_reason: condition`), it was never reached because its parent ended early (`skip_reason: not_reached`), or a `return` ended its sequence before it (`skip_reason: returned`). |
 | `timed_out` | The node's **own** `timeout` or `attempt_timeout` fired. |
 | `cancelled` | The node was running and was stopped from outside (§6, §7). |
 

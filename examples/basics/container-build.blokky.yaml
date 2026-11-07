@@ -1,12 +1,16 @@
 # Building in a container
 # `container` runs the node's leaves in an ephemeral container; by default the
-# cwd is mounted read-write at the same path. Containers are not a sandbox.
-# Needs Docker or Podman; on a rootful engine, files written may be owned by root.
+# cwd is mounted read-write at the same path, and Blokky maps your user into the
+# container where the engine allows it, so build output stays yours. `env_pass`
+# passes host environment variables in (here a private NuGet feed token, if set).
+# The image needs sh, sleep and kill. Containers are not a sandbox.
+# Needs Docker or Podman.
 # Run: blokky run examples/basics/container-build.blokky.yaml
 blokky: 1.0
 name: build and test in the .NET SDK image
 container:
   image: mcr.microsoft.com/dotnet/sdk:10.0
+  env_pass: [NUGET_AUTH_TOKEN]
 timeout: 20m
 do:
   - exec: [dotnet, build, -c, Release]

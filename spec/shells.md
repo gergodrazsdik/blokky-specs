@@ -34,7 +34,7 @@ This document is normative for how leaves become processes: splitting `exec` str
 
 ### 2.1 Script file
 
-- **SH-11.** The script text is written to a file owned by the run (readable only by the run's user) before the leaf starts. Its name is derived from the node's path id, never from `name`. The extension is `.sh` for `bash` and `sh`, `.zsh` for `zsh`, `.fish` for `fish`, and `.ps1` for `pwsh` and `powershell`.
+- **SH-11.** The script text is written to a file owned by the run (readable only by the run's user) before the leaf starts. Its name is derived from the node's path id, never from `name`. The extension is `.sh` for `bash` and `sh`, `.zsh` for `zsh`, and `.ps1` for `pwsh` and `powershell`.
 - **SH-12.** The file holds the text as written (YAML block scalars give LF line endings), encoded as UTF-8 without a BOM, except for `powershell` (Windows PowerShell 5.1), which gets a UTF-8 BOM so it reads non-ASCII text correctly.
 - **SH-13.** The file is passed to the shell **as a file**, never with `-c`: there are no command-line length limits, no quoting layer, and the exact script stays inspectable until `clean`. Consequences: `$0` (POSIX) and `$PSCommandPath` (PowerShell) are the script file's path, and shell error messages name that file.
 - **SH-14.** Blokky never interpolates `${…}` in script text; `${…}` there is the shell's own syntax and reaches the shell unchanged. Plan variables reach the script only through `env:` and `export:` as environment variables.
@@ -50,13 +50,12 @@ This document is normative for how leaves become processes: splitting `exec` str
 | `pwsh` | `<pwsh> -NoProfile -NonInteractive -File <file>` | prologue `$ErrorActionPreference = 'Stop'` |
 | `powershell` | `<powershell> -NoProfile -NonInteractive -ExecutionPolicy Bypass -File <file>` | prologue `$ErrorActionPreference = 'Stop'` |
 | `zsh` | `<zsh> --no-rcs -o pipefail <file>` | `pipefail`; no `-e`, no `-u` |
-| `fish` | `<fish> --no-config <file>` | none (failures are visible through `$status` and `$pipestatus`) |
 
 `<bash>` etc. are absolute paths (§4).
 
 - **SH-15.** `sh` gets no options: common `/bin/sh` implementations (dash) reject `--noprofile`/`--norc`, and a non-interactive `sh` reads no startup file once `ENV` is cleared.
 - **SH-16.** In bash, `pipefail` is set with the `-o pipefail` option, so the script text is unchanged and line numbers match the plan. A failing command in the middle of a bash or sh script doesn't stop it; the script's exit status is the leaf's.
-- **SH-33.** `zsh` and `fish` are Unix-only and used only when named (`shell:` or `defaults.shell`); detection never picks them. `zsh --no-rcs` still reads `/etc/zshenv`, which zsh can't skip; `fish --no-config` reads no configuration ([ADR 0014](../adr/0014-remaining-features.md)).
+- **SH-33.** `zsh` is Unix-only and used only when named (`shell:` or `defaults.shell`); detection never picks it. `zsh --no-rcs` still reads `/etc/zshenv`, which zsh can't skip ([ADR 0014](../adr/0014-remaining-features.md)). `fish` isn't supported ([ADR 0017](../adr/0017-review-features.md)).
 - **SH-17.** **PowerShell prologue.** Blokky inserts `$ErrorActionPreference = 'Stop';` (followed by a space) at the start of the first line of the script that isn't blank, a comment, or a `using` statement. The prologue shares that line, so line numbers in error messages stay exact ([ADR 0011](../adr/0011-pwsh-prologue.md)). A `param(` block at that position is a plan error (plan scripts receive no arguments). With the prologue, a cmdlet error ends the script with exit code 1 instead of being written to stderr while the script exits 0.
 - **SH-18.** `$PSNativeCommandUseErrorActionPreference` is not set: a failing native program doesn't stop a PowerShell script, matching "no `-e`" in bash.
 - **SH-19.** The exact invocation, including the prologue, is determined statically, so implementations can show it before a run.
@@ -89,7 +88,6 @@ This document is normative for how leaves become processes: splitting `exec` str
 | `pwsh` | ✓ | ✓ | ✓ |
 | `powershell` | — | — | ✓ |
 | `zsh` | ✓ | ✓ | — |
-| `fish` | ✓ | ✓ | — |
 | `cmd` | not supported | | |
 
 `cmd` is not supported on any OS: cmd.exe expands `%X%` textually before parsing every command, so passing values through the environment would degrade to text substitution.

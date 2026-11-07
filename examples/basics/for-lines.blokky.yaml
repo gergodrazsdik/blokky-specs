@@ -1,7 +1,8 @@
 # for lines
 # `for: { lines }` runs the body once per line of a variable; blank lines are
-# dropped. Deletes local branches already merged into main (git branch -d
-# refuses unmerged ones). Run inside a git repository.
+# dropped unless `keep_blank: true`. Deletes local branches already merged into
+# main (git branch -d refuses unmerged ones), then shows the latest release's
+# notes with their paragraph breaks. Run inside a GitHub clone with gh.
 # Run: blokky run examples/basics/for-lines.blokky.yaml
 blokky: 1.0
 do:
@@ -12,3 +13,7 @@ do:
     do:
       - when: { var: BRANCH, not_equals: main }
         exec: [git, branch, -d, { var: BRANCH }]
+  - exec: [gh, release, view, --json, body, --jq, .body]
+    capture: NOTES
+  - for: { lines: { var: NOTES }, as: LINE, keep_blank: true }
+    log: "${LINE}"

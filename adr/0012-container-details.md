@@ -1,8 +1,8 @@
 # 0012: Container mount path on Windows and default user (draft round 6)
 
-- Status: accepted
+- Status: accepted; the `container.user` decisions are superseded by [ADR 0017](0017-review-features.md)
 - Date: 2026-11-05
-- Questions: none from the brief's §4 list; left open by ADR 0005 and raised while drafting `spec/containers-and-privilege.md` (T-0021)
+- Questions: none from the brief's §4 list; left open by ADR 0005 and raised while drafting `spec/containers.md` (T-0021)
 
 ## Context and problem statement
 
@@ -30,5 +30,5 @@ Both answers follow the recommendation.
 
 ## More information
 
-- Applied in: `spec/containers-and-privilege.md` CP-10, CP-17.
+- Applied in: `spec/containers.md` CP-10, CP-17.
 - Tracker: T-0021.

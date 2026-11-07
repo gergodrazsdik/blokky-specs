@@ -10,7 +10,7 @@ Other files define the details this reference points to:
 - [variables.md](variables.md): names, scopes, captures, inputs, outputs, secrets;
 - [conditions.md](conditions.md): subjects, operators, composites, probes, condition errors;
 - [shells.md](shells.md): `exec` splitting, the shell invocation table, executable resolution;
-- [containers-and-privilege.md](containers-and-privilege.md): `container` and `become`;
+- [containers.md](containers.md): `container`;
 - [errors.md](errors.md): the `BK_` code catalogue.
 
 Every feature described here belongs to the language 1.0. An implementation that doesn't support a feature yet rejects every plan that uses it with `BK_PLAN_NOT_SUPPORTED` before anything runs ([errors.md](errors.md)).
@@ -37,7 +37,7 @@ A node is a YAML mapping with:
 
 **Path ids.** Every node has a path id derived from its position: the root is `/`; a node in a body field is its parent's id plus `/<field>/<index>` (0-based), for example `/do/2`, `/do/2/all/0`, `/do/3/then/1`, `/finally/0`. Nodes inside loop bodies keep their plan path id; the run result tells iterations apart by their index ([results.md](results.md)).
 
-Modifiers apply in a fixed order, outermost first: `when` → `timeout` → `lock` → `tempdir` → `cwd` → `env` → `container`/`become` → `services` → `finally` → repetition → `attempt_timeout` → kind ([execution-model.md](execution-model.md)).
+Modifiers apply in a fixed order, outermost first: `when` → `timeout` → `lock` → `tempdir` → `cwd` → `env` → `container` → `services` → `finally` → repetition → `attempt_timeout` → kind ([execution-model.md](execution-model.md)).
 
 ## 2. Node kinds
 
@@ -55,6 +55,7 @@ Modifiers apply in a fixed order, outermost first: `when` → `timeout` → `loc
 | `fail` | Fail with a message and code. |
 | `assert` | Fail unless a condition holds. |
 | `set` | Bind variables. |
+| `return` | End the enclosing sequence early, successfully. |
 
 ### 2.1 `exec`
 
@@ -78,7 +79,7 @@ Runs shell text with a shell.
 ```
 
 - The text is written to a script file (readable only by the run's user) and passed to the shell as a file, with the invocation and prologue from [shells.md](shells.md) (bash: `-o pipefail`; PowerShell: `$ErrorActionPreference = 'Stop'`; sh: none).
-- **Companion `shell`:** `bash`, `sh`, `pwsh`, `powershell`, `zsh`, `fish`. Without `shell`, the shell comes from `defaults.shell`, then the implementation's configuration, then detection (bash → sh on Unix, pwsh → powershell on Windows).
+- **Companion `shell`:** `bash`, `sh`, `pwsh`, `powershell`, `zsh`. Without `shell`, the shell comes from `defaults.shell`, then the implementation's configuration, then detection (bash → sh on Unix, pwsh → powershell on Windows).
 - A reached `script` whose shell isn't supported on the current OS fails the node; statically false `host:` branches are pruned first.
 - The text is executed as written; it never interpolates `${…}`. Plan variables reach it only through `env:` and `export:`.
 - Success: exit 0 or a code in `ok_exit`.
@@ -196,6 +197,28 @@ Starts all children at once, in declaration order; the **first child to complete
 - An undefined variable in a template or reference fails the node (`BK_UNDEFINED_VARIABLE`; `BK_FROM_ENV_UNSET` for `from_env`). A value built from any secret part is secret.
 - **Scope:** like a capture. Variables are single-assignment: setting a bound name is an error, and a name bound in every branch of an `if` is defined after it ([variables.md §6](variables.md#6-scope-and-binding), [ADR 0015](../adr/0015-set-and-vars.md)).
 
+### 2.13 `return`
+
+```yaml
+do:
+  - exec: [git, diff, --name-only, origin/main...HEAD]
+    capture: CHANGED
+  - when: { var: CHANGED, empty: true }
+    return: "Nothing changed; nothing to lint"
+  - name: lint ${CHANGED}
+    exec: [./lint.sh]
+```
+
+`return: "message"` ends the **nearest enclosing sequence** successfully ([ADR 0017](../adr/0017-review-features.md)):
+
+- **The sequence** is the nearest enclosing `do` list: the root's or a `do` node's, the body of a loop (where `return` ends the current iteration, like `continue`, and the loop goes on), or a `finally` list. `then` and `else` are transparent: a `return` in a branch ends the sequence that contains the `if`.
+- The `return` node succeeds, and the sequence's remaining nodes are `skipped` with skip reason `returned`. The sequence's node then completes normally: its `finally` runs, and a loop goes on to its next iteration or condition check.
+- The message is a display string, recorded like a `log` message.
+- A `return` whose nearest sequence would be reached through an `all`, `any` or `race` is a plan error: those groups have no order to end early.
+- A `return` without `when` that isn't inside a `then` or `else` gets a warning, because the nodes after it never run.
+- There is no `break`: a loop ends through its own condition, `max` or source.
+- Only `name` and `when` are valid on it (§7).
+
 ## 3. Leaf options
 
 Leaf options are node-level siblings of `exec` or `script`; on any other kind they are plan errors. A mapping given as the value of `exec:` or `script:` (`exec: { cmd: …, timeout: 5m }`) is a plan error whose fix-it moves the options to the node.
@@ -206,8 +229,7 @@ Leaf options are node-level siblings of `exec` or `script`; on any other kind th
 | `ok_exit` | none | Extra exit codes that count as success. |
 | `stderr` | separate | `merge` sends stderr into the stdout stream. |
 | `encoding` | `utf-8` | How output is decoded for tails, captures and conditions. |
-| `max_log_bytes` | implementation-defined | Cap on how much of this leaf's output the implementation keeps. |
-| `keep_descendants` | `false` | Don't kill the leaf's remaining processes at leaf completion. |
+| `keep_descendants` | `false` | Don't kill the leaf's remaining processes at leaf completion (`true`), or at all (`detach`). |
 | `capture` | — | Bind stdout (or JSON fields of it) to variables. |
 | `capture_file` | — | Write stdout to a runtime-owned file and bind its path. |
 | `secret` | `false` | Mark all captures of this node as secret. |
@@ -216,8 +238,8 @@ Leaf options are node-level siblings of `exec` or `script`; on any other kind th
 - **`ok_exit`.** A list of integers; exit 0 always succeeds. On Windows, exit codes are unsigned 32-bit values.
 - **`stderr: merge`.** Both streams go to one pipe, so their interleaving is kept; captures and `result: stdout` then include stderr text.
 - **`encoding`.** `utf-8`, `utf-16le`, `utf-16be` or `latin1`. Invalid sequences become U+FFFD wherever output is shown as text; captures treat them as errors ([variables.md](variables.md)).
-- **`max_log_bytes`.** A size; past it, the implementation stops keeping the leaf's output (with a truncation marker), and the leaf keeps running. It never limits what a capture or `result:` condition sees beyond their own limits.
-- **`keep_descendants: true`.** By default, when the leaf's direct child exits, its remaining process group, session or job is killed. With `true` they keep running. Every descendant still dies no later than run end.
+- **`keep_descendants`.** By default, when the leaf's direct child exits, its remaining process group, session or job is killed. With `true` they keep running until the run ends. With `detach` they are never stopped by the run, not even at its end: the way to start a daemon, like `nohup x &` in bash. Static views show `detach`, and the run result lists the processes left running (EM-22, [ADR 0017](../adr/0017-review-features.md)).
+- How much of a leaf's output an implementation keeps is its own configuration, not part of the plan.
 - **`capture`, `capture_file`, `secret`.** `capture: NAME` binds stdout with trailing CR/LF removed; `capture: { NUM: .number, STATE: .state }` binds JSON fields of stdout; `capture_file: NAME` binds the path of a file holding stdout. Over `max_capture_bytes` (1 MiB) or containing a NUL byte, a capture fails the node; it never truncates. Captures are bound only if the node succeeds. Binding and scope: [variables.md](variables.md).
 
 ## 4. Modifiers
@@ -233,7 +255,6 @@ Leaf options are node-level siblings of `exec` or `script`; on any other kind th
 | `env` | see §7 | Scoped environment variables. |
 | `export` | see §7 | Export plan variables as environment variables. |
 | `container` | see §7 | Run leaves in an ephemeral container. |
-| `become` | see §7 | Run leaves as another user. |
 | `services` | see §7 | Background processes around the node. |
 | `finally` | all but `sleep`, `log`, `fail`, `set` | Cleanup nodes, run once per node. |
 | `ignore_errors` | all but `sleep`, `log`, `fail`, `set` | The node's failure doesn't fail its parent. |
@@ -246,7 +267,7 @@ A display string, rendered per attempt or iteration (`name: build ${PROJ}`). The
 
 ### 4.2 `when`
 
-A guard condition, evaluated **once, before anything else, in the parent's scope**. If it is false, the node is `skipped`: it takes no lock, creates no tempdir, starts nothing and runs no `finally`. A condition error fails the node. A `when` that uses relative paths or probes on a node that sets `cwd`, `container` or `become` gets the `when-scope` lint warning, because those apply only inside the node.
+A guard condition, evaluated **once, before anything else, in the parent's scope**. If it is false, the node is `skipped`: it takes no lock, creates no tempdir, starts nothing and runs no `finally`. A condition error fails the node. A `when` that uses relative paths or probes on a node that sets `cwd` or `container` gets the `when-scope` lint warning, because those apply only inside the node.
 
 ### 4.3 `timeout`
 
@@ -272,12 +293,12 @@ There is no implicit `timeout` on groups or the root; `defaults.leaf_timeout` se
 
 ### 4.5 `tempdir`
 
-`tempdir: true` or `tempdir: { as: WORK, prefix: build }`.
+`tempdir: true` or `tempdir: { as: WORK, prefix: build, remove: on_success }`.
 
 - Creates a fresh directory (mode 0700, unpredictable name, optional `prefix`) under the per-user temp root, **once per node** (not per attempt; nest `retry` inside to get a fresh dir per attempt).
 - The directory **becomes the node's cwd**. A relative `cwd` on the same node resolves inside it; an absolute `cwd` together with `tempdir` is a plan error.
 - `as` binds the directory's absolute path to a variable visible inside the node.
-- The directory is not deleted when the node or the run ends; removing it is the implementation's business (for blokky-cli: `blokky clean`).
+- **`remove`:** `true` deletes the directory at node end, after `finally`; `on_success` deletes it only if the node succeeded, so a failure can be inspected. Removal never follows symbolic links. Without `remove`, the directory is kept, and removing it later is the implementation's business (for blokky-cli: `blokky clean`).
 - `prefix` matches `^[A-Za-z0-9._-]{1,32}$`.
 
 ### 4.6 `cwd`
@@ -301,13 +322,9 @@ export: [BRANCH]
 
 ### 4.8 `container`
 
-`container: { image, mounts, user, env_pass }` runs the node's leaves in an ephemeral container started for the node and stops (not removes) afterwards. By default the cwd is mounted read-write at the same path. Full semantics: [containers-and-privilege.md](containers-and-privilege.md).
+`container: { image, mounts, env_pass }` runs the node's leaves in an ephemeral container started for the node and stops (not removes) afterwards. By default the cwd is mounted read-write at the same path. Full semantics: [containers.md](containers.md).
 
-### 4.9 `become`
-
-`become: USER`, `become: invoker` or `become: { user: USER }` runs the node's leaves and probes as another user, through `sudo -n` or `doas -n`, or by dropping privileges when the run has root privileges. Implementations MAY require an explicit opt-in to enable `become`. Full semantics: [containers-and-privilege.md](containers-and-privilege.md).
-
-### 4.10 `services`
+### 4.9 `services`
 
 Background processes that live for the node's duration: a database, a dev server, a mock API.
 
@@ -317,8 +334,7 @@ Background processes that live for the node's duration: a database, a dev server
     - name: db
       exec: [postgres, -D, ./pgdata, -p, '5433']
       ready: { port: 5433, open: true }
-    - name: api
-      depends_on: [db]
+    - name: api                       # starts after db is ready
       exec: [dotnet, run, --project, src/Api]
       env: { DB_PORT: '5433' }
       ready: { output: stdout, contains: 'Now listening' }
@@ -333,18 +349,17 @@ Background processes that live for the node's duration: a database, a dev server
 | `env`, `export`, `cwd` | no | As for leaves; the service runs in the node's scope. |
 | `ready` | yes | A condition polled until it holds ([conditions.md](conditions.md)); may use the service-only subjects `port` and `output`, and probes. |
 | `ready_timeout` | no | How long readiness may take; default 30s, within the node's `timeout`. |
-| `depends_on` | no | Names of services that must be ready before this one starts. |
 | `on_exit` | no | `fail` (default) or `ignore`: what happens if the service exits on its own after it was ready. |
 
-- **Start:** services start in parallel, in list order, except that a service with `depends_on` starts only after the services it names are ready. Dependencies MUST NOT form a cycle (plan error). The node's body starts when every service is ready.
+- **Start:** services start one at a time, in list order; each starts after the previous one is ready. The node's body starts when every service is ready.
 - **Readiness:** `ready:` is polled every 250ms. A service that exits before it is ready, or isn't ready within `ready_timeout`, fails the node (`BK_SERVICE_EXITED`, `BK_SERVICE_NOT_READY`); services already started are stopped.
-- **While the body runs:** a service with `on_exit: fail` that exits on its own cancels the body and fails the node with `BK_SERVICE_EXITED` (with the service name and exit code). With `on_exit: ignore`, the exit is recorded and the body continues.
-- **Stop:** after the node's `finally`, services are stopped in reverse dependency order, each as a whole process tree (graceful, then forced). An exit caused by stopping is not a failure.
+- **While the body runs:** a service with `on_exit: fail` that exits on its own cancels the body and fails the node with `BK_SERVICE_EXITED` (with the service name and exit code). With `on_exit: ignore`, the exit is recorded and the body continues. A service that exits after the body ended (for example during `finally`) is recorded, not a failure.
+- **Stop:** after the node's `finally`, services are stopped in reverse list order, each as a whole process tree (graceful, then forced). An exit caused by stopping is not a failure.
 - **Visibility:** services bind no variables. The run result records each service's readiness time and how it ended ([results.md](results.md)). Services are processes the plan executes, like leaves.
 
 ([ADR 0014](../adr/0014-remaining-features.md))
 
-### 4.11 `finally`
+### 4.10 `finally`
 
 A list of cleanup nodes that runs **once per node** (not per attempt or iteration) after the node's body ends, whether it succeeded, failed, timed out or was cancelled.
 
@@ -354,11 +369,11 @@ A list of cleanup nodes that runs **once per node** (not per attempt or iteratio
 - **Errors:** a failing `finally` fails an otherwise successful node. If the body failed too, the body error is primary and the `finally` error is attached.
 - Captures under `finally` are visible only to later nodes in the same `finally` list ([ADR 0002](../adr/0002-language-core.md), Q-s).
 
-### 4.12 `ignore_errors`
+### 4.11 `ignore_errors`
 
 `ignore_errors: true`: if the node fails, its parent treats it as not failed. The run result shows status `failed` with `ignored: true`. It never hides an outer cancellation, an ancestor's timeout or an external stop. A node whose failure is ignored binds no captures (use `ok_exit` when a capture should survive a known exit code).
 
-### 4.13 `attempt_timeout`
+### 4.12 `attempt_timeout`
 
 A limit for each attempt (`retry`) or iteration (`while`, `until`, `for`), valid only together with a repetition modifier. It covers the body only: not the condition (probes have their own timeouts), not the `every` wait. When it fires, the attempt's processes are killed (graceful, then forced) and the attempt fails with `BK_TIMEOUT_ATTEMPT`.
 
@@ -380,6 +395,9 @@ A limit for each attempt (`retry`) or iteration (`while`, `until`, `for`), valid
 | `backoff: { factor, max }` | yes | — | — | none (fixed delay) |
 | `jitter` | yes | — | — | none |
 | `on_body_failure: stop \| continue` | — | yes | yes | `while`: `stop`; `until`: `continue` |
+| `index` (§5.8) | yes | yes | yes | none |
+| `carry` (§5.8) | — | yes | yes | none |
+| `collect` (§5.8) | — | yes | yes | none (also valid on `for`) |
 
 Using a field where the table says "—" is a plan error.
 
@@ -423,7 +441,7 @@ For a group node with `retry`, "attempt failed" means the group failed, and the 
 - **`until: <condition>`** checks the condition **after** each successful iteration; true ends the loop successfully. Polling is `until` with a `result:` condition.
 - **Body failure** (including `BK_TIMEOUT_ATTEMPT`): with `on_body_failure: stop`, the node fails with the body's error. With `continue`, the iteration counts as "not done yet": no condition is checked, and the loop goes on to the next iteration after the delay.
 - **Reaching `max`** without the condition ending the loop fails the node with `BK_LOOP_MAX_REACHED`, with the last iteration's error (if any) nested. Reaching `timeout` fails with `BK_TIMEOUT_TOTAL`.
-- Captures on the repeating node itself are bound from the terminating iteration; captures in a loop body are scoped to the loop ([variables.md](variables.md)).
+- Captures on the repeating node itself are bound from the terminating iteration; captures in a loop body are scoped to the loop ([variables.md](variables.md)). Values pass from one iteration to the next only through `carry`, and leave the loop only through `collect` (§5.8).
 
 ### 5.7 `for`
 
@@ -453,7 +471,7 @@ All `for` options live inside the `for:` mapping:
 - `concurrency` (integer ≥ 1, default 1, capped by `max_concurrency`): above 1 the loop is a fan-out; iterations start in item order.
 - `fail_fast` (boolean, default `true`): as for `all`.
 - `allow_empty` (boolean, default `false`, `glob` only): zero matches succeed with zero iterations instead of failing.
-- `max_items` (integer, default 1000, `items` and `lines` only): more items fail the node with `BK_ITEMS_TOO_MANY` before the first iteration; items are never truncated.
+- `max_items` (integer, default 1000, every source): more items (for `matrix`, more combinations) fail the node with `BK_ITEMS_TOO_MANY` before the first iteration; items are never truncated.
 - `fields` (`items` only): `{ NAME: .path, … }` binds a variable per field from each item, with the JSON-path subset and conversion of field captures. A path that doesn't resolve for an item fails that iteration with `BK_CAPTURE_PATH`.
 - `keep_blank` (boolean, default `false`, `lines` only): keep empty and whitespace-only lines as items.
 
@@ -471,9 +489,31 @@ All `for` options live inside the `for:` mapping:
 
 **Glob rules:** ordinal sort of the matches; no dotfiles unless the pattern names them; no symlink following; `/` separators in item values; no `..` escaping the cwd subtree; zero matches is an error unless `allow_empty: true`. Patterns are host paths relative to the node's cwd.
 
-**Iterations** never publish captures to the enclosing scope (only through `collect`). A for-loop's iteration count and items are in the run result. Item values and inputs used as `exec` arguments should be preceded by `--` where the program supports it.
+**Iterations** never publish captures to the enclosing scope (only through `collect`, §5.8). A for-loop's iteration count and items are in the run result. Item values and inputs used as `exec` arguments should be preceded by `--` where the program supports it.
 
-**`collect`**: `collect: { CAPTURE: LISTVAR }` on a `for` node binds `LISTVAR`, after the loop, to a compact JSON array of each iteration's `CAPTURE` value (bound in that iteration by the `for` node's own `capture`, when the node is a leaf, or by a node in its body), in item order, with `null` for iterations that failed, were skipped or didn't bind it (`["12 passed",null,"8 passed"]`). The list can feed another `for: { items }`, a `json:` condition or `outputs`.
+### 5.8 Loop variables: `index`, `carry` and `collect`
+
+These sibling fields bind variables around a loop's iterations ([ADR 0017](../adr/0017-review-features.md)). Each name is still bound once per iteration, so single assignment holds ([variables.md §6](variables.md#6-scope-and-binding)).
+
+```yaml
+- name: fetch all issues
+  until: { var: NEXT, empty: true }
+  carry: { CURSOR: NEXT }          # '' in iteration 1, then the previous NEXT
+  collect: { PAGES: PAGE }         # every PAGE, as a list, after the loop
+  index: { as: PAGE_NO, start: 1 }
+  max: 100
+  timeout: 5m
+  do:
+    - log: "page ${PAGE_NO}"
+    - exec: [./fetch-issues, --cursor, { var: CURSOR }]
+      capture:
+        PAGE: { json: .items }
+        NEXT: { json: .next_cursor }
+```
+
+- **`index`** (`retry`, `while`, `until`): `index: NAME` binds the attempt or iteration number, 0-based; `{ as: NAME, start: N }` starts at `N` (an integer). It is visible in the body and in the node's own condition, and isn't published. `for` binds its index as `<AS>_INDEX` instead.
+- **`carry`** (`while`, `until`): `carry: { NAME: CAPTURE }` binds `NAME` at the start of each iteration: `''` in the first, then the value `CAPTURE` had at the end of the previous iteration. The long form `{ NAME: { from: CAPTURE, initial: VALUE } }` sets another first value (a literal). `CAPTURE` is a capture bound in the body (or by the node's own `capture`); if the previous iteration didn't bind it (a failed body under `on_body_failure: continue`, or a `return` first), `NAME` keeps its previous value, so a failed page is fetched again. `NAME` is visible in the body and in the condition, isn't published, and is secret if `CAPTURE` is.
+- **`collect`** (`for`, `while`, `until`): `collect: { CAPTURE: LISTVAR }` binds `LISTVAR`, after the loop, to a compact JSON array of each iteration's `CAPTURE` value (bound in that iteration by the node's own `capture`, when the node is a leaf, or by a node in its body), in item or iteration order, with `null` for iterations that failed, were skipped or didn't bind it (`["12 passed",null,"8 passed"]`). The list can feed a `for: { items }`, a `json:` condition or `outputs`.
 
 ## 6. Plan-level keys
 
@@ -481,9 +521,9 @@ All `for` options live inside the `for:` mapping:
 
 ## 7. Validity matrix
 
-Which modifiers and companion groups each kind accepts. ✓ = valid; — = plan error. `name` and `when` are valid on every kind. `timeout`, `finally` (with `finally_timeout`) and `ignore_errors` are valid on every kind except `sleep`, `log`, `fail` and `set`, where they would mean nothing: those nodes start no process, have nothing to clean up and can't fail in a way worth ignoring (a `sleep` ends early only by cancellation, which `ignore_errors` never hides; ignoring a `fail` is a no-op) ([ADR 0015](../adr/0015-set-and-vars.md)). Neither group is repeated below.
+Which modifiers and companion groups each kind accepts. ✓ = valid; — = plan error. `name` and `when` are valid on every kind. `timeout`, `finally` (with `finally_timeout`) and `ignore_errors` are valid on every kind except `sleep`, `log`, `fail`, `set` and `return`, where they would mean nothing: those nodes start no process, have nothing to clean up and can't fail in a way worth ignoring (a `sleep` ends early only by cancellation, which `ignore_errors` never hides; ignoring a `fail` is a no-op) ([ADR 0015](../adr/0015-set-and-vars.md)). Neither group is repeated below.
 
-| Kind | Scope (`cwd`, `env`, `export`, `tempdir`, `lock`, `container`, `become`, `services`) | `retry`, `while`, `until` | `for` | `attempt_timeout` | Leaf options (§3) | `concurrency` | `fail_fast` |
+| Kind | Scope (`cwd`, `env`, `export`, `tempdir`, `lock`, `container`, `services`) | `retry`, `while`, `until` | `for` | `attempt_timeout` | Leaf options (§3) | `concurrency` | `fail_fast` |
 |---|---|---|---|---|---|---|---|
 | `exec` | ✓ | ✓ | ✓ | with repetition | ✓ | `for` only | `for` only |
 | `script` | ✓ | ✓ | ✓ | with repetition | ✓ | `for` only | `for` only |
@@ -497,8 +537,9 @@ Which modifiers and companion groups each kind accepts. ✓ = valid; — = plan 
 | `sleep` | — | — | — | — | — | — | — |
 | `fail` | — | — | — | — | — | — | — |
 | `set` | — | — | — | — | — | — | — |
+| `return` | — | — | — | — | — | — | — |
 
-"`for` only" means the field is valid only inside the `for:` mapping of that node. Companion fields of a kind (`then`/`else`, `shell`, `level`, `message`, `code`) are valid only on their kind.
+"`for` only" means the field is valid only inside the `for:` mapping of that node. `index`, `carry` and `collect` are valid wherever the repetition they belong to is (§5.2, §5.8). Companion fields of a kind (`then`/`else`, `shell`, `level`, `message`, `code`) are valid only on their kind.
 
 ## 8. Rules the schema doesn't express
 
@@ -509,7 +550,7 @@ Implementations MUST enforce these as plan errors (unless noted) in addition to 
 - **RF-3.** The validity matrix (§7) and the per-repetition sibling table (§5.2).
 - **RF-4.** `attempt_timeout` only with a repetition modifier.
 - **RF-5.** `while` and `until` have `max` or `timeout` (or both).
-- **RF-6.** Modifiers outside repetition (`when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`, `container`, `become`, `services`) don't reference variables the node itself introduces (`as`, `tempdir.as`, its own captures): "move it into the body".
+- **RF-6.** Modifiers outside repetition (`when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`, `container`, `services`) don't reference variables the node itself introduces (`as`, `tempdir.as`, its own captures): "move it into the body".
 - **RF-7.** Shadowing: no variable name is bound twice in nested scopes; inputs collide with every other binding.
 - **RF-8.** Two `all` children don't capture the same name.
 - **RF-9.** Inputs and variables never reach literal fields; argv[0] of an `exec` array is a literal.
@@ -527,11 +568,13 @@ Implementations MUST enforce these as plan errors (unless noted) in addition to 
 - **RF-21.** Empty lists only in fields that allow them (`mounts`).
 - **RF-22.** A regex compiles under `RegexOptions.NonBacktracking`.
 - **RF-23.** `${X}` names a variable in scope (a warning when it might be undefined; a run-time error when it is).
-- **RF-24.** Service names are present and unique within a node; `depends_on` names exist and form no cycle.
-- **RF-25.** `fields` only with `items`; `keep_blank` only with `lines`; `allow_empty` only with `glob`; `max_items` only with `items` and `lines`.
+- **RF-24.** Service names are present and unique within a node.
+- **RF-25.** `fields` only with `items`; `keep_blank` only with `lines`; `allow_empty` only with `glob`.
 - **RF-26.** A name isn't bound twice: not by two sequential siblings, not by `set` for a bound name, not by `vars` for an input or another `vars` entry.
 - **RF-27.** Templates (`${…}` in executed values) appear only in `set` and `vars` values; `vars` values use only inputs, earlier `vars` and `from_env`.
-- **RF-28.** `timeout`, `finally`, `finally_timeout` and `ignore_errors` are not used on `sleep`, `log`, `fail` or `set`.
+- **RF-28.** `timeout`, `finally`, `finally_timeout` and `ignore_errors` are not used on `sleep`, `log`, `fail`, `set` or `return`.
+- **RF-29.** A `return`'s nearest enclosing sequence is not reached through an `all`, `any` or `race` (§2.13).
+- **RF-30.** `index` only with `retry`, `while` or `until`; `carry` only with `while` or `until`; `collect` only with `for`, `while` or `until`. `carry` and `collect` name a capture bound by the node or in its body; `index` and `carry` names follow the shadowing rules (RF-7).
 
 ## 9. Security considerations
 
@@ -542,5 +585,6 @@ Implementations MUST enforce these as plan errors (unless noted) in addition to 
 - **Secrets.** Masking doesn't follow derived values, and conditions on secrets act as oracles. Secrets come only by reference, so their values never appear in the plan or in a static view of it.
 - **Probes** should be side-effect-free; they run as real processes in the node's scope.
 - **Containers** are not a sandbox by default; mounting the engine socket or running privileged is equivalent to host root.
-- **`become`** uses passwordless `sudo -n`/`doas -n` only; Blokky never prompts for or forwards passwords.
+- **Users.** Every process runs as the user Blokky runs as; a plan that needs another user calls `sudo -n` or `doas -n` in a leaf, as in bash (CP-39).
+- **Daemons.** `keep_descendants: detach` leaves processes running after the run, like `nohup x &` in bash; static views show it.
 - **Resource bounds** (timeouts, caps, the concurrency cap) exist for predictability, not as security boundaries.
