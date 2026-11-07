@@ -46,7 +46,7 @@ One mistake is one error with one rule ([ADR 0025](../adr/0025-open-points.md)):
 - When no `RF-n` rule applies, the grammar or structure rule of [syntax.md](syntax.md) is reported: SY-52 for names, SY-53 for booleans, SY-54 for integers, SY-56 and SY-57 for durations, SY-20 for empty values, and so on. A rule elsewhere that restates it is reported as that `SY-n` rule: VA-4, VA-6, ER-1 and SY-42 as SY-52; SY-24 and CO-8 as SY-53; SY-25 as the grammar's rule; SY-41 as SY-20.
 - A targeted error (SY-91) changes the message, not the rule: it carries the code and rule of the generic error it replaces. A string condition is reported as CO-4.
 - Where §8 rules overlap, the more specific one wins: RF-4, RF-12, RF-28, RF-30, RF-31 and RF-32 over RF-3; RF-7 over RF-26 when an input or an enclosing scope is involved; RF-9 over RF-27 for `${…}` in a literal field; RF-6, RF-16 and RF-27 over RF-23, which is reported only when no more specific rule applies.
-- A reference in a literal field (`{ var: X }`, as in `timeout: { var: X }`) is `BK_PLAN_INVALID` with RF-9 alone. A regex that doesn't compile is `BK_PLAN_VALUE` with RF-22. A root that is a list is `BK_PLAN_VALUE` with SY-32. A value of the wrong type for its field (a mapping where a list or scalar belongs, a scalar where a condition belongs, as in `retry: 3`) is `BK_PLAN_VALUE` with SY-88, the per-field table, unless a more specific rule names the mistake. `secret:` on an input is `BK_PLAN_UNKNOWN_KEY` with the targeted message (SY-48, SY-91).
+- A reference in a literal field (`{ var: X }`, as in `timeout: { var: X }`) is `BK_PLAN_INVALID` with RF-9 alone. A regex that doesn't compile is `BK_PLAN_VALUE` with RF-22. A root that is a list is `BK_PLAN_VALUE` with SY-32. A value of the wrong type for its field (a mapping where a list or scalar belongs, a scalar where a condition belongs, as in `retry: 3`) is `BK_PLAN_VALUE` with SY-88, the per-field table, unless a more specific rule names the mistake. `secret:` on an input is `BK_PLAN_UNKNOWN_KEY` with the targeted message (SY-48, SY-91). An image reference outside the OCI grammar is `BK_PLAN_VALUE` with SY-103; a missing `container.image` or mount `host` or `path` is `BK_PLAN_INVALID` with CP-40; a forbidden or reserved `container.env_pass` name, or one that is also in `env` or `export` on the node, is `BK_PLAN_INVALID` with RF-10 (CP-42) ([ADR 0026](../adr/0026-runtime-edge-cases.md)).
 - A probe with both or neither of `exec:` and `script:`, or with `shell:` but no `script:`, is `BK_PLAN_INVALID` with rule CO-26; a node used as a condition is `BK_PLAN_INVALID` at its kind key ([ADR 0023](../adr/0023-wave-c-gaps.md)).
 
 | Code | Meaning |
@@ -72,10 +72,10 @@ One mistake is one error with one rule ([ADR 0025](../adr/0025-open-points.md)):
 |---|---|---|
 | `BK_EXIT` | The leaf exited with a code that isn't 0 or in `ok_exit`. `detail.exit_code`. | yes |
 | `BK_SIGNAL` | The leaf was killed by a signal it didn't get from Blokky (Unix). `detail.signal`: the signal's name (`SIGSEGV`). | yes |
-| `BK_SPAWN_NOT_FOUND` | The program or shell couldn't be resolved. `detail.program`: argv[0] (or the shell) as written. | no |
+| `BK_SPAWN_NOT_FOUND` | The program or shell couldn't be resolved; for a container leaf, argv[0] isn't in the image (CP-15). `detail.program`: argv[0] (or the shell) as written. | no |
 | `BK_SPAWN_FAILED` | The OS refused to start the process (not executable, permission denied, a file format it can't run, a PowerShell execution policy or AppLocker rule that blocks the script). `detail.reason`: `not_executable`, `permission_denied`, `bad_format` or `blocked`. A literal argv[0] ending in `.bat` or `.cmd` is a plan error instead (`BK_PLAN_VALUE`, SH-10). | no |
 | `BK_ENV_TOO_LARGE` | The leaf's environment or one value exceeds the OS limit. `detail.name`. | no |
-| `BK_SHELL_UNAVAILABLE` | The `script` shell isn't supported on this OS or isn't configured (Git Bash on Windows). | no |
+| `BK_SHELL_UNAVAILABLE` | The `script` shell isn't supported on this OS or isn't configured (Git Bash on Windows), or, for a container leaf, isn't in the image (CP-15). | no |
 | `BK_CWD_INVALID` | The node's cwd doesn't exist, isn't a directory or can't be entered. | no |
 | `BK_TEMPDIR_FAILED` | The node's `tempdir` couldn't be created. | no |
 
@@ -122,7 +122,7 @@ User codes from `fail` and `assert` (`code:`) are node errors too; `retry: true`
 | Code | Meaning | Retried |
 |---|---|---|
 | `BK_LOCK_TIMEOUT` | A `lock` wasn't acquired within `wait`. | no |
-| `BK_CONTAINER_FAILED` | The container couldn't be started, the image lacks `sh`, `sleep` or `kill` (CP-36; `detail.missing`), or the engine failed. `detail.engine`. | no |
+| `BK_CONTAINER_FAILED` | The container couldn't be started, the image lacks `sh`, `sleep` or `kill` (CP-36; `detail.missing`: a list of the missing program names, such as `[kill]`), or the engine failed. `detail.engine`. | no |
 | `BK_CWD_UNMAPPED` | The node's cwd maps through no container mount. | no |
 | `BK_SERVICE_NOT_READY` | A service's `ready:` condition didn't hold within `ready_timeout`. `detail.service`. | yes |
 | `BK_SERVICE_EXITED` | A service exited before it was ready, or (with `on_exit: fail`) after it was ready while the body ran; an exit after the body ended is recorded, not an error. `detail.service`, `detail.exit_code`. | yes |

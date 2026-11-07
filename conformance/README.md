@@ -174,7 +174,7 @@ The result document is the run result of results.md, written with these keys. Va
 | node: messages | `messages` | `[{ text, level }]`, `text` rendered and masked. |
 | node: probes | `probes` | `[{ invocation, exit_code, result }]`. |
 | node: bindings | `bindings` | A list of names. |
-| leaf fields | `program`, `invocation`, `exit_code`, `signal`, `killed_by`, `descendants_held_output`, `survivors`, `left_running`, `user`, `container` | `invocation` is the masked argv; `signal` is a name (`SIGKILL`); `user` is `{ name, elevation }`.; `left_running` is `[{ program, pid }]`. |
+| leaf fields | `program`, `invocation`, `exit_code`, `signal`, `killed_by`, `descendants_held_output`, `survivors`, `left_running`, `user`, `container` | `invocation` is the masked argv; `signal` is a name (`SIGKILL`); `user` is `{ name, elevation }`.; `left_running` is `[{ program, pid }]`; `container` is `{ engine, image_digest, id, labelling_disabled }`; for a container leaf, `invocation` is the in-container argv, not the engine command. |
 | error: code, node, detail, causes, context | `code`, `node`, `detail`, `causes`, `context` | `message` is never matched (CF-3). |
 | durations (results.md §6) | `duration` | On the run and on every node. |
 

@@ -268,11 +268,11 @@ A display string, rendered per attempt or iteration (`name: build ${PROJ}`). The
 
 ### 4.2 `when`
 
-A guard condition, evaluated **once, before anything else, in the parent's scope**. If it is false, the node is `skipped`: it takes no lock, creates no tempdir, starts nothing and runs no `finally`. A condition error fails the node. A `when` that uses relative paths or probes on a node that sets `cwd` or `container` gets the `when-scope` lint warning, because those apply only inside the node.
+A guard condition, evaluated **once, before anything else, in the parent's scope**. If it is false, the node is `skipped`: it takes no lock, creates no tempdir, starts nothing and runs no `finally`, and only the node itself appears in the run result, without its descendants and `finally` nodes (RS-7). A condition error fails the node, which then records only its error and its `when` probes (RS-8). A `when` that uses relative paths or probes on a node that sets `cwd` or `container` gets the `when-scope` lint warning, because those apply only inside the node.
 
 ### 4.3 `timeout`
 
-The node's **total** wall-clock limit, measured on a monotonic clock. It covers lock wait, tempdir creation, container and service startup, the body and every repetition, but not `finally` (which has its own limit). When it fires, running processes get the graceful signal, then the forced kill after the grace period (5s), and the node fails with `BK_TIMEOUT_TOTAL`, status `timed_out`; an attempt it interrupts is the last attempt, and its `BK_CANCELLED` is nested (EM-53). The grace period comes after the limit ([ADR 0003](../adr/0003-execution-defaults.md), Q-k). Nested limits combine as the minimum.
+The node's **total** wall-clock limit, measured on a monotonic clock. It covers lock wait, tempdir creation, container and service startup, the body and every repetition, but not `finally` (which has its own limit). When it fires, the body's running processes get the graceful signal, then the forced kill after the grace period (5s), and the node fails with `BK_TIMEOUT_TOTAL`, status `timed_out`; an attempt it interrupts is the last attempt, its entry is `cancelled`, and its `BK_CANCELLED` is nested (EM-53). The node's services keep running for `finally` and are stopped after it (EM-65). If it fires before the body starts (during lock wait, tempdir, container or service startup), `finally` doesn't run (EM-63). The grace period comes after the limit ([ADR 0003](../adr/0003-execution-defaults.md), Q-k). Nested limits combine as the minimum.
 
 There is no implicit `timeout` on groups or the root; `defaults.leaf_timeout` sets one for leaves and probes only. On a leaf with `retry`, `while` or `until`, `defaults.leaf_timeout` limits each attempt or iteration, like an implicit `attempt_timeout`, not the whole loop (`BK_TIMEOUT_ATTEMPT`, `killed_by: attempt_timeout`); the node's own `timeout` always limits the whole node, repetition included ([ADR 0018](../adr/0018-review-semantics.md)). An implementation may also stop a whole run from outside ([execution-model.md §7](execution-model.md#7-external-stops)).
 
@@ -288,7 +288,7 @@ There is no implicit `timeout` on groups or the root; `defaults.leaf_timeout` se
 ```
 
 - **Scope:** lock names form one namespace per OS user on the machine: the same name in any plan, repository or run of that user is the same lock. Locks of other users never interact, root included: a run under `sudo` and a run as the user don't exclude each other.
-- **Waiting:** without `wait`, the node waits as long as its `timeout` (and any external stop) allows. `wait` bounds the waiting time (`0s`: try once). Giving up fails the node with `BK_LOCK_TIMEOUT`. Waiting time counts against the node's `timeout`, and the run result records it.
+- **Waiting:** without `wait`, the node waits as long as its `timeout` (and any external stop) allows. `wait` bounds the waiting time (`0s`: try once). Giving up fails the node with `BK_LOCK_TIMEOUT`, and the node's body and `finally` don't run (EM-63). Waiting time counts against the node's `timeout`, and the run result records it. A waiter checks the lock again at most 250ms after its previous check ends (EM-60).
 - **Release:** the lock is released when the node ends, and also when the run's process dies, so a crashed run never leaves a lock behind (implementations use OS advisory locks).
 - **No nesting:** a node with `lock` MUST NOT have a descendant with `lock`, including in `finally` and `services` ([ADR 0005](../adr/0005-containers-become-locks.md)). Locks are exclusive only ([ADR 0014](../adr/0014-remaining-features.md)).
 
@@ -304,7 +304,7 @@ There is no implicit `timeout` on groups or the root; `defaults.leaf_timeout` se
 
 ### 4.6 `cwd`
 
-The working directory for the node and everything inside it: a literal path or `{ var: X }`. A relative path resolves against the parent's cwd (at the root: the invocation cwd), so paths are built by nesting. A cwd that doesn't exist or isn't a directory when the node starts fails the node (`BK_CWD_INVALID`). Under `container`, an absolute `cwd` that isn't under a mount is a path inside the container and is checked there, not on the host (CP-14).
+The working directory for the node and everything inside it: a literal path or `{ var: X }`. A relative path resolves against the parent's cwd (at the root: the invocation cwd), so paths are built by nesting. A cwd that doesn't exist or isn't a directory when the node starts fails the node (`BK_CWD_INVALID`). Under `container`, an absolute `cwd` that isn't a host path under a mount is a path inside the container and is checked there, not on the host (CP-14). Host paths are absolute by the host OS's rules; container paths are POSIX paths, absolute when they start with `/`, on every host OS (CP-41).
 
 ### 4.7 `env` and `export`
 
@@ -323,7 +323,7 @@ export: [BRANCH]
 
 ### 4.8 `container`
 
-`container: { image, mounts, env_pass }` runs the node's leaves in an ephemeral container started for the node and stops (not removes) afterwards. By default the cwd is mounted read-write at the same path. Full semantics: [containers.md](containers.md).
+`container: { image, mounts, env_pass }` runs the node's leaves in an ephemeral container started for the node and stops (not removes) afterwards. By default the cwd the node inherits (its parent's effective cwd) is mounted read-write at the same path (CP-9). Full semantics: [containers.md](containers.md).
 
 ### 4.9 `services`
 
@@ -355,7 +355,7 @@ Background processes that live for the node's duration: a database, a dev server
 - **Start:** services start one at a time, in list order; each starts after the previous one is ready. The node's body starts when every service is ready.
 - **Readiness:** `ready:` is first checked right after the service process starts, then 250ms after the previous check ends. A service that exits before it is ready, or isn't ready within `ready_timeout`, fails the node (`BK_SERVICE_EXITED`, `BK_SERVICE_NOT_READY`); services already started are stopped, and the body and `finally` don't run: their nodes are `skipped` with `not_reached` (EM-63).
 - **While the body runs:** a service with `on_exit: fail` that exits on its own cancels the body and fails the node with `BK_SERVICE_EXITED` (with the service name and exit code). With `on_exit: ignore`, the exit is recorded and the body continues. A service that exits after the body ended (for example during `finally`) is recorded, not a failure.
-- **Stop:** after the node's `finally`, services are stopped in reverse list order, each as a whole process tree (graceful, then forced). An exit caused by stopping is not a failure.
+- **Stop:** after the node's `finally`, services are stopped in reverse list order, each as a whole process tree (graceful, then forced). An exit caused by stopping is not a failure. When the node's own `timeout` fires while the body runs, only the body is stopped: the services keep running for `finally` (EM-65).
 - **Visibility:** services bind no variables. The run result lists the services that started, in list order, with each one's readiness time, measured from the node's start, and how it ended: `stopped` by the run, `exited` with its exit code (also before it was ready), or `never_ready` (not ready in time, or stopped by a timeout or cancellation during startup) ([results.md](results.md)). Services are processes the plan executes, like leaves, and are stoppable the same way (EM-15).
 
 ([ADR 0014](../adr/0014-remaining-features.md))
@@ -365,7 +365,7 @@ Background processes that live for the node's duration: a database, a dev server
 A list of cleanup nodes that runs **once per node** (not per attempt or iteration) after the node's body ends, whether it succeeded, failed, timed out or was cancelled.
 
 - **Companion `finally_timeout`** (duration, default 5m). `finally` runs under it even after the node's `timeout` fired; when the runtime stops the whole run, it may get less time ([execution-model.md §7](execution-model.md#7-external-stops)). When it fires, the running `finally` nodes are `cancelled`, their leaves with `killed_by: finally_timeout`, and the `finally` list fails with `BK_TIMEOUT_FINALLY` (EM-7, [ADR 0024](../adr/0024-wave-d-gaps.md)).
-- A node skipped by `when` runs no `finally`.
+- A node skipped by `when` runs no `finally`, and neither does a node that fails before its body, in a layer outside `finally`: lock wait, tempdir, cwd, env, container or services, or a timeout during them. Its `finally` nodes are `skipped` with `not_reached`, and no `finally` status is recorded (EM-63).
 - `finally` runs inside the node's tempdir, cwd, env, container and services, and sees what the body bound.
 - **Errors:** a `finally` list runs every node even if one fails, like a `do` with `fail_fast: false`, so each cleanup step is tried; it fails with its first failure ([ADR 0022](../adr/0022-wave-b-gaps.md)). A failing `finally` fails an otherwise successful node. If the body failed too, the body error is primary and the `finally` error is attached.
 - Captures under `finally` are visible only to later nodes in the same `finally` list ([ADR 0002](../adr/0002-language-core.md), Q-s).
@@ -558,7 +558,7 @@ Implementations MUST enforce these as plan errors (unless noted), with `BK_PLAN_
 - **RF-7.** Shadowing: no variable name is bound twice in nested scopes, including by `index` and `carry`; inputs collide with every other binding.
 - **RF-8.** Two children of an `all` don't bind the same name anywhere in their subtrees, except names scoped to a loop iteration, which never reach the `all`'s scope.
 - **RF-9.** Inputs and variables never reach literal fields; argv[0] of an `exec` array is a literal. A reference in a literal field (`timeout: { var: X }`) is RF-9 alone, not a type mismatch.
-- **RF-10.** `env` doesn't set a forbidden key; `export` doesn't name a reserved environment name; no name is in both `env` and `export` on one node.
+- **RF-10.** `env` doesn't set a forbidden key; `export` doesn't name a reserved environment name; no name is in both `env` and `export` on one node; `container.env_pass` names neither a forbidden nor a reserved name, nor a name in `env` or `export` on the same node (CP-42).
 - **RF-11.** An absolute `cwd` is not combined with `tempdir` on one node.
 - **RF-12.** Captures (`capture`, `capture_file`, `secret`) only on `exec` and `script` nodes. *(schema)*
 - **RF-13.** The `result:` subject only in `until` and `retry` conditions; `result: stdout|stderr|exit` only when the node's kind is `exec` or `script`.

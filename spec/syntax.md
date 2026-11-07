@@ -287,6 +287,19 @@ How values are supplied, the value rules and the input error codes are in [varia
 - **SY-102.** A literal `..` segment is a plan error (`BK_PLAN_VALUE`), so a pattern can't leave the cwd subtree.
 - **SY-75.** The other glob rules (sorting, the error on zero matches) are in [reference.md §5.7](reference.md#57-for).
 
+### 6.10 Image references
+
+**SY-103.** `container.image` is an image reference in the OCI grammar `[registry/]name[:tag][@digest]` ([ADR 0026](../adr/0026-runtime-edge-cases.md)). A value that doesn't match it is a plan error (`BK_PLAN_VALUE`).
+
+| Part | Grammar |
+|---|---|
+| `registry` | A host name (dot-separated components matching `[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?`) or IPv4 address, with an optional `:port` (decimal). The first `/`-separated component is the registry only if it contains `.` or `:`, or is `localhost`. |
+| `name` | One or more path components separated by `/`, each matching `[a-z0-9]+((\.\|_\|__\|-+)[a-z0-9]+)*`; with the registry, at most 255 characters. |
+| `tag` | `[A-Za-z0-9_][A-Za-z0-9._-]{0,127}`. |
+| `digest` | `algorithm:hex`: the algorithm matches `[a-z0-9]+([+._-][a-z0-9]+)*`, the hex part `[a-f0-9]{32,}` (64 characters for `sha256`). |
+
+Examples: `alpine`, `alpine:3.20`, `docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec`, `localhost:5000/team/app:1.2`, `mcr.microsoft.com/dotnet/sdk:10.0`.
+
 ## 7. Values: literals, references and interpolation
 
 ### 7.1 Literals
@@ -405,7 +418,7 @@ How values are supplied, the value rules and the input error codes are in [varia
 | `jitter` | decimal, 0 < j ≤ 1 | L |
 | `lock` | lock name, or `{ name, wait }` | L |
 | `lock.wait` | duration (`0s` allowed) | L |
-| `container.image` | image reference | L |
+| `container.image` | image reference (§6.10) | L |
 | `container.mounts` | list of mounts (**empty list allowed**) | — |
 | `container.mounts[].host` | path | R (`var` only) |
 | `container.mounts[].path` | absolute container path | L |
