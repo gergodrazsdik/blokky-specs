@@ -1,0 +1,10 @@
+title: A plan encoded as UTF-32LE with a byte-order mark is one encoding error
+rules: [SY-1, SY-5, SY-6]
+features: [log]
+plan_base64: //4AAGIAAABsAAAAbwAAAGsAAABrAAAAeQAAADoAAAAgAAAAMQAAAC4AAAAwAAAACgAAAGwAAABvAAAAZwAAADoAAAAgAAAAaAAAAGUAAABsAAAAbAAAAG8AAAAKAAAA
+expect:
+  plan_errors:
+    - code: BK_PLAN_ENCODING
+      line: 1
+      column: 1   # a whole-text error (SY-1)
+  exhaustive: true

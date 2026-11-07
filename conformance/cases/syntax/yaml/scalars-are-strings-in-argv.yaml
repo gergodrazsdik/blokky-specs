@@ -1,0 +1,14 @@
+title: Scalars that YAML would type (booleans, null, numbers) reach argv as written
+rules: [SY-23]
+features: [outputs, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [ARGS]
+  exec: [blokky-testkit, argv, on, yes, no, null, ~, true, 0x10, 1e3, 1.10, 010]
+  capture: ARGS
+expect:
+  status: succeeded
+  outputs:
+    ARGS: '["on","yes","no","null","~","true","0x10","1e3","1.10","010"]'
+  invocations:
+    - { argv: [argv, 'on', 'yes', 'no', 'null', '~', 'true', '0x10', '1e3', '1.10', '010'] }

@@ -1,0 +1,22 @@
+title: Zero-width characters are rejected in keys as well as values
+rules: [SY-3, SY-10, SY-12, SY-13]
+features: [log]
+plan_base64: Ymxva2t5OiAxLjAKbmHigIttZTogZ3JlZXRpbmcKbG9nOiAnYeKBoGInCmZhaWxfZmFzdDogJ3jigI0nCg==
+expect:
+  plan_errors:
+    - code: BK_PLAN_CHARACTER
+      detail: { codepoint: U+200B }
+      line: 2
+      column: 3   # ZERO WIDTH SPACE, in the key
+    - code: BK_PLAN_CHARACTER
+      detail: { codepoint: U+2060 }
+      line: 3
+      column: 8   # WORD JOINER
+    - code: BK_PLAN_CHARACTER
+      detail: { codepoint: U+200D }
+      line: 4
+      column: 14   # ZERO WIDTH JOINER
+  exhaustive: true
+notes: >-
+  Parsed, the plan would have other errors (the key isn't name; fail_fast isn't a
+  boolean), but character-lint errors end processing before YAML parsing (SY-10).

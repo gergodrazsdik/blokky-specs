@@ -1,0 +1,16 @@
+title: A plan-only key on a node below the root is a key in the wrong place
+rules: [SY-33]
+features: [do, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - outputs: [RESULT]
+      exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: SY-33 }
+      line: 3
+      column: 5
+  exhaustive: true
+notes: A language key in the wrong place is BK_PLAN_INVALID, not unknown (errors.md §4).

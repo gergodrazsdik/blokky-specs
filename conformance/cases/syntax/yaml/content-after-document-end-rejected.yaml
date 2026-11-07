@@ -1,0 +1,15 @@
+title: Content after a ... document end marker is a YAML error
+rules: [SY-16]
+features: [log]
+plan: |
+  blokky: 1.0
+  log: hello
+  ...
+  log: again
+expect:
+  plan_errors:
+    - code: BK_PLAN_YAML
+  exhaustive: true
+notes: >-
+  No position is asserted: SY-16 doesn't say whether the error points at the ...
+  or at the content after it.

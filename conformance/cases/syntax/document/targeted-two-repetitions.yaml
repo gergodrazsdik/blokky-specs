@@ -1,0 +1,15 @@
+title: Two repetition modifiers on one node are one error at the later key
+rules: [SY-1, SY-91, RF-2]
+features: [exec, retry, for-each]
+plan: |
+  blokky: 1.0
+  retry: true
+  max: 2
+  for: { each: [a, b], as: ITEM }
+  exec: [blokky-testkit, argv, { var: ITEM }]
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-2 }
+      line: 4
+      column: 1

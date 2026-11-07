@@ -1,0 +1,14 @@
+title: A backslash escape like \d in a double-quoted regex is a YAML error (pitfall)
+rules: [SY-89]
+features: [vars, assert, cond-var]
+plan: |
+  blokky: 1.0
+  vars:
+    COUNT: '42'
+  assert: { var: COUNT, matches: "^\d+$" }
+expect:
+  plan_errors:
+    - code: BK_PLAN_YAML
+      line: 4
+      column: 32   # the opening quote of the scalar (SY-1)
+  exhaustive: true

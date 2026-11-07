@@ -1,0 +1,15 @@
+title: retry with a number is a value error at the value
+rules: [SY-91]
+features: [exec, retry]
+plan: |
+  blokky: 1.0
+  retry: 3
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: SY-91 }
+      line: 2
+      column: 8
+  exhaustive: true
+notes: The targeted error replaces the generic type error (SY-3).

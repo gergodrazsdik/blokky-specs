@@ -1,0 +1,15 @@
+title: An anchor and the alias that uses it are each a YAML error
+rules: [SY-3, SY-14]
+features: [log]
+plan: |
+  blokky: 1.0
+  name: &title greeting
+  log: *title
+expect:
+  plan_errors:
+    - code: BK_PLAN_YAML
+      line: 2
+      column: 7
+    - code: BK_PLAN_YAML
+      line: 3
+      column: 6

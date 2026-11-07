@@ -1,0 +1,13 @@
+title: A version with a patch number is malformed
+rules: [SY-35, SY-36]
+features: [log]
+plan: |
+  blokky: 1.0.0
+  log: hello
+expect:
+  plan_errors:
+    - code: BK_PLAN_VERSION
+      detail: { supported: { $contains: ['1.0'] } }
+      line: 1
+      column: 9
+  exhaustive: true

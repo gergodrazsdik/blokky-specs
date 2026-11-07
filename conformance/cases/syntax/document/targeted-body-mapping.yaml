@@ -1,0 +1,14 @@
+title: A single node instead of a body list is a value error at the value
+rules: [SY-91]
+features: [do]
+plan: |
+  blokky: 1.0
+  do: { exec: [blokky-testkit, exit, '0'] }
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: SY-91 }
+      line: 2
+      column: 5
+  exhaustive: true
+notes: The targeted error replaces the generic type error (SY-3); its fix-it is in the message.

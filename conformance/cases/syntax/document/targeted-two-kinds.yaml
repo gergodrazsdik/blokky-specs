@@ -1,0 +1,14 @@
+title: Two kinds in one node is a plan error
+rules: [SY-91, RF-1]
+features: [exec, log]
+plan: |
+  blokky: 1.0
+  log: starting
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-1 }
+      line: 3      # the later of the two conflicting keys (SY-1)
+      column: 1
+  exhaustive: true

@@ -1,0 +1,14 @@
+title: blokky 1.00 is a malformed version string, not the number 1.0
+rules: [SY-23, SY-35, SY-51]
+features: [log]
+plan: |
+  blokky: 1.00
+  log: hello
+expect:
+  plan_errors:
+    - code: BK_PLAN_VERSION
+      detail: { supported: { $contains: ['1.0'] } }
+      line: 1
+      column: 9
+  exhaustive: true
+notes: An implementation that typed the scalar as a number would read 1.0 and accept the plan.

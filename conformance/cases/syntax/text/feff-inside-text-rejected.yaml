@@ -1,0 +1,12 @@
+title: U+FEFF anywhere but as a leading byte-order mark is rejected
+rules: [SY-12, SY-13]
+features: [log]
+plan_base64: Ymxva2t5OiAxLjAKbG9nOiAnYe+7v2InCg==
+expect:
+  plan_errors:
+    - code: BK_PLAN_CHARACTER
+      detail: { codepoint: U+FEFF }
+      line: 2
+      column: 8   # ZERO WIDTH NO-BREAK SPACE
+  exhaustive: true
+notes: Character-lint errors end processing before YAML parsing (SY-10), so no other error follows.

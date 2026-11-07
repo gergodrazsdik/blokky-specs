@@ -1,0 +1,16 @@
+title: Any key under defaults other than shell and leaf_timeout is unknown
+rules: [SY-37, SY-38]
+features: [defaults, exec]
+plan: |
+  blokky: 1.0
+  defaults:
+    leaf_timeout: 10s
+    cache: false
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_UNKNOWN_KEY
+      detail: { suggestion: { $absent: true } }   # no key within distance 2
+      line: 4
+      column: 3
+  exhaustive: true

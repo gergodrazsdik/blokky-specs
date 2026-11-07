@@ -1,0 +1,15 @@
+title: A mapping as the value of exec is one targeted value error at the value
+rules: [SY-3, SY-91]
+features: [do]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: { cmd: blokky-testkit exit 0, timeout: 5m }
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: SY-91 }
+      line: 3
+      column: 11
+  exhaustive: true
+notes: The targeted error replaces the generic type and unknown-key errors (SY-3).

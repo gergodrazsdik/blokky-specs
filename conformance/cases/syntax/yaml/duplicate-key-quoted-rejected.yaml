@@ -1,0 +1,14 @@
+title: A plain and a quoted spelling of the same key in a nested mapping are duplicates
+rules: [SY-18]
+features: [do, log]
+plan: |
+  blokky: 1.0
+  do:
+    - log: hello
+      'log': again
+expect:
+  plan_errors:
+    - code: BK_PLAN_DUPLICATE_KEY
+      line: 4
+      column: 5
+  exhaustive: true

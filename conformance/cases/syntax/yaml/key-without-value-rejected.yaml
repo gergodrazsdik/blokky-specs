@@ -1,0 +1,14 @@
+title: A key with no value is an error, not an unset field
+rules: [SY-20]
+features: [exec, timeout]
+plan: |
+  blokky: 1.0
+  timeout:
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: SY-20 }
+      line: 2      # a missing value is located at its key (SY-1)
+      column: 1
+  exhaustive: true

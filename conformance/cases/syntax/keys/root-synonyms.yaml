@@ -1,0 +1,15 @@
+title: Root keys from other tools suggest inputs and vars
+rules: [SY-30]
+features: [exec]
+plan: |
+  blokky: 1.0
+  params:
+    BRANCH: { default: main }
+  variables:
+    MODE: fast
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - { code: BK_PLAN_UNKNOWN_KEY, detail: { suggestion: inputs }, line: 2, column: 1 }
+    - { code: BK_PLAN_UNKNOWN_KEY, detail: { suggestion: vars }, line: 4, column: 1 }
+  exhaustive: true

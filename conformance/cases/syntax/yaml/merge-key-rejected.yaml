@@ -1,0 +1,13 @@
+title: A merge key is a YAML error at the key
+rules: [SY-14]
+features: [do, log]
+plan: |
+  blokky: 1.0
+  do:
+    - <<: { name: shared }
+      log: hello
+expect:
+  plan_errors:
+    - code: BK_PLAN_YAML
+      line: 3
+      column: 5

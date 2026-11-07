@@ -1,0 +1,21 @@
+title: Keys from other tools suggest their Blokky synonyms on a node
+rules: [SY-30]
+features: [do, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, exit, '0']
+      register: OUT
+    - exec: [blokky-testkit, exit, '0']
+      continue-on-error: true
+    - exec: [blokky-testkit, exit, '0']
+      working-directory: sub
+    - exec: [blokky-testkit, exit, '0']
+      environment: { MODE: fast }
+expect:
+  plan_errors:
+    - { code: BK_PLAN_UNKNOWN_KEY, detail: { suggestion: capture }, line: 4, column: 5 }
+    - { code: BK_PLAN_UNKNOWN_KEY, detail: { suggestion: ignore_errors }, line: 6, column: 5 }
+    - { code: BK_PLAN_UNKNOWN_KEY, detail: { suggestion: cwd }, line: 8, column: 5 }
+    - { code: BK_PLAN_UNKNOWN_KEY, detail: { suggestion: env }, line: 10, column: 5 }
+  exhaustive: true

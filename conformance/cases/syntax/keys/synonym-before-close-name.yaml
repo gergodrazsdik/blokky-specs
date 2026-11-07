@@ -1,0 +1,21 @@
+title: A synonym is suggested even when a valid key is within edit distance 2
+rules: [SY-30]
+features: [do, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - exit: done
+      exec: [blokky-testkit, exit, '0']
+    - loop: [a, b]
+      exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_UNKNOWN_KEY
+      detail: { suggestion: return }   # not exec (distance 2)
+      line: 3
+      column: 5
+    - code: BK_PLAN_UNKNOWN_KEY
+      detail: { suggestion: for }      # the key the snippet names; not log (distance 2)
+      line: 5
+      column: 5
+  exhaustive: true

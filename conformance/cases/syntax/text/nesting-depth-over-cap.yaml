@@ -1,0 +1,17 @@
+title: A plan nested deeper than 128 levels is rejected as too large
+rules: [SY-9]
+features: [log, vars]
+plan: |
+  blokky: 1.0
+  vars:
+    DEEP: [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
+  log: hello
+expect:
+  plan_errors:
+    - code: BK_PLAN_TOO_LARGE
+      line: 3      # the first node that is too deep (SY-1)
+  exhaustive: true
+notes: >-
+  200 nested flow sequences, well over the cap however levels are counted. The
+  column and the exact boundary (128 accepted, 129 rejected) aren't asserted
+  because SY-9 doesn't say whether the root mapping counts as a level.

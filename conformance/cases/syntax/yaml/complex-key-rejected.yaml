@@ -1,0 +1,14 @@
+title: A complex key (the ? indicator) is a YAML error
+rules: [SY-17]
+features: [log]
+plan: |
+  blokky: 1.0
+  log: hello
+  ? name
+  : greeting
+expect:
+  plan_errors:
+    - code: BK_PLAN_YAML
+      line: 3
+      column: 1
+  exhaustive: true

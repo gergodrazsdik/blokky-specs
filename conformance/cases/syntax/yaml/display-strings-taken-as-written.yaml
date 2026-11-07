@@ -1,0 +1,19 @@
+title: Display strings that look like null, numbers or booleans are taken as written
+rules: [SY-23, SY-26]
+features: [do, log]
+plan: |
+  blokky: 1.0
+  do:
+    - log: null
+    - log: ~
+    - log: 1.10
+    - log: 0x10
+    - log: yes
+expect:
+  status: succeeded
+  nodes:
+    /do/0: { messages: [{ text: 'null' }] }
+    /do/1: { messages: [{ text: '~' }] }
+    /do/2: { messages: [{ text: '1.10' }] }
+    /do/3: { messages: [{ text: '0x10' }] }
+    /do/4: { messages: [{ text: 'yes' }] }

@@ -1,0 +1,21 @@
+title: Integers with a leading zero, a sign or an exponent are errors at the value
+rules: [SY-3, SY-25]
+features: [do, exec, retry]
+plan: |
+  blokky: 1.0
+  do:
+    - retry: true
+      max: 03
+      exec: [blokky-testkit, exit, '0']
+    - retry: true
+      max: +3
+      exec: [blokky-testkit, exit, '0']
+    - retry: true
+      max: 1e1
+      exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, line: 4, column: 10 }
+    - { code: BK_PLAN_VALUE, line: 7, column: 10 }
+    - { code: BK_PLAN_VALUE, line: 10, column: 10 }
+  exhaustive: true

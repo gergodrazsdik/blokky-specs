@@ -1,0 +1,13 @@
+title: An anchor is a YAML error at the anchor
+rules: [SY-14]
+features: [log]
+plan: |
+  blokky: 1.0
+  name: &title greeting
+  log: hello
+expect:
+  plan_errors:
+    - code: BK_PLAN_YAML
+      line: 2
+      column: 7
+  exhaustive: true

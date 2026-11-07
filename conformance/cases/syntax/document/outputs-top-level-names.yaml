@@ -1,0 +1,21 @@
+title: outputs return an input, a vars constant, a set variable and a capture of the top-level scope
+rules: [SY-39]
+features: [inputs, vars, outputs, do, set, exec, capture, interpolation]
+plan: |
+  blokky: 1.0
+  inputs:
+    MODE: { default: fast }
+  vars:
+    GREETING: hello
+  outputs: [MODE, GREETING, SAID, TOLD]
+  do:
+    - set: { SAID: 'said ${GREETING}' }
+    - exec: [blokky-testkit, print, --out, done]
+      capture: TOLD
+expect:
+  status: succeeded
+  outputs:
+    MODE: fast
+    GREETING: hello
+    SAID: said hello
+    TOLD: done

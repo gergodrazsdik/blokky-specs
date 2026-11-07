@@ -1,0 +1,11 @@
+title: A space and # after an exec string start a comment, which the command loses
+rules: [SY-2, SY-89]
+features: [exec-string]
+plan: |
+  blokky: 1.0
+  exec: blokky-testkit argv done # tidy
+expect:
+  status: succeeded
+  invocations:
+    - { argv: [argv, done] }
+notes: SY-89 asks for a warning here; warnings never block the run (SY-2) and the result document has no warnings to match.

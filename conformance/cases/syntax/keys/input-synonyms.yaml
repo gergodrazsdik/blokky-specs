@@ -1,0 +1,22 @@
+title: Input keys from other tools suggest in, matches, description and default
+rules: [SY-30]
+features: [inputs, exec]
+plan: |
+  blokky: 1.0
+  inputs:
+    ENVIRONMENT:
+      default: staging
+      enum: [staging, production]
+    BRANCH:
+      pattern: '^[a-z]+$'
+      desc: Branch to build
+    NOTE:
+      value: none
+  exec: [blokky-testkit, exit, '0']
+inputs: [BRANCH=main, NOTE=x]
+expect:
+  plan_errors:
+    - { code: BK_PLAN_UNKNOWN_KEY, detail: { suggestion: in }, line: 5, column: 5 }
+    - { code: BK_PLAN_UNKNOWN_KEY, detail: { suggestion: matches }, line: 7, column: 5 }
+    - { code: BK_PLAN_UNKNOWN_KEY, detail: { suggestion: description }, line: 8, column: 5 }
+    - { code: BK_PLAN_UNKNOWN_KEY, detail: { suggestion: default }, line: 10, column: 5 }

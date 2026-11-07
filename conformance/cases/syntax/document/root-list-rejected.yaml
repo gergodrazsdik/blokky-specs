@@ -1,0 +1,17 @@
+title: A bare top-level list is a plan error; the root must be a mapping
+rules: [SY-32]
+features: [script, shell-sh]
+plan: |
+  - blokky: 1.0
+  - shell: sh
+    script: |
+      echo hello
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: SY-32 }
+      line: 1
+      column: 1
+notes: >-
+  The root's type is decided by the value alone, so BK_PLAN_VALUE (errors.md §4).
+  Other errors (no blokky: at the root) may be reported too.

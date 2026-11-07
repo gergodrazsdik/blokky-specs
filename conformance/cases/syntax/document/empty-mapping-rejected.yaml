@@ -1,0 +1,14 @@
+title: An empty mapping is a value error at the value
+rules: [SY-22]
+features: [env, exec]
+plan: |
+  blokky: 1.0
+  env: {}
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: SY-22 }
+      line: 2
+      column: 6
+  exhaustive: true
