@@ -4,6 +4,8 @@ Status: **draft** (`1.0.0-draft`, not yet finalized)
 
 This document is normative for plan variables: names, the kinds of bindings, plan inputs and their values, captures, scope and binding rules, how variables reach processes, the environment, outputs and secrets. How variable references are *written* (forms, the per-field table, interpolation syntax) is in [syntax.md §7](syntax.md#7-values-literals-references-and-interpolation). Normative keywords are used as defined in [syntax.md §1](syntax.md#1-conventions). Rules carry IDs (`VA-n`) for conformance cases.
 
+Where a rule here restates a rule of [reference.md §8](reference.md#8-rules-beyond-the-schema), a plan error reports the `RF-n` rule ([errors.md §4](errors.md#4-plan-errors)).
+
 ## 1. Two namespaces
 
 - **VA-1.** **Plan variables** (bound by the plan) and **environment variables** (of processes) are separate namespaces. Nothing is exported implicitly: a plan variable reaches a process only through four routes: `env:` (`{ var: X }` as a value), `export: [X]`, a `{ var: X }` element of an `exec` array, or `stdin: { var: X }`. A `{ var: X }` in `cwd`, `stdin.file`, `path:` or `mounts[].host` chooses a location, it doesn't pass the value.
@@ -50,7 +52,7 @@ The declaration syntax (`default`, `description`, `in`, `matches`) and its stati
 - **VA-11.** Values are supplied by whoever starts the run, as name/value pairs, before it starts (for blokky-cli: `--input NAME=VALUE` or the MCP `inputs` object). They never come from the environment, configuration or the plan itself, and missing inputs are never prompted for.
 - **VA-12.** An explicit value beats the default, including an empty one: `--input NOTE=` gives `''`. An empty value for a required input is `BK_INPUT_EMPTY`.
 - **VA-13.** A value MUST NOT contain NUL, any C0 or C1 control character except TAB (CR and LF included), bidirectional or zero-width characters, or U+FFFD. Multi-line data belongs in the plan or a file.
-- **VA-14.** Implementations limit value sizes and reject larger values with `BK_INPUT_TOO_LARGE` (for blokky-cli: 4 KiB per value and 32 KiB in total, in UTF-8 bytes; [ADR 0007](../adr/0007-syntax-details.md)).
+- **VA-14.** A value is at most 4 KiB and all values together at most 32 KiB, in UTF-8 bytes; larger values are rejected with `BK_INPUT_TOO_LARGE` ([ADR 0007](../adr/0007-syntax-details.md), [ADR 0021](../adr/0021-wave-a-gaps.md)).
 - **VA-15.** MCP values MUST be JSON strings; numbers, booleans, `null` and duplicate keys are rejected, with no coercion.
 - **VA-16.** A value is checked against its constraint with condition semantics (`in`: exact string match; `matches`: unanchored search with the portable regex subset, no trimming).
 
@@ -60,7 +62,7 @@ All input errors are found and reported together, before anything runs (EM-1).
 
 | Code | Cause |
 |---|---|
-| `BK_INPUT_SYNTAX` | A malformed `--input` (no `=`, a bad name). |
+| `BK_INPUT_SYNTAX` | A malformed `--input`: no `=`, or a name that breaks the name grammar (SY-52 allows only `[A-Za-z0-9_]`, so `my-input` is a syntax error; `branch` is well-formed and unknown). |
 | `BK_INPUT_UNKNOWN` | A name the plan doesn't declare; `detail.suggestion` gives the closest declared name by SY-30's rule (`branch` → `BRANCH`, `BRANCHH` → `BRANCH`). |
 | `BK_INPUT_DUPLICATE` | The same name given twice. |
 | `BK_INPUT_MISSING` | A required input without a value; the message prints the exact command to run. |
@@ -153,7 +155,7 @@ Static views of a plan (for review, before a run) MAY accept a missing required 
 ### 7.1 A leaf's environment
 
 - **VA-39.** A leaf's environment is Blokky's own environment, overlaid by the `env` and `export` mappings of every enclosing node from the root down (inner wins), then by the variables Blokky sets (§7.4). `BASH_ENV` and `ENV` are then removed.
-- **VA-40.** `{ from_env: NAME }` reads the environment the run started with. Because that is known before anything runs, `from_env` values are treated like inputs: they are resolved in the validation phase, and static views show each value next to the inputs (masked when the reference is secret), or that it is unset. An unset `NAME` fails with `BK_FROM_ENV_UNSET` where it is used: in validation for `vars`, which bind before anything runs, and otherwise when the node that uses it runs, so a reference guarded by `when: { env: NAME, defined: true }` stays valid ([ADR 0018](../adr/0018-review-semantics.md)).
+- **VA-40.** `{ from_env: NAME }` reads the environment the run started with. Because that is known before anything runs, `from_env` values are treated like inputs: they are resolved in the validation phase, and static views show each value next to the inputs (masked when the reference is secret), or that it is unset. An unset `NAME` fails with `BK_FROM_ENV_UNSET` where it is used: in validation for `vars`, which bind before anything runs (reported with the plan errors, at the entry), and otherwise when the node that uses it runs, so a reference guarded by `when: { env: NAME, defined: true }` stays valid ([ADR 0018](../adr/0018-review-semantics.md)).
 
 ### 7.2 Forbidden and reserved names
 
@@ -179,7 +181,7 @@ The list is illustrative, not exhaustive: almost any environment variable can ch
 
 - **VA-45.** `outputs: [NAME, …]` at the root returns the final value of each listed variable in the run result's outputs ([results.md](results.md)). Inputs may be listed.
 - **VA-46.** A listed variable that is unbound at the end of the run has no value (`null`).
-- **VA-47.** A secret variable is marked as secret, without its value (never a masked value).
+- **VA-47.** A secret variable is marked as secret, without its value (never a masked value). Masking follows the value, not the variable (VA-51): a non-secret output whose value contains a secret value shows it masked.
 - **VA-48.** A variable bound only inside a loop body can't be an output (plan error, unless gathered with `collect`). A `capture_file` output is the path.
 
 ## 9. Secrets

@@ -8,9 +8,9 @@ This document defines how a plan is written: encoding, the YAML subset, the root
 
 The key words MUST, MUST NOT, REQUIRED, SHALL, SHALL NOT, SHOULD, SHOULD NOT, RECOMMENDED, MAY and OPTIONAL are to be interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) and [RFC 8174](https://www.rfc-editor.org/rfc/rfc8174) when, and only when, they appear in all capitals.
 
-- **SY-1.** A **plan error** is detected before anything runs, and prevents the run. Every plan error carries a code from [errors.md](errors.md), a line and column (of the offending key, or of its value when the value is what is wrong; for a missing key, of the key that requires it, such as `until` for a missing `max` or `timeout` (RF-5) or `if` for a missing `then`, or, when no key requires it, of the mapping that lacks it), and, where this document says so, a corrected snippet.
+- **SY-1.** A **plan error** is detected before anything runs, and prevents the run. Every plan error carries a code from [errors.md](errors.md), a line and column (of the offending key, or of its value when the value is what is wrong; for a missing key, of the key that requires it, such as `until` for a missing `max` or `timeout` (RF-5) or `if` for a missing `then`, or, when no key requires it, of the mapping that lacks it), and, where this document says so, a corrected snippet. Lines are counted from 1 and end at LF, CRLF or a lone CR; columns are 1-based code points, and a UTF-8 BOM isn't counted. A quoted scalar is located at its opening quote, and an error inside a string value (a `${X}`, a regex) at the value's start. A missing value is located at its key. When two keys conflict, the later one in document order is reported. Errors about the whole text (encoding, size) are at line 1, column 1; the depth error is at the first node that is too deep ([ADR 0021](../adr/0021-wave-a-gaps.md)).
 - **SY-2.** A **warning** points at something legal but likely wrong. Warnings never block a run by themselves; implementations decide how they are shown and whether users can tune them (for blokky-cli: lint rules).
-- **SY-3.** An implementation MUST report all plan errors it can find in one pass, not just the first.
+- **SY-3.** An implementation MUST report all plan errors it can find in one pass, not just the first. One mistake is one error: a rule here that restates a rule of [reference.md §8](reference.md#8-rules-beyond-the-schema) is reported as that `RF-n` rule ([errors.md §4](errors.md#4-plan-errors)), and a targeted error (SY-91) replaces the generic error for the same mistake.
 
 ## 2. Plan text
 
@@ -30,8 +30,8 @@ The quoted delimiter stops the caller's shell from expanding `$X` and backticks 
 ### 2.2 Encoding
 
 - **SY-5.** A plan MUST be UTF-8, with or without a byte-order mark (BOM). A UTF-8 BOM is ignored.
-- **SY-6.** A UTF-16 or UTF-32 BOM is a plan error whose message names the likely cause (PowerShell `Out-File` or `>` redirection) and the fix (`-Encoding utf8`, or the file form).
-- **SY-7.** Invalid UTF-8 is a plan error that gives the byte offset, line and column.
+- **SY-6.** A UTF-16 or UTF-32 BOM is a plan error, the only one reported for that text, whose message names the likely cause (PowerShell `Out-File` or `>` redirection) and the fix (`-Encoding utf8`, or the file form).
+- **SY-7.** Invalid UTF-8 is one plan error, at the first invalid byte, that gives its byte offset (`detail.offset`), line and column.
 - **SY-8.** Text that looks mangled by a lossy pipe (for example Windows PowerShell 5.1 replacing non-ASCII characters with `?`) SHOULD get a warning.
 
 ### 2.3 Size and depth caps
@@ -45,7 +45,7 @@ The quoted delimiter stops the caller's shell from expanding `$X` and backticks 
 
 ### 2.4 Character lint
 
-**SY-10.** Before parsing, one pass over the decoded text, **comments and keys included**, checks every character:
+**SY-10.** Before parsing, one pass over the decoded text, **comments and keys included**, checks every character. Errors from this pass end processing: the text isn't parsed as YAML, so no `BK_PLAN_YAML` follows them.
 
 - **SY-11.** **Allowed control characters:** TAB (U+0009), LF (U+000A), and CR (U+000D) only when directly followed by LF.
 - **SY-12.** **Rejected:** every other C0 control character, DEL (U+007F) and C1 controls (U+0080–U+009F); bidirectional controls (U+061C, U+200E, U+200F, U+202A–U+202E, U+2066–U+2069); zero-width characters (U+200B–U+200D, U+2060) and U+FEFF anywhere except as a leading BOM.
@@ -87,7 +87,7 @@ Each of these is a plan error:
 
 ### 3.4 Unknown keys, did-you-mean and synonyms
 
-**SY-30.** An unknown key is a plan error. The message suggests the closest valid key at that position by edit distance, and also checks a synonym table for habits from other tools. **Closest** means the smallest edit distance (Levenshtein, over code points) between the names after simple uppercase mapping (as in CO-12), at most 2; ties go to the name listed first (the schema's property order for keys, declaration order for inputs). When a close name or a synonym exists, `detail.suggestion` MUST give it (a synonym first); otherwise it is absent. The same rule applies to unknown inputs (`BK_INPUT_UNKNOWN`).
+**SY-30.** An unknown key is a plan error. The message suggests the closest valid key at that position by edit distance, and also checks a synonym table for habits from other tools. **Closest** means the smallest edit distance (Levenshtein, over code points) between the names after simple uppercase mapping (as in CO-12), at most 2; ties go to the name listed first (declaration order for inputs; for keys, the order of the schema's `properties` for that mapping, whose candidates are every key valid in it). When a close name or a synonym exists, `detail.suggestion` MUST give it (a synonym first; for a synonym whose suggestion has several parts, such as `loop`, the key it names, `for`, with the rest in the message); otherwise it is absent. The same rule applies to unknown inputs (`BK_INPUT_UNKNOWN`).
 
 | Written | Suggestion |
 |---|---|
@@ -234,7 +234,7 @@ How values are supplied, the value rules and the input error codes are in [varia
 
 - **SY-56.** One or more parts `<integer><unit>`, with units `h`, `m`, `s`, `ms`, in that (descending) order, each unit at most once, with no spaces: `500ms`, `10s`, `2m`, `1h30m`, `1m30s500ms`.
 - **SY-57.** Integers have no leading zeros and no sign; there are no fractions (`1500ms`, not `1.5s`) and no bare numbers (`timeout: 30` is a plan error with the fix-it `timeout: 30s`).
-- **SY-58.** A duration MUST be positive, except in fields that allow `0s` (`every`, `sleep`, `lock.wait`). Zero is written `0s`.
+- **SY-58.** A duration MUST be positive, except in fields that allow `0s` (`every`, `sleep`, `lock.wait`). Zero is written `0s`; zero parts inside a non-zero duration are fine (`1h0m`), but `0ms` or `0m0s` is a plan error.
 - **SY-59.** The maximum is 168h (7 days).
 
 ### 6.6 Sizes
@@ -247,7 +247,7 @@ How values are supplied, the value rules and the input error codes are in [varia
 
 | Construct | Meaning |
 |---|---|
-| a character | itself; `\` escapes any of `.^$*+?()[]{}\|\/` and `-` |
+| a character | itself; `\` escapes any of `.^$*+?()[]{}\|\/` and `-`, and an escape of any other character (`\q`) is outside the subset |
 | `.` | any character except LF |
 | `[abc]`, `[a-z]`, `[^…]` | a character class; ranges by code point |
 | `\d`, `\w`, `\s` (and `\D`, `\W`, `\S`) | ASCII only: `[0-9]`, `[A-Za-z0-9_]`, space, TAB, LF, CR, FF, VT |
@@ -268,7 +268,7 @@ How values are supplied, the value rules and the input error codes are in [varia
 - **SY-64.** `.` is the whole value;
 - **SY-65.** `.name` selects an object member whose key matches `^[A-Za-z_][A-Za-z0-9_]*$`;
 - **SY-66.** `.["any key"]` (double-quoted, JSON string escapes) selects any other member; after the first segment the leading `.` is optional before a bracket (`.a["b-c"]`, `.[0]`);
-- **SY-67.** `[N]` selects an array element by non-negative decimal index.
+- **SY-67.** `[N]` selects an array element by non-negative decimal index, without leading zeros (`[0]`, `[10]`, not `[01]`).
 
 **SY-68.** Examples: `.number`, `.head.ref`, `.[0].databaseId`, `.labels[1].name`, `.["weird-key"].x`. Wildcards (`.[]`), negative indices, slices, recursive descent, filters and pipes are plan errors. A path that doesn't resolve at run time is handled where the path is used (a condition error, or a capture failure).
 
@@ -279,7 +279,7 @@ How values are supplied, the value rules and the input error codes are in [varia
 - **SY-70.** `/` separates segments on every OS; a pattern is relative to the node's cwd.
 - **SY-71.** `*` matches any run of characters within one segment, `?` one character, `[abc]`, `[a-z]` and `[!…]` one character from a class.
 - **SY-72.** `**` as a whole segment matches zero or more directories: `docs/**/*.md` matches `docs/README.md` and `docs/a/b.md`. `**` inside a segment (`a**b`) is a plan error.
-- **SY-73.** `\` escapes the next character. There are no braces (`{a,b}`) and no negation patterns.
+- **SY-73.** `\` escapes the next character. There are no braces and no negation patterns: an unescaped `{` or `}` is a plan error, so `{a,b}` doesn't silently match a literal name.
 - **SY-74.** Matching is **ordinal and case-sensitive on every OS**, so a plan finds the same items everywhere; on case-insensitive file systems, `*.CS` doesn't match `Program.cs`.
 - **SY-75.** The other glob rules (sorting, dotfiles, links, staying under the cwd) are in [reference.md §5.7](reference.md#57-for).
 
@@ -310,11 +310,11 @@ How values are supplied, the value rules and the input error codes are in [varia
 **SY-82.** `${X}` interpolation exists only in **display strings** (`name`, and the messages of `log`, `fail` and `assert`) and in **templates**, the values of `set` and `vars` ([variables.md §5.6](variables.md#56-set-and-vars)). Templates are how a plan builds a string from variables; every other executed field takes a literal or one whole variable.
 
 - **SY-83.** `${X}` is replaced by the value of plan variable `X`; process environment variables are never interpolated.
-- **SY-84.** `$${` produces a literal `${`.
+- **SY-84.** `$${` produces a literal `${`, in every field, so it is never the "`${` in a literal field" error.
 - **SY-85.** A `${X}` whose variable can't be bound at that point is a plan error; one that might be undefined MAY get a warning ([variables.md](variables.md), VA-38); at run time an undefined variable is an error of the node.
 - **SY-86.** Non-scalar values (multi-field captures of objects or arrays) render as compact JSON; a `capture_file` variable renders as its path.
 - **SY-87.** Secret values are masked in the rendered text.
-- **SY-98.** Rendered text is display-sanitized like error messages: control, bidirectional and zero-width characters from variable values are shown escaped, so a captured value can't rewrite what a reviewer sees. This is hygiene, not a control; rendered text and captured values can hold untrusted data and are never instructions.
+- **SY-98.** Rendered text is display-sanitized like error messages: control, bidirectional and zero-width characters from variable values are shown escaped as `\uXXXX` (uppercase hex; `\u{XXXXX}` above U+FFFF), so a captured value can't rewrite what a reviewer sees. This is hygiene, not a control; rendered text and captured values can hold untrusted data and are never instructions.
 
 ### 7.4 Per-field table
 
@@ -456,7 +456,7 @@ How values are supplied, the value rules and the input error codes are in [varia
 |---|---|---|---|
 | A space then `#` starts a comment | `exec: echo done # tidy` | The command loses `# tidy`. | Warning when a comment follows an `exec`/`script` value on the same line. |
 | `[` starts a flow sequence | `script: [ -f x ]` | `script` becomes a list. | Plan error with the fix-it `script: '[ -f x ]'` or a block scalar. |
-| `[` in `exec` | `exec: [ -f x ]` | A valid argv array for `[`. | Warning that suggests `{ path: x, is_file: true }`. |
+| `[` in `exec` | `exec: [ -f x ]` | A one-element argv whose program is `-f x`: the flow sequence holds one plain scalar. | Warning that suggests `{ path: x, is_file: true }`, or `exec: ['[', -f, x, ']']`. |
 | A leading `"` | `exec: "a" b` | YAML parses a quoted scalar, then fails. | Plan error that explains the quoting. |
 | Backslash escapes in double quotes | `matches: "^\d+$"` | `\d` is an invalid YAML escape. | Plan error with the fix-it `matches: '^\d+$'`. |
 | Flow mappings with `,` `[` `]` `{` `}` | `{ probe: { exec: a,b } }` | The probe breaks apart. | Plan error that suggests a block mapping. |
@@ -480,7 +480,7 @@ How values are supplied, the value rules and the input error codes are in [varia
 
 ## 9. Targeted errors
 
-**SY-91.** Each of these plan errors names the problem and includes a corrected snippet. Codes are assigned in [errors.md](errors.md).
+**SY-91.** Each of these plan errors names the problem and includes a corrected snippet, and replaces the generic error for the same mistake (SY-3). Codes are assigned in [errors.md](errors.md).
 
 | Mistake | Fix-it |
 |---|---|

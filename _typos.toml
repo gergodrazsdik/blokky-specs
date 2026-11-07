@@ -2,6 +2,10 @@
 [files]
 extend-exclude = ["LICENSE", "CODE_OF_CONDUCT.md"]
 
+[default]
+# Base64 plan bytes in conformance cases are data, not words.
+extend-ignore-re = ["plan_base64: [A-Za-z0-9+/=]+"]
+
 [default.extend-words]
 # Project vocabulary that is not a typo.
 blokky = "blokky"

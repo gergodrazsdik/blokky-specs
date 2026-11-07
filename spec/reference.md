@@ -111,7 +111,7 @@ Succeeds as soon as one child succeeds; fails only when all fail.
 
 ### 2.6 `race`
 
-Starts all children at once, in declaration order; the **first child to complete** decides the node's outcome, and the others are cancelled (and confirmed, EM-32). `concurrency` and `fail_fast` are not valid on `race`.
+Starts all children at once, in declaration order; the **first child to complete** decides the node's outcome, and the others are cancelled (and confirmed, EM-32). `concurrency` and `fail_fast` are not valid on `race`, except inside `for:`.
 
 ```yaml
 - name: tests, unless the log shows OOM
@@ -165,7 +165,7 @@ Starts all children at once, in declaration order; the **first child to complete
 `fail: "No release tag on ${BRANCH}"` fails the node.
 
 - **Companion `code`:** a user error code (default `BK_FAIL`).
-- The message is a display string. `retry: true` doesn't retry a `fail`; only a `retry:` condition matching its code does (§5.5).
+- The message is a display string. An enclosing `retry: true` doesn't retry a `fail`; only a `retry:` condition matching its code does (§5.5).
 
 ### 2.11 `assert`
 
@@ -214,7 +214,7 @@ do:
 - **The sequence** is the nearest enclosing `do` list: the root's or a `do` node's, the body of a loop (where `return` ends the current iteration, like `continue`, and the loop goes on), or a `finally` list. `then` and `else` are transparent: a `return` in a branch ends the sequence that contains the `if`.
 - The `return` node succeeds, and the sequence's remaining nodes are `skipped` with skip reason `returned`. The sequence's node then completes normally: its `finally` runs, and a loop goes on to its next iteration or condition check.
 - The message is a display string, recorded like a `log` message.
-- A `return` whose nearest sequence would be reached through an `all`, `any` or `race` is a plan error: those groups have no order to end early.
+- A `return` whose nearest sequence would be reached through an `all`, `any` or `race` is a plan error: those groups have no order to end early. So is a `return` with no enclosing sequence at all (a root `return`, or one under a root `if` or `all`).
 - A `return` without `when` that isn't inside a `then` or `else` gets a warning, because the nodes after it never run.
 - There is no `break`: a loop ends through its own condition, `max` or source.
 - Only `name` and `when` are valid on it (§7).
@@ -248,7 +248,7 @@ Leaf options are node-level siblings of `exec` or `script`; on any other kind th
 |---|---|---|
 | `name` | all | Display label. |
 | `when` | all | Run only if a condition holds, else `skipped`. |
-| `timeout` | all but `sleep`, `log`, `fail`, `set` | Total wall-clock limit. |
+| `timeout` | all but `sleep`, `log`, `fail`, `set`, `return` | Total wall-clock limit. |
 | `lock` | see §7 | Hold a named advisory lock. |
 | `tempdir` | see §7 | Create a runtime-owned temp dir and make it the cwd. |
 | `cwd` | see §7 | Working directory. |
@@ -256,8 +256,8 @@ Leaf options are node-level siblings of `exec` or `script`; on any other kind th
 | `export` | see §7 | Export plan variables as environment variables. |
 | `container` | see §7 | Run leaves in an ephemeral container. |
 | `services` | see §7 | Background processes around the node. |
-| `finally` | all but `sleep`, `log`, `fail`, `set` | Cleanup nodes, run once per node. |
-| `ignore_errors` | all but `sleep`, `log`, `fail`, `set` | The node's failure doesn't fail its parent. |
+| `finally` | all but `sleep`, `log`, `fail`, `set`, `return` | Cleanup nodes, run once per node. |
+| `ignore_errors` | all but `sleep`, `log`, `fail`, `set`, `return` | The node's failure doesn't fail its parent. |
 | `retry`, `while`, `until`, `for` | see §7 | Repetition (§5). |
 | `attempt_timeout` | with repetition | Per-attempt or per-iteration limit. |
 
@@ -273,7 +273,7 @@ A guard condition, evaluated **once, before anything else, in the parent's scope
 
 The node's **total** wall-clock limit, measured on a monotonic clock. It covers lock wait, tempdir creation, container and service startup, the body and every repetition, but not `finally` (which has its own limit). When it fires, running processes get the graceful signal, then the forced kill after the grace period (5s), and the node fails with `BK_TIMEOUT_TOTAL`, status `timed_out`. The grace period comes after the limit ([ADR 0003](../adr/0003-execution-defaults.md), Q-k). Nested limits combine as the minimum.
 
-There is no implicit `timeout` on groups or the root; `defaults.leaf_timeout` sets one for leaves and probes only. On a leaf with `retry`, `while` or `until`, it limits each attempt or iteration, like an implicit `attempt_timeout`, not the whole loop ([ADR 0018](../adr/0018-review-semantics.md)). An implementation may also stop a whole run from outside ([execution-model.md §7](execution-model.md#7-external-stops)).
+There is no implicit `timeout` on groups or the root; `defaults.leaf_timeout` sets one for leaves and probes only. On a leaf with `retry`, `while` or `until`, `defaults.leaf_timeout` limits each attempt or iteration, like an implicit `attempt_timeout`, not the whole loop; the node's own `timeout` always limits the whole node, repetition included ([ADR 0018](../adr/0018-review-semantics.md)). An implementation may also stop a whole run from outside ([execution-model.md §7](execution-model.md#7-external-stops)).
 
 ### 4.4 `lock`
 
@@ -502,7 +502,7 @@ These sibling fields bind variables around a loop's iterations ([ADR 0017](../ad
 - name: fetch all issues
   until: { var: NEXT, empty: true }
   carry: { CURSOR: NEXT }          # '' in iteration 1, then the previous NEXT
-  collect: { PAGES: PAGE }         # every PAGE, as a list, after the loop
+  collect: { PAGE: PAGES }         # every PAGE, as a list, after the loop
   index: { as: PAGE_NO, start: 1 }
   max: 100
   timeout: 5m
@@ -542,20 +542,20 @@ Which modifiers and companion groups each kind accepts. ✓ = valid; — = plan 
 | `set` | — | — | — | — | — | — | — |
 | `return` | — | — | — | — | — | — | — |
 
-"`for` only" means the field is valid only inside the `for:` mapping of that node. On a node that has `for`, node-level `concurrency` and `fail_fast` are plan errors for every kind: they would apply to the inner group, not the loop. The loop's settings go in `for:`; an inner `all` or `any` with its own settings is written as a child node (RF-31). `index`, `carry` and `collect` are valid wherever the repetition they belong to is (§5.2, §5.8). Companion fields of a kind (`then`/`else`, `shell`, `level`, `message`, `code`) are valid only on their kind.
+"`for` only" means the field is valid only inside the `for:` mapping of that node. On a node that has `for`, node-level `concurrency` and `fail_fast` are plan errors for every kind: they would apply to the inner group, not the loop. The loop's settings go in `for:`; an inner `all` or `any` with its own settings is written as a child node (RF-31). `index`, `carry` and `collect` are valid wherever the repetition they belong to is (§5.2, §5.8). Companion fields of a kind (`then`/`else`, `shell`, `level`, `message`, `code`) are valid only on their kind. `collect` with `for` on `log` is valid in this table but can never be used: a `log` binds no capture, so RF-30 always rejects it.
 
 ## 8. Rules beyond the schema
 
-Implementations MUST enforce these as plan errors (unless noted). Rules carry IDs (`RF-n`) for conformance cases and for `detail.rule`. The schema also enforces the ones marked *(schema)*, so an editor with the schema catches them before an implementation runs; implementations report them with the rule's ID either way.
+Implementations MUST enforce these as plan errors (unless noted), with `BK_PLAN_INVALID`, except RF-21 and RF-22, which are `BK_PLAN_VALUE`; a rule elsewhere that restates one of these is reported under its `RF-n` ID ([errors.md §4](errors.md#4-plan-errors)). Rules carry IDs (`RF-n`) for conformance cases and for `detail.rule`. The schema also enforces the ones marked *(schema)*, so an editor with the schema catches them before an implementation runs; implementations report them with the rule's ID either way.
 
 - **RF-1.** Exactly one kind per node.
 - **RF-2.** At most one repetition modifier per node.
 - **RF-3.** The validity matrix (§7) and the per-repetition sibling table (§5.2). *(schema)*
 - **RF-4.** `attempt_timeout` only with a repetition modifier. *(schema)*
 - **RF-5.** `while` and `until` have `max` or `timeout` (or both). *(schema)*
-- **RF-6.** Modifiers outside repetition (`when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`, `container`, `services`) don't reference variables the node itself introduces (`as`, `tempdir.as`, its own captures): "move it into the body".
-- **RF-7.** Shadowing: no variable name is bound twice in nested scopes; inputs collide with every other binding.
-- **RF-8.** Two children of an `all` don't bind the same name anywhere in their subtrees.
+- **RF-6.** Modifiers outside repetition (`when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`, `container`, `services`) don't reference variables the node itself introduces (`as`, `tempdir.as`, `index`, `carry`, its own captures): "move it into the body".
+- **RF-7.** Shadowing: no variable name is bound twice in nested scopes, including by `index` and `carry`; inputs collide with every other binding.
+- **RF-8.** Two children of an `all` don't bind the same name anywhere in their subtrees, except names scoped to a loop iteration, which never reach the `all`'s scope.
 - **RF-9.** Inputs and variables never reach literal fields; argv[0] of an `exec` array is a literal.
 - **RF-10.** `env` doesn't set a forbidden key; `export` doesn't name a reserved environment name; no name is in both `env` and `export` on one node.
 - **RF-11.** An absolute `cwd` is not combined with `tempdir` on one node.
@@ -566,17 +566,17 @@ Implementations MUST enforce these as plan errors (unless noted). Rules carry ID
 - **RF-16.** Captures under `finally` aren't referenced outside that `finally` list.
 - **RF-17.** No `lock` inside a `lock`.
 - **RF-18.** `as` is present for scalar `for` sources and absent for `matrix`. *(schema)*
-- **RF-19.** A secret marker is only on references, never on literals.
+- **RF-19.** A secret marker is only on references, never on literals; a literal marked secret (SY-91) is reported under this rule, not as an unknown key.
 - **RF-20.** An input's `default` satisfies its constraint; at most one of `in`/`matches`.
 - **RF-21.** Empty lists only in fields that allow them (`mounts`).
 - **RF-22.** A regex stays within the portable subset ([syntax.md §6.7](syntax.md#67-regular-expressions)).
 - **RF-23.** A reference (`${X}`, `{ var: X }`, a `var:` subject, an `outputs` entry) names a variable that some binding can provide before it: a syntactic scope check over the plan. A reference with no possible binding is a plan error; whether a possible binding actually happened is checked at run time ([variables.md §6](variables.md#6-scope-and-binding)).
 - **RF-24.** Service names are present and unique within a node.
 - **RF-25.** `fields` only with `items`; `keep_blank` only with `lines`; `allow_empty` only with `glob`. *(schema)*
-- **RF-26.** A name isn't bound twice: not by two sequential siblings, not by `set` for a bound name, not by `vars` for an input or another `vars` entry.
+- **RF-26.** A name isn't bound twice: not by two sequential siblings, not by `set` for a bound name, not by `vars` for an input or another `vars` entry. Two sequential loops may bind the same loop variable, because each binds it in its own iteration scope.
 - **RF-27.** Templates (`${…}` in executed values) appear only in `set` and `vars` values; `vars` values use only inputs, earlier `vars` and `from_env`.
 - **RF-28.** `timeout`, `finally`, `finally_timeout` and `ignore_errors` are not used on `sleep`, `log`, `fail`, `set` or `return`. *(schema)*
-- **RF-29.** A `return`'s nearest enclosing sequence is not reached through an `all`, `any` or `race` (§2.13).
+- **RF-29.** A `return` has an enclosing sequence, and it is not reached through an `all`, `any` or `race` (§2.13).
 - **RF-30.** `index` only with `retry`, `while` or `until`; `carry` only with `while` or `until`; `collect` only with `for`, `while` or `until`. `carry` and `collect` name a capture bound by the node or in its body; `index` and `carry` names follow the shadowing rules (RF-7).
 - **RF-31.** Node-level `concurrency` and `fail_fast` don't appear on a node that has `for` (§7). *(schema)*
 - **RF-32.** Companion fields only with their owner: `then`/`else` with `if` (and `if` has `then`), `shell` with `script`, `level` with `log`, `message` with `assert`, `code` with `fail` or `assert`, `finally_timeout` with `finally`. *(schema)*

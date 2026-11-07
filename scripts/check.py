@@ -271,8 +271,9 @@ def _node(node: Any, found: set[str]) -> None:
     if not isinstance(node, dict):
         return
     for kind in KINDS:
-        if kind in node:
-            found.add("exec" if kind == "exec" and isinstance(node["exec"], list) else kind)
+        # the string form of exec is exec-string (added in _process)
+        if kind in node and (kind != "exec" or isinstance(node["exec"], list)):
+            found.add(kind)
     _process(node, found)
     for key, feature in LEAF_OPTIONS.items():
         if key in node:
@@ -307,6 +308,8 @@ def _node(node: Any, found: set[str]) -> None:
     for service in node.get("services") or []:
         if isinstance(service, dict):
             _process(service, found)
+            if isinstance(service.get("exec"), list):
+                found.add("exec")
             _condition(service.get("ready"), found)
     for key in ("do", "all", "any", "race", "then", "else", "finally"):
         for child in node.get(key) or []:
@@ -435,7 +438,7 @@ def check_case(
         if error["code"] == "BK_PLAN_INVALID" and "rule" not in (error.get("detail") or {}):
             finding(path, "every BK_PLAN_INVALID asserts detail.rule (CF-24)")
         rule = (error.get("detail") or {}).get("rule")
-        if rule and rule not in rules:
+        if isinstance(rule, str) and rule not in rules:
             finding(path, f"detail.rule {rule} names no rule")
 
     for feature in case["features"]:
@@ -479,6 +482,8 @@ def check_case(
             if action.get(a.replace("external-", "")) is True
         }
         declared = set(case["features"])
+        if not isinstance(plan, dict):  # a root that isn't a mapping uses no derivable feature
+            derived = declared
         if missing := derived - declared:
             finding(path, f"features: the plan uses {sorted(missing)}, which the case doesn't list (CF-11)")
         if extra := declared - derived - UNDERIVED:

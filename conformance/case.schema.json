@@ -228,6 +228,7 @@
         "status": { "enum": ["succeeded", "failed", "stopped"] },
         "error": { "type": ["object", "null"] },
         "outputs": { "type": "object" },
+        "inputs": { "type": "object" },
         "nodes": {
           "type": "object",
           "propertyNames": { "pattern": "^/([a-z_]+/[0-9]+(/[a-z_]+/[0-9]+)*)?$" },

@@ -24,7 +24,7 @@ How an implementation reports errors (JSON formats, exit codes) and the errors i
 
 | Code | Meaning |
 |---|---|
-| `BK_INPUT_SYNTAX` | A malformed `--input` (no `=`, a bad name) or MCP `inputs` object (non-string value, duplicate key). |
+| `BK_INPUT_SYNTAX` | A malformed `--input` (no `=`, a name that breaks the name grammar) or MCP `inputs` object (non-string value, duplicate key). |
 | `BK_INPUT_UNKNOWN` | An input the plan doesn't declare. `detail.suggestion` gives the closest declared name, when one is close enough ([syntax.md](syntax.md) SY-30). |
 | `BK_INPUT_DUPLICATE` | The same input given twice. |
 | `BK_INPUT_MISSING` | A required input without a value. `detail.command` is the exact command to run. |
@@ -34,20 +34,26 @@ How an implementation reports errors (JSON formats, exit codes) and the errors i
 
 ## 4. Plan errors
 
-Plan errors carry a line and column. `BK_PLAN_INVALID` covers every rule of [reference.md §8](reference.md#8-rules-beyond-the-schema) and the static rules of the other spec files; `detail.rule` is the ID of the rule that was broken (for example `RF-1`, `RF-5`, `SY-12`), so new rules don't need new codes and every error points at its spec text ([ADR 0018](../adr/0018-review-semantics.md)).
+Plan errors carry a line and column. `detail.rule` is the ID of the rule that was broken (for example `RF-1`, `SY-56`), so new rules don't need new codes and every error points at its spec text ([ADR 0018](../adr/0018-review-semantics.md)). Which code applies ([ADR 0021](../adr/0021-wave-a-gaps.md)):
+
+- **`BK_PLAN_UNKNOWN_KEY`**: a key that no kind or position accepts in that kind of mapping (a node, a condition, an input, `for:` …). A language key in the wrong place is not unknown.
+- **`BK_PLAN_VALUE`**: anything one value decides alone: its grammar or type, an empty value or list, a regex outside the subset or that doesn't compile, a reserved prefix (`BLOKKY_`, a `BK_` user code). `detail.rule` names the rule.
+- **`BK_PLAN_INVALID`**: a language key in the wrong place, and every rule relating keys, values or scopes. `detail.rule` names the rule.
+
+One mistake is one error with one rule. The [reference.md §8](reference.md#8-rules-beyond-the-schema) rule is canonical: a rule elsewhere that restates it is reported as the `RF-n` rule. Where §8 rules overlap, the more specific one wins: RF-4, RF-12, RF-28, RF-30, RF-31 and RF-32 over RF-3; RF-7 over RF-26 when an input or an enclosing scope is involved; RF-9 over RF-27 for `${…}` in a literal field; RF-27 over RF-23 for a template outside `set` and `vars`.
 
 | Code | Meaning |
 |---|---|
-| `BK_PLAN_ENCODING` | Not UTF-8: a UTF-16/32 BOM or invalid UTF-8 ([syntax.md §2.2](syntax.md#22-encoding)). |
-| `BK_PLAN_CHARACTER` | A character rejected by the character lint. `detail.codepoint`. |
+| `BK_PLAN_ENCODING` | Not UTF-8: a UTF-16/32 BOM or invalid UTF-8 ([syntax.md §2.2](syntax.md#22-encoding)). `detail.offset` for invalid UTF-8. |
+| `BK_PLAN_CHARACTER` | A character rejected by the character lint. `detail.codepoint`, written `U+XXXX` (uppercase hex, at least four digits). |
 | `BK_PLAN_TOO_LARGE` | Over 4 MiB, or nested deeper than 128 levels. |
 | `BK_PLAN_YAML` | Not valid YAML, or a rejected YAML feature (anchor, alias, merge key, tag, directive, second document, complex key). |
 | `BK_PLAN_DUPLICATE_KEY` | A key repeated in a mapping. |
-| `BK_PLAN_UNKNOWN_KEY` | A key that isn't valid at its position. `detail.suggestion` from the synonym table or did-you-mean (SY-30). |
+| `BK_PLAN_UNKNOWN_KEY` | A key that no kind accepts in that kind of mapping (above). `detail.suggestion` from the synonym table or did-you-mean (SY-30). |
 | `BK_PLAN_NOT_SUPPORTED` | A feature the implementation doesn't support yet. `detail.feature` is a feature id from the conformance vocabulary ([conformance/README.md §3.2](../conformance/README.md#32-features-and-requirements)). |
-| `BK_PLAN_VERSION` | `blokky:` missing, malformed or naming an unsupported version. `detail.supported` lists the supported versions. |
-| `BK_PLAN_VALUE` | A value that doesn't match its field's type or grammar (a boolean that isn't `true`/`false`, a bad duration, a bare number, an empty value or list, a regex that doesn't compile). |
-| `BK_PLAN_INVALID` | A structural or static semantic rule is violated. `detail.rule`. |
+| `BK_PLAN_VERSION` | `blokky:` missing, malformed or naming an unsupported version. `detail.supported` lists the supported versions, always. |
+| `BK_PLAN_VALUE` | A value that doesn't match its field's type or grammar (a boolean that isn't `true`/`false`, a bad duration, a bare number, an empty value or list, a regex outside the subset or that doesn't compile, a reserved prefix). `detail.rule`. |
+| `BK_PLAN_INVALID` | A key in the wrong place, or a rule relating keys, values or scopes is violated. `detail.rule`. |
 
 ## 5. Node errors
 
