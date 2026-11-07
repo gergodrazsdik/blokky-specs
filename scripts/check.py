@@ -460,6 +460,8 @@ def check_case(
             check_matchers(path, override["expect"], f"platforms.{key}.expect")
 
     expect = case["expect"]
+    if expect.get("no_result") and not any(a.get("kill") is True for a in case.get("actions", [])):
+        finding(path, "expect: { no_result: true } is only for a case with a kill action (CF-22)")
     plan_errors = expect.get("plan_errors", [])
     for error in plan_errors:
         if error["code"] == "BK_PLAN_INVALID" and "rule" not in (error.get("detail") or {}):

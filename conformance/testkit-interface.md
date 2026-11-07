@@ -110,10 +110,11 @@ Cases MUST NOT expect 123–125 as a command's result; a runner MAY report a lea
 
 ### 2.6 `sleep`
 
-- **TK-14.** `sleep DURATION [--ignore-term] [--ignore-term-for DURATION] [--record-signals FILE] [--exit CODE]` sleeps, then exits with `CODE` (default 0).
+- **TK-14.** `sleep DURATION [--ignore-term] [--ignore-term-for DURATION] [--record-signals FILE] [--tag TEXT] [--exit CODE]` sleeps, then exits with `CODE` (default 0).
   - `--ignore-term`: the graceful stop request (EM-26) is ignored for the whole sleep: SIGTERM, SIGINT and SIGHUP on Unix; CTRL_BREAK and CTRL_C on Windows. Only the forced kill ends the process.
   - `--ignore-term-for D`: requests in the first `D` after start are ignored; a request after that ends the process as by default.
   - `--record-signals FILE`: each received request appends its name and an LF to `FILE` (`SIGTERM`, `SIGINT`, `SIGHUP`, `CTRL_BREAK`, `CTRL_C`), before it is acted on or ignored. A forced kill can't be recorded.
+  - `--tag TEXT`: each recorded line is `TEXT SIGNAL` (`db SIGTERM`) instead of the bare name, so several processes can record to one file and a case can see the order in which they were stopped (EM-65).
 
 ### 2.7 `spawn`
 

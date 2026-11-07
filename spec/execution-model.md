@@ -39,15 +39,16 @@ Entering a node means applying each layer in this order; leaving it unwinds them
 
 - **EM-5.** A node skipped by `when` takes no lock, creates no tempdir, starts no container or service, and runs no `finally`.
 - **EM-6.** `timeout` covers everything from lock wait to the end of the last attempt, but not `finally`.
-- **EM-7.** `finally` runs once per node, inside the node's tempdir, cwd, env, container and services, under its own `finally_timeout`, even after `timeout` fired.
+- **EM-7.** `finally` runs once per node, inside the node's tempdir, cwd, env, container and services, under its own `finally_timeout`, even after `timeout` fired. When `finally_timeout` fires, the running `finally` nodes are cancelled (§6) and their leaves carry `killed_by: finally_timeout`; the `finally` list fails with `BK_TIMEOUT_FINALLY`, which is attached to the node's error like any `finally` error (EM-51) and doesn't make the node `timed_out` (EM-27; [ADR 0024](../adr/0024-wave-d-gaps.md)).
 - **EM-8.** Probes in `if`, `assert`, `while`, `until` and `retry` conditions run in the node's own scope (after `cwd`, `env`, `container`); `when` probes run in the parent's scope.
+- **EM-70.** A node's duration runs from its start, after its `when` passed, to its completion, and includes lock wait, setup (tempdir, container), services and `finally`. For a leaf's process, EM-68 defines when it ends; the drain and reap time after that are recorded separately and don't end the node's duration ([ADR 0024](../adr/0024-wave-d-gaps.md)).
 
 ### 2.1 Locks and services
 
-- **EM-60.** A `lock` is acquired after the node's `timeout` starts and before anything else in the node; waiting counts against `timeout`. It is held until the node ends (after `finally`) and released when the run's process dies.
+- **EM-60.** A `lock` is acquired after the node's `timeout` starts and before anything else in the node; waiting counts against `timeout`. It is held until the node ends (after `finally`) and released when the run's process dies. Two nodes of the same run that use the same lock name exclude each other, as nodes of two runs do; the order among waiters is unspecified ([ADR 0024](../adr/0024-wave-d-gaps.md)).
 - **EM-61.** `services` start after `container` and before `finally` and the body. They start one at a time, in list order, each after the previous one is ready. The body starts when every service is ready.
 - **EM-62.** Readiness is polled, with at most 250ms between the end of one check and the start of the next, until the `ready:` condition holds, for at most `ready_timeout` (default 30s), within the node's `timeout`.
-- **EM-63.** If a service exits before it is ready or isn't ready in time, the services already started are stopped and the node fails (`BK_SERVICE_EXITED`, `BK_SERVICE_NOT_READY`). The body and the node's `finally` don't run, because `finally` sits inside `services` in the modifier order.
+- **EM-63.** If a service exits before it is ready or isn't ready in time, the services already started are stopped and the node fails (`BK_SERVICE_EXITED`, `BK_SERVICE_NOT_READY`). The body and the node's `finally` don't run, because `finally` sits inside `services` in the modifier order: their nodes are `skipped` with `not_reached`, and the run result records no `finally` status ([ADR 0024](../adr/0024-wave-d-gaps.md)).
 - **EM-64.** If a ready service with `on_exit: fail` exits on its own, the body is cancelled (§6) and the node fails with `BK_SERVICE_EXITED`; `finally` still runs, with the remaining services. With `on_exit: ignore`, the exit is recorded and nothing else happens. A service that exits after the body ended (during `finally`) is recorded and is not a failure.
 - **EM-65.** After `finally`, services are stopped in reverse list order, each as a whole process tree (graceful, then forced, EM-26). An exit caused by stopping is not a failure.
 
@@ -67,7 +68,7 @@ Entering a node means applying each layer in this order; leaving it unwinds them
 ### 4.1 Launch
 
 - **EM-14.** A leaf's program is resolved before launch: `exec` argv[0], or the shell binary for `script`, against `PATH` from the environment the run started with, never the cwd ([shells.md §4](shells.md#4-executable-resolution)).
-- **EM-15.** Every leaf, with everything it starts, MUST be stoppable as one process tree. Leaves have no controlling terminal on Unix; on Windows they have no visible console and receive no user input. (How: implementation-defined; for blokky-cli: own session and process group on Unix, own Job Object on Windows.) Every Windows leaf MUST have a console the graceful stop can reach: its own hidden console, or its own process group on a shared hidden console, so that CTRL_BREAK can be delivered (EM-26; [ADR 0020](../adr/0020-conformance-gaps.md)).
+- **EM-15.** Every leaf, service and probe, with everything it starts, MUST be stoppable as one process tree. Leaves have no controlling terminal on Unix; on Windows they have no visible console and receive no user input. (How: implementation-defined; for blokky-cli: own session and process group on Unix, own Job Object on Windows.) Every Windows leaf, service and probe MUST have a console the graceful stop can reach: its own hidden console, or its own process group on a shared hidden console, so that CTRL_BREAK can be delivered (EM-26; [ADR 0020](../adr/0020-conformance-gaps.md), [ADR 0024](../adr/0024-wave-d-gaps.md)).
 - **EM-16.** A leaf's environment is the environment the run started with, plus the `env` and `export` mappings of every enclosing scope, innermost last; `BASH_ENV` and `ENV` are then cleared ([variables.md §7](variables.md#7-environment)).
 - **EM-17.** A leaf's stdin is empty unless the plan sets `stdin`. A run never forwards its own stdin to leaves and never prompts.
 
@@ -108,15 +109,15 @@ All limits use a monotonic clock.
 |---|---|---|---|
 | `timeout` | a node, total | none | `BK_TIMEOUT_TOTAL` |
 | `attempt_timeout` | one attempt or iteration (body only) | none | `BK_TIMEOUT_ATTEMPT` |
-| `defaults.leaf_timeout` | each leaf without its own `timeout`; on a leaf with `retry`, `while` or `until`, each attempt or iteration | none | `BK_TIMEOUT_TOTAL`; `BK_TIMEOUT_ATTEMPT` per attempt |
+| `defaults.leaf_timeout` | each leaf without its own `timeout`; on a leaf with `retry`, `while` or `until`, each attempt or iteration | none | `BK_TIMEOUT_TOTAL`; `BK_TIMEOUT_ATTEMPT` per attempt (`killed_by: attempt_timeout`) |
 | probe `timeout` | one probe | 30s, or `leaf_timeout` if smaller (CO-29) | condition error (unless `timeout_result`) |
-| `finally_timeout` | a node's `finally` list | 5m | attached to the node's error |
+| `finally_timeout` | a node's `finally` list | 5m | `BK_TIMEOUT_FINALLY`, attached to the node's error |
 
 Implementations MAY let users change the 30s and 5m defaults and the grace period below; plans that need a specific value set it explicitly.
 
 - **EM-25.** Nested limits combine: the effective limit at any point is the earliest deadline of all enclosing limits. The one exception is `finally`: a `finally` list's deadline is its own `finally_timeout`, measured from when it starts, whatever limits of the node or its ancestors have expired (only an external stop may shorten it, EM-56). An ancestor's `finally` starts after the nested ones have ended.
 - **EM-26.** **When a limit fires**, every process tree under that limit gets the graceful stop request (SIGTERM on Unix; CTRL_BREAK on Windows, through the leaf's console, EM-15), then, after the **grace period** (default 5s), is killed. A process that has left its console (a Windows program that detached itself) has no graceful channel: it is killed at once, and the run result records `graceful: none` for it. The grace period comes **after** the limit, not inside it ([ADR 0003](../adr/0003-execution-defaults.md), Q-k).
-- **EM-27.** The node whose own limit fired is `timed_out`; its error code is always present, and leaves under it carry `killed_by: timeout` or `attempt_timeout`.
+- **EM-27.** The node whose own limit fired and ended it is `timed_out`: its error is that limit's code, `BK_TIMEOUT_TOTAL` or `BK_TIMEOUT_ATTEMPT`, which is always present, and leaves under it carry `killed_by: timeout` or `attempt_timeout`. A repeating node whose own `attempt_timeout` (or per-attempt `defaults.leaf_timeout`) fired, and which then ends with `BK_RETRIES_EXHAUSTED` or `BK_LOOP_MAX_REACHED`, is `failed`; its repetition entries ended by `attempt_timeout` are `timed_out` ([ADR 0024](../adr/0024-wave-d-gaps.md)).
 - **EM-28.** `sleep` and `every` waits end immediately when their node is cancelled or a limit fires.
 
 ## 6. Cancellation
@@ -126,6 +127,7 @@ A node is **cancelled** when something outside it stops it:
 - a failing sibling under `fail_fast: true` (`do`, `all`, `for`);
 - a decided `any` (a sibling succeeded) or `race` (a sibling completed);
 - an ancestor's `timeout` or `attempt_timeout`;
+- for nodes of a `finally` list, that list's `finally_timeout` (EM-7);
 - an external stop of the whole run (§7).
 
 Rules:
@@ -143,7 +145,7 @@ An implementation can stop a whole run from outside the plan, for example when a
 - **EM-55.** Every running node is cancelled (§6) with `BK_CANCELLED` and `detail.reason` naming the cause; leaves carry `killed_by` with the cause. Nodes that haven't started never start.
 - **EM-56.** `finally` lists still run, but the implementation MAY shorten their `finally_timeout` and the grace period, down to zero, so the run ends in time.
 - **EM-36.** `ignore_errors` never hides an external stop, an ancestor's timeout or an ancestor's cancellation.
-- **EM-57.** The run ends with a run result whose status is `stopped`, with the cause ([results.md](results.md)).
+- **EM-57.** The run ends with a run result whose status is `stopped`, with the cause ([results.md](results.md)). The run's error is the root's `BK_CANCELLED`, whose `detail.reason` names the cause ([ADR 0024](../adr/0024-wave-d-gaps.md)).
 
 ## 8. Status
 
@@ -154,14 +156,14 @@ An implementation can stop a whole run from outside the plan, for example when a
 | `succeeded` | The node finished without failing. |
 | `failed` | The node failed. With `ignore_errors: true` it also carries `ignored: true`. |
 | `skipped` | The node didn't start: its `when` was false (`skip_reason: condition`), it was never reached because its parent ended early (`skip_reason: not_reached`), a `return` ended its sequence before it (`skip_reason: returned`), a `host:` condition was false on this machine (`skip_reason: pruned`, CO-7), or it is in the branch of an `if` that didn't run (`skip_reason: not_taken`; `pruned` wins when a `host:` condition decided the branch). |
-| `timed_out` | The node's **own** `timeout` or `attempt_timeout` fired. With `ignore_errors: true` it also carries `ignored: true`. |
+| `timed_out` | The node's **own** `timeout` or `attempt_timeout` fired and ended it: its error is `BK_TIMEOUT_TOTAL` or `BK_TIMEOUT_ATTEMPT` (EM-27). A retry or loop that ends with `BK_RETRIES_EXHAUSTED` or `BK_LOOP_MAX_REACHED` is `failed`, even if its attempts timed out. With `ignore_errors: true` it also carries `ignored: true`. |
 | `cancelled` | The node was running and was stopped from outside (§6, §7). |
 
 ### 8.2 Propagation
 
 ([ADR 0009](../adr/0009-status-propagation.md))
 
-- **EM-43.** A node is `timed_out` only if its own limit fired, and `cancelled` only if it was stopped from outside. A parent never inherits these statuses from a child: a parent whose child failed, timed out or was cancelled is `failed` (or `cancelled`/`timed_out` for its own reasons).
+- **EM-43.** A node is `timed_out` only if its own limit fired and its error is that limit's timeout code (EM-27), and `cancelled` only if it was stopped from outside. A parent never inherits these statuses from a child: a parent whose child failed, timed out or was cancelled is `failed` (or `cancelled`/`timed_out` for its own reasons).
 - **EM-44.** A `do`, `all` or `any` whose children were **all skipped** is `succeeded`, and its `finally` runs.
 - **EM-45.** `do` succeeds if no child failed (ignored failures don't count). `all` likewise. `any` succeeds if one child succeeded, or if no child failed (all skipped); it fails if no child succeeded and at least one failed. A child of `any` skipped by its `when` doesn't take part: an ordered `any` moves on to the next child.
 - **EM-46.** A child that failed with `ignore_errors: true` is **not a success**: it doesn't fail its parent, but it doesn't win an `any` either; `any` goes on to the next alternative, and if none succeeds, the ignored failures are among its causes.
@@ -175,10 +177,10 @@ An implementation can stop a whole run from outside the plan, for example when a
 
 ### 8.4 Error precedence
 
-- **EM-51.** If a node's body fails and its `finally` also fails, the body error is primary and the `finally` error is attached. A failing `finally` fails an otherwise successful node.
+- **EM-51.** If a node's body fails and its `finally` also fails (including by `finally_timeout`, `BK_TIMEOUT_FINALLY`, EM-7), the body error is primary and the `finally` error is attached. A failing `finally` fails an otherwise successful node.
 - **EM-66.** **A failed group carries its child's error.** When a `do`, `all`, `if`, `for` iteration or other group fails because a child failed, the group's error is that child's error itself (same code, `detail` and `node`), not a wrapper. Causes the group attaches (EM-51, EM-52) belong to the group's error only; the child's own recorded error is unchanged. So `retry:` conditions and `result: error` see the real cause, at any nesting depth ([ADR 0016](../adr/0016-fixes-from-examples.md)).
 - **EM-52.** When several children fail (`do` with `fail_fast: false`, `all`), the first failure in plan order is the group's error; the others are attached to it as causes. An `any` whose children all failed fails with `BK_ANY_ALL_FAILED` and every child error as a cause, in plan order.
-- **EM-53.** Repetition errors (`BK_RETRIES_EXHAUSTED`, `BK_LOOP_MAX_REACHED`, `BK_TIMEOUT_TOTAL`) nest the last attempt's error.
+- **EM-53.** Repetition errors (`BK_RETRIES_EXHAUSTED`, `BK_LOOP_MAX_REACHED`, `BK_TIMEOUT_TOTAL`) nest the last attempt's error. When the node's own `timeout` fires during an attempt, the attempt it interrupted is the last attempt, and that attempt's error, `BK_CANCELLED`, is the one nested ([ADR 0024](../adr/0024-wave-d-gaps.md)).
 
 ## 9. Worked example: a cancellation timeline
 

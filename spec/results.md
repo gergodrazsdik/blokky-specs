@@ -20,7 +20,7 @@ This document defines the **run result**: the abstract outcome of a run that eve
 | inputs | Each input's value and its source (supplied, or `default`), in declaration order. |
 | status | `succeeded`, `failed` or `stopped` (EM-50). |
 | stop cause | For `stopped`: why the run was stopped from outside (implementation-defined values, for example `budget`, `interrupt`). |
-| error | The run's primary error (§5): the root node's error, or the external stop. None on success. |
+| error | The run's primary error (§5): the root node's error; for `stopped`, the root's `BK_CANCELLED`, whose `detail.reason` names the cause (EM-57). None on success. |
 | outputs | Each `outputs` name with its final value, no value (`null`) if unbound, or marked secret ([variables.md §8](variables.md#8-outputs)). |
 | warnings | Warnings the implementation raised at validation or run time (for example a short secret that couldn't be masked). |
 | nodes | The root node's result (§3). |
@@ -33,14 +33,15 @@ This document defines the **run result**: the abstract outcome of a run that eve
 | kind | all | The node's kind. |
 | name | if set | The raw `name` template. |
 | status | all | `succeeded`, `failed`, `skipped`, `timed_out` or `cancelled` ([execution-model.md §8](execution-model.md#8-status)). |
-| ignored | failed nodes | Whether `ignore_errors` hid the failure from the parent. |
+| ignored | failed and timed-out nodes | `true` when `ignore_errors` hid the failure from the parent; absent otherwise. |
 | skip reason | skipped nodes | `condition`, `not_reached`, `returned`, `pruned` (a `host:` condition was false, CO-7), or `not_taken` (the branch of an `if` that didn't run, unless a `host:` condition decided it: then `pruned`). |
 | error | failed, timed out, cancelled | The node's error (§5). |
-| repetition | `retry`, `while`, `until`, `for` | The number of attempts or iterations; what ended them (`ended_by`: `success` for `retry`, `condition` for `while`/`until`, `items` for `for`, or `max`, `timeout`, `failure`, which includes a condition error that ended the repetition, CO-40); the last condition result (`true`, `false`, `error`); and for each attempt or iteration its index, rendered name, item, status and error. Entries are listed in index order. |
+| repetition | `retry`, `while`, `until`, `for` | The number of attempts or iterations, including one that was cancelled; what ended them (`ended_by`: `success` for `retry`; `condition` for `while`/`until`; `items` for a `for` that ran all its items, even if some failed; or `max`, `timeout`, `cancelled` (cancellation or an external stop), or `failure`, which includes a `for` stopped by `fail_fast` and a condition error that ended the repetition, CO-40); the last condition result (`true`, `false`, `error`); and for each attempt or iteration its index, rendered name, item, status and error (an entry ended by `attempt_timeout` is `timed_out`, EM-27). Entries are listed in index order. |
 | children | groups, `if` | The children's results, in plan order. |
 | finally | nodes with `finally` | The `finally` list's results and its status. |
 | lock wait | nodes with `lock` | How long the node waited for its lock. |
-| services | nodes with `services` | For each service: its name, when it became ready, and how it ended (stopped by the run, exited with code N, never ready). |
+| services | nodes with `services` | For each service that started, in list order (services that never started are absent): its name; when it became ready, measured from the node's start; and how it ended: stopped by the run; exited with its exit code, also when it exited before it was ready; or never ready, when it wasn't ready within `ready_timeout` or was stopped by a timeout or cancellation during startup ([ADR 0024](../adr/0024-wave-d-gaps.md)). |
+| duration | nodes that started | From the node's start to its completion (EM-70). |
 | messages | `log`, `fail`, `assert` | The rendered message and, for `log`, its level. |
 | probes | nodes whose conditions ran probes | For each executed probe, in execution order: the command, exit code and result (`true`, `false`, `error`). Its invocation follows the leaf rules (§3.1): masked, element 0 as written, or the resolved shell path for a `script` probe. |
 | bindings | `exec`, `script`, `set`, loops, `tempdir` | The names of the variables the node bound by `capture`, `set`, `collect` or `tempdir.as` (never their values). |
@@ -54,7 +55,7 @@ This document defines the **run result**: the abstract outcome of a run that eve
 | cwd | The leaf's working directory (on the host; for a container leaf, also the container path). |
 | exit code | The exit code (an unsigned 32-bit value on Windows), if the process exited. |
 | signal | The terminating signal (Unix), if any. |
-| killed by | If the run stopped the leaf: `timeout`, `attempt_timeout`, `cancel`, or the external stop's cause. |
+| killed by | If the run stopped the leaf: `timeout`, `attempt_timeout`, `finally_timeout` (EM-7), `cancel`, or the external stop's cause. |
 | graceful | `none` when the leaf had left its console, so it had no graceful stop channel and was killed at once (EM-26). |
 | descendants held output | Whether a descendant kept the output open after the leaf completed (EM-20). |
 | survivors | Processes still alive after a join's reap timeout (EM-32). |

@@ -76,9 +76,10 @@ One mistake is one error with one rule. The [reference.md §8](reference.md#8-ru
 
 | Code | Meaning | Retried |
 |---|---|---|
-| `BK_TIMEOUT_TOTAL` | The node's own `timeout` (or `defaults.leaf_timeout`) fired. | never for the retrying node's own `timeout`; yes when a descendant's `timeout` fired inside an attempt (reference.md §5.5) |
-| `BK_TIMEOUT_ATTEMPT` | The node's `attempt_timeout` fired for one attempt or iteration. | yes |
-| `BK_CANCELLED` | The node was cancelled from outside: a failing sibling, a decided `any`/`race`, an ancestor's limit, or the runtime stopping the run (run budget, shutdown; `detail.reason`). Its status is `cancelled`. | never |
+| `BK_TIMEOUT_TOTAL` | The node's own `timeout` (or `defaults.leaf_timeout`, except on repeating leaves, [ADR 0018](../adr/0018-review-semantics.md) S-9) fired. | never for the retrying node's own `timeout`; yes when a descendant's `timeout` fired inside an attempt (reference.md §5.5) |
+| `BK_TIMEOUT_ATTEMPT` | The node's `attempt_timeout` fired for one attempt or iteration, or `defaults.leaf_timeout` did on a leaf with `retry`, `while` or `until`, where it limits each attempt. Leaves it stopped carry `killed_by: attempt_timeout`. | yes |
+| `BK_TIMEOUT_FINALLY` | The node's `finally_timeout` fired: the running `finally` nodes were cancelled, their leaves with `killed_by: finally_timeout`. Attached to the node's error like any `finally` error (EM-7, EM-51; [ADR 0024](../adr/0024-wave-d-gaps.md)). | no |
+| `BK_CANCELLED` | The node was cancelled from outside: a failing sibling, a decided `any`/`race`, an ancestor's limit, the `finally_timeout` of the `finally` list it is in, or the runtime stopping the run (run budget, shutdown; `detail.reason`). Its status is `cancelled`. | never |
 
 ### 5.3 Conditions, variables and captures
 

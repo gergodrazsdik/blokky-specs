@@ -101,7 +101,7 @@ Code-formatted words (`exec`, `timeout`) are plan keywords; plain words are conc
 - **Run result.** The abstract outcome of a run: its status, inputs, outputs, errors and one result per node in plan order. Conformance cases assert on it; implementations serialize it (for blokky-cli: the JSON run report). See [results.md](results.md).
 - **Run-owned files.** Files a run creates for itself: script files, capture files and tempdirs. They are readable only by the run's user, outlive the run, and are removed by the implementation when asked (for blokky-cli: `blokky clean`).
 - **`tempdir`.** A run-owned temporary directory created for a node (0700, unpredictable name). It always becomes the node's cwd; `remove` deletes it at node end.
-- **`killed_by`.** Why a run stopped a leaf: `timeout`, `attempt_timeout`, `cancel`, or the cause of an external stop.
+- **`killed_by`.** Why a run stopped a leaf: `timeout`, `attempt_timeout`, `finally_timeout`, `cancel`, or the cause of an external stop.
 - **Error code.** The machine-readable code of an error. Built-in codes start with `BK_` (see [errors.md](errors.md)); user codes (from `fail` and `assert`) match `^[A-Z][A-Z0-9_]*$` and must not start with `BK_`.
 
 ## Review and controls
