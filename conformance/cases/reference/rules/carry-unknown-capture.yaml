@@ -1,0 +1,17 @@
+title: carry naming a capture the loop doesn't bind is a plan error
+rules: [RF-30]
+features: [until, cond-var, carry, do, exec, capture]
+plan: |
+  blokky: 1.0
+  until: { var: NEXT, empty: true }
+  carry: { CURSOR: NEXTT }
+  max: 3
+  do:
+    - exec: [blokky-testkit, print, --out, { var: CURSOR }]
+      capture: NEXT
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-30 }
+      line: 3
+      column: 18   # the capture name NEXTT

@@ -1,0 +1,16 @@
+title: An input default outside its in list is a plan error
+rules: [RF-20]
+features: [inputs, log, interpolation]
+plan: |
+  blokky: 1.0
+  inputs:
+    ENVIRONMENT:
+      default: prod
+      in: [staging, production]
+  log: "Deploying to ${ENVIRONMENT}"
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-20 }
+      line: 4
+      column: 14   # the default value

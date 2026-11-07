@@ -1,0 +1,14 @@
+title: ignore_errors on the root is a plan error
+rules: [RF-33]
+features: [ignore-errors, exec]
+plan: |
+  blokky: 1.0
+  ignore_errors: true
+  exec: [blokky-testkit, exit, '1']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-33 }
+      line: 2
+      column: 1
+  exhaustive: true

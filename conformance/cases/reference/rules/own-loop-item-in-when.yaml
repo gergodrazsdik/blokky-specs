@@ -1,0 +1,18 @@
+title: A when on a for node can't use the loop's own item variable
+rules: [RF-6]
+features: [do, for-each, when, cond-var, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - for: { each: [a, b], as: ITEM }
+      when: { var: ITEM, equals: a }
+      exec: [blokky-testkit, argv, { var: ITEM }]
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-6 }
+      line: 4
+notes: >-
+  when is evaluated before the node, in the parent's scope, where ITEM isn't
+  bound; the fix is a when inside the body. The scope check (RF-23) may
+  report the same reference too, so the case isn't exhaustive.

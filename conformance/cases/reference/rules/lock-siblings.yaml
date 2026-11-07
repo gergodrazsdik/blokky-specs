@@ -1,0 +1,16 @@
+title: Locks on sibling nodes are valid
+rules: [RF-17]
+features: [do, lock, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - lock: conf-lock-siblings-a
+      exec: [blokky-testkit, exit, '0']
+    - lock: conf-lock-siblings-b
+      exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  invocations:
+    - { argv: [exit, '0'] }
+    - { argv: [exit, '0'] }
+notes: Near miss for RF-17.

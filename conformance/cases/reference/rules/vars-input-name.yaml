@@ -1,0 +1,16 @@
+title: A vars entry can't reuse an input's name
+rules: [RF-26]
+features: [inputs, vars, log, interpolation]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH: { default: main }
+  vars:
+    BRANCH: dev
+  log: "${BRANCH}"
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-26 }
+      line: 5
+      column: 3

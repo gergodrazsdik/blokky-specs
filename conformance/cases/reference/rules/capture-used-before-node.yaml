@@ -1,0 +1,14 @@
+title: A capture used before its node is a plan error
+rules: [RF-23]
+features: [do, exec, capture]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, argv, { var: OUT }]
+    - exec: [blokky-testkit, print, --out, x]
+      capture: OUT
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-23 }
+      line: 3

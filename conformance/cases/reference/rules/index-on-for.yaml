@@ -1,0 +1,15 @@
+title: index on a for node is a plan error
+rules: [RF-30]
+features: [for-each, index, exec]
+plan: |
+  blokky: 1.0
+  for: { each: [a, b], as: ITEM }
+  index: N
+  exec: [blokky-testkit, argv, { var: ITEM }]
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-30 }
+      line: 3
+      column: 1
+notes: for binds its index as ITEM_INDEX instead.

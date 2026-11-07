@@ -1,0 +1,15 @@
+title: export can't name a reserved environment name
+rules: [RF-10]
+features: [vars, export, exec]
+plan: |
+  blokky: 1.0
+  vars: { TMPDIR: /tmp/work }
+  export: [TMPDIR]
+  exec: [blokky-testkit, env, TMPDIR]
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-10 }
+      line: 3
+      column: 10   # the list entry TMPDIR
+notes: TMPDIR is a valid plan variable name; only exporting it is forbidden (VA-42).

@@ -1,0 +1,14 @@
+title: env may set a name that export can't
+rules: [RF-10]
+features: [outputs, env, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  env: { HOME: /blokky-home }
+  exec: [blokky-testkit, env, HOME]
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: '{"HOME":"/blokky-home"}'
+notes: Near miss for RF-10; HOME is reserved for export (VA-42) but not forbidden in env (VA-41).

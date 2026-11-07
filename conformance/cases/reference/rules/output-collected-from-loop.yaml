@@ -1,0 +1,19 @@
+title: A loop capture gathered with collect can be an output
+rules: [RF-15]
+features: [outputs, for-each, collect, do, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [ALL]
+  for: { each: [a, b], as: ITEM }
+  collect: { LAST: ALL }
+  do:
+    - exec: [blokky-testkit, print, --out, { var: ITEM }]
+      capture: LAST
+expect:
+  status: succeeded
+  outputs:
+    ALL: '["a","b"]'
+  invocations:
+    - { argv: [print, --out, a] }
+    - { argv: [print, --out, b] }
+notes: Near miss for RF-15 ("unless gathered with collect").

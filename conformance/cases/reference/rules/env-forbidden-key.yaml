@@ -1,0 +1,13 @@
+title: env can't set PATH
+rules: [RF-10]
+features: [env, exec]
+plan: |
+  blokky: 1.0
+  env: { PATH: /usr/bin }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-10 }
+      line: 2
+      column: 8    # the env key PATH

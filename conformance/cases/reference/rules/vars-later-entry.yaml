@@ -1,0 +1,15 @@
+title: A vars template can't use a later vars entry
+rules: [RF-27]
+features: [vars, log, interpolation]
+plan: |
+  blokky: 1.0
+  vars:
+    URL: https://${HOST}/healthz
+    HOST: example.com
+  log: "${URL}"
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-27 }
+      line: 3
+notes: vars values use only inputs, earlier vars entries and from_env. The scope check (RF-23) may report the same reference.

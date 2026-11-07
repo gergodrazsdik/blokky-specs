@@ -1,0 +1,13 @@
+title: shell on an exec node is a plan error
+rules: [RF-32]
+features: [exec]
+plan: |
+  blokky: 1.0
+  exec: [blokky-testkit, exit, '0']
+  shell: bash
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-32 }
+      line: 3
+      column: 1

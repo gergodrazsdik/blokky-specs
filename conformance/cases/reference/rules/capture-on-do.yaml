@@ -1,0 +1,14 @@
+title: capture on a do node is a plan error
+rules: [RF-12]
+features: [capture, do, exec]
+plan: |
+  blokky: 1.0
+  capture: OUT
+  do:
+    - exec: [blokky-testkit, print, --out, x]
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-12 }
+      line: 2
+      column: 1

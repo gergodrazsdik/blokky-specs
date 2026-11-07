@@ -1,0 +1,22 @@
+title: An until loop bounded only by timeout is valid
+rules: [RF-5]
+features: [until, timeout, cond-var, do, exec, capture]
+plan: |
+  blokky: 1.0
+  until: { var: STATE, equals: done }
+  timeout: 30s
+  do:
+    - exec: [blokky-testkit, print, --out, done]
+      capture: STATE
+expect:
+  status: succeeded
+  nodes:
+    /:
+      status: succeeded
+      repetition: { count: 1, ended_by: condition }
+  invocations:
+    - { argv: [print, --out, done] }
+notes: >-
+  Near miss for RF-5 (max or timeout, or both). The loop node is a group, so
+  its timeout is the total limit; on a leaf, timeout limits each iteration
+  (reference.md §4.3), which this case avoids.

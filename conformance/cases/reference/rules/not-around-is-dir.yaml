@@ -1,0 +1,12 @@
+title: not around is_dir is valid, because is_dir has no not_ form
+rules: [RF-14]
+features: [when, cond-composite, cond-path, exec]
+plan: |
+  blokky: 1.0
+  when: { not: { path: missing, is_dir: true } }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  invocations:
+    - { argv: [exit, '0'] }
+notes: Near miss for RF-14; conditions.md §3 lists is_file and is_dir with "use not:".

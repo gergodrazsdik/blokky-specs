@@ -1,0 +1,17 @@
+title: An absolute cwd together with tempdir is a plan error (Unix path)
+rules: [RF-11]
+features: [tempdir, cwd, exec]
+requires:
+  os: [linux, macos]
+plan: |
+  blokky: 1.0
+  tempdir: true
+  cwd: /tmp
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-11 }
+notes: >-
+  No position: the rule is about the combination. The Windows twin is
+  tempdir-absolute-cwd-windows; plans can't be overridden per OS (CF-34).

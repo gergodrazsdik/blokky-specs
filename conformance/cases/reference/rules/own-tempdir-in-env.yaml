@@ -1,0 +1,14 @@
+title: env on a node can't use the node's own tempdir variable
+rules: [RF-6]
+features: [tempdir, env, exec]
+plan: |
+  blokky: 1.0
+  tempdir: { as: WORK }
+  env: { WORKDIR: { var: WORK } }
+  exec: [blokky-testkit, env, WORKDIR]
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-6 }
+      line: 3
+notes: tempdir sits outside env in the modifier order, but RF-6 forbids every modifier outside repetition from using tempdir.as.

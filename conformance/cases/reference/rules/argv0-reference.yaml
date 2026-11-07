@@ -1,0 +1,13 @@
+title: argv[0] of an exec array can't be a variable reference
+rules: [RF-9]
+features: [vars, exec]
+plan: |
+  blokky: 1.0
+  vars: { PROG: blokky-testkit }
+  exec: [{ var: PROG }, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-9 }
+      line: 3
+      column: 8    # the element, the value that is wrong

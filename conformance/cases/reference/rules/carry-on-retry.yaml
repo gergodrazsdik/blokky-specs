@@ -1,0 +1,15 @@
+title: carry on a retry node is a plan error
+rules: [RF-30]
+features: [retry, carry, exec, capture]
+plan: |
+  blokky: 1.0
+  retry: true
+  carry: { PREV: OUT }
+  exec: [blokky-testkit, print, --out, x]
+  capture: OUT
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-30 }
+      line: 3
+      column: 1

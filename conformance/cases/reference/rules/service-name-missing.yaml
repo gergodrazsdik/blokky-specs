@@ -1,0 +1,16 @@
+title: A service without a name is a plan error at the service mapping
+rules: [RF-24]
+features: [services, exec]
+plan: |
+  blokky: 1.0
+  services:
+    - exec: [blokky-testkit, print, --out, up, --hang]
+      ready: { output: stdout, contains: up }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-24 }
+      line: 3      # no key requires name, so the mapping that lacks it (SY-1)
+      column: 5
+  exhaustive: true

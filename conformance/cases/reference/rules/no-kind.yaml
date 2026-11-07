@@ -1,0 +1,15 @@
+title: A node with no kind is a plan error at the mapping that lacks it
+rules: [RF-1]
+features: [do, log]
+plan: |
+  blokky: 1.0
+  do:
+    - name: nothing to do
+    - log: done
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-1 }
+      line: 3      # no key requires the kind, so the mapping that lacks it (SY-1)
+      column: 5
+  exhaustive: true

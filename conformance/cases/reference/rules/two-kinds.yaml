@@ -1,0 +1,13 @@
+title: A node with two kinds is a plan error
+rules: [RF-1]
+features: [do, log, sleep]
+plan: |
+  blokky: 1.0
+  do:
+    - { log: hello, sleep: 1s }
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-1 }
+      line: 3      # both kind keys are on this line; which one is offending isn't specified
+notes: A flow mapping puts both kinds on one line, so the line is determined even though the column isn't.

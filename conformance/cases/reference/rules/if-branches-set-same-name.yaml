@@ -1,0 +1,18 @@
+title: Both branches of an if may set the same name, and it is bound after the if
+rules: [RF-26, VA-31]
+features: [vars, do, if, cond-var, set, exec]
+plan: |
+  blokky: 1.0
+  vars: { ENVIRONMENT: production }
+  do:
+    - if: { var: ENVIRONMENT, equals: production }
+      then:
+        - set: { REPLICAS: '3' }
+      else:
+        - set: { REPLICAS: '1' }
+    - exec: [blokky-testkit, argv, { var: REPLICAS }]
+expect:
+  status: succeeded
+  invocations:
+    - { argv: [argv, '3'] }
+notes: Near miss for RF-26; alternatives may bind the same name (VA-36).

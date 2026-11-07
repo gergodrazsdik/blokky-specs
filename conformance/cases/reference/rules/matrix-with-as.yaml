@@ -1,0 +1,13 @@
+title: A for over matrix with as is a plan error
+rules: [RF-18]
+features: [for-matrix, exec]
+plan: |
+  blokky: 1.0
+  for: { matrix: { OS: [linux] }, as: M }
+  exec: [blokky-testkit, argv, { var: OS }]
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-18 }
+      line: 2
+      column: 33   # the as key

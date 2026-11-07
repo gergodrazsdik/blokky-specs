@@ -1,0 +1,23 @@
+title: A relative cwd with tempdir is valid and resolves inside the temp dir
+rules: [RF-11]
+spec: [reference.md§4.5]
+features: [tempdir, cwd, exec]
+files:
+  sub: { dir: true }
+plan: |
+  blokky: 1.0
+  tempdir: true
+  cwd: sub
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: failed
+  error: { code: BK_CWD_INVALID, node: / }
+  nodes:
+    /:
+      status: failed
+      error: { code: BK_CWD_INVALID, node: / }
+  invocations: []
+notes: >-
+  Near miss for RF-11. sub exists in the work directory but not in the fresh
+  temp dir, which is where the relative cwd resolves, so the node fails at run
+  time instead of in validation.

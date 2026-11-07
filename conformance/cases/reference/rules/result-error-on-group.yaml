@@ -1,0 +1,22 @@
+title: result error is valid in a retry condition on a group node
+rules: [RF-13]
+spec: [reference.md§5.5]
+features: [retry-condition, cond-result, do, exec]
+plan: |
+  blokky: 1.0
+  retry: { result: error, equals: BK_EXIT }
+  max: 2
+  every: 0s
+  do:
+    - exec: [blokky-testkit, exit, '1']
+expect:
+  status: failed
+  error: { code: BK_RETRIES_EXHAUSTED, node: / }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 2 }
+  invocations:
+    - { argv: [exit, '1'] }
+    - { argv: [exit, '1'] }
+notes: Near miss for RF-13. The group carries its child's BK_EXIT (EM-66), which is what the condition sees.

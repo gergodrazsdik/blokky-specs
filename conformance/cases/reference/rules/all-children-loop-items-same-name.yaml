@@ -1,0 +1,17 @@
+title: Two children of an all can't bind the same loop variable either
+rules: [RF-8]
+features: [all, for-each, exec]
+plan: |
+  blokky: 1.0
+  all:
+    - for: { each: [a], as: ITEM }
+      exec: [blokky-testkit, argv, { var: ITEM }]
+    - for: { each: [b], as: ITEM }
+      exec: [blokky-testkit, argv, { var: ITEM }]
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-8 }
+notes: >-
+  RF-8 and VA-29 say "anywhere in their subtrees", so names scoped to a loop
+  body count too, although they are never published.

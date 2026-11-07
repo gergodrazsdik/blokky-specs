@@ -1,0 +1,13 @@
+title: allow_empty on a for that isn't over a glob is a plan error
+rules: [RF-25]
+features: [for-each, exec]
+plan: |
+  blokky: 1.0
+  for: { each: [a], as: ITEM, allow_empty: true }
+  exec: [blokky-testkit, argv, { var: ITEM }]
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-25 }
+      line: 2
+      column: 29   # the allow_empty key

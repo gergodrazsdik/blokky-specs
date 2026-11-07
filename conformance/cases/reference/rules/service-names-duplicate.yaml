@@ -1,0 +1,18 @@
+title: Two services of a node with the same name are a plan error
+rules: [RF-24]
+features: [services, exec]
+plan: |
+  blokky: 1.0
+  services:
+    - name: api
+      exec: [blokky-testkit, print, --out, up, --hang]
+      ready: { output: stdout, contains: up }
+    - name: api
+      exec: [blokky-testkit, print, --out, up, --hang]
+      ready: { output: stdout, contains: up }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-24 }
+notes: No position; whether the first or the second name is reported isn't specified.

@@ -1,0 +1,16 @@
+title: An input with both in and matches is a plan error
+rules: [RF-20]
+features: [inputs, log, interpolation]
+plan: |
+  blokky: 1.0
+  inputs:
+    MODE:
+      in: [fast, slow]
+      matches: '^[a-z]+$'
+  log: "Mode ${MODE}"
+inputs: [MODE=fast]
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-20 }
+notes: No position; either constraint could be the offending key. The input is supplied so no input error is expected.

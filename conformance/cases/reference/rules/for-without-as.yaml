@@ -1,0 +1,12 @@
+title: A for over each without as is a plan error
+rules: [RF-18]
+features: [for-each, exec]
+plan: |
+  blokky: 1.0
+  for: { each: [a, b] }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-18 }
+      line: 2      # the missing as is required by the for mapping on this line

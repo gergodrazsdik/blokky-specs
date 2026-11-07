@@ -1,0 +1,15 @@
+title: A capture can't reuse an input's name
+rules: [RF-7]
+features: [inputs, do, exec, capture]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH: { default: main }
+  do:
+    - exec: [blokky-testkit, print, --out, dev]
+      capture: BRANCH
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-7 }
+      line: 6
