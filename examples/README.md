@@ -92,7 +92,7 @@ For the rules behind each feature, see the [reference](../spec/reference.md). Th
 
 | Scenario | Task | Features it combines |
 |---|---|---|
-| [changed-files-lint](scenarios/changed-files-lint.blokky.yaml) | Lint the files changed on a branch with the right linter per type | `return`, `for` `lines`/`items`, `all`, `any`, `collect`, `set`, `ok_exit`, `ignore_errors`, `assert` |
+| [changed-files-lint](scenarios/changed-files-lint.blokky.yaml) | Lint the files changed on a branch with the right linter per type | `return`, `command:` conditions, `if`, `for` `lines`/`items`, `all`, `collect`, `set`, `ok_exit`, `ignore_errors` |
 | [cross-platform-setup](scenarios/cross-platform-setup.blokky.yaml) | Set up a Node.js clone on Linux, macOS and Windows | `host:` conditions, `when`, `race`, `any`, `retry`, `sleep`, `fail`, scripts in bash/zsh/pwsh |
 | [deploy-health-check](scenarios/deploy-health-check.blokky.yaml) | Deploy a systemd service, check health, roll back on failure | `sudo -n` leaves, `lock`, `until`, `if`, `set`, `fail` |
 | [dotnet-build-test](scenarios/dotnet-build-test.blokky.yaml) | Build and test a .NET solution with a per-project summary | `lock`, `for` `glob`, `all`, `collect`, `capture_file`, `finally`, `retry` |

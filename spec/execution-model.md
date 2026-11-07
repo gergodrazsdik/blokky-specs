@@ -8,7 +8,7 @@ This document is normative for how a plan runs: the run lifecycle, the order in 
 
 A run goes through two phases:
 
-1. **Validation.** The plan is read, checked (encoding, character lint, YAML subset, schema, the static rules of [reference.md §8](reference.md#8-rules-the-schema-doesnt-express)), its inputs and `vars` are bound, and its `from_env` references are resolved ([variables.md](variables.md), VA-40).
+1. **Validation.** The plan is read, checked (encoding, character lint, YAML subset, schema, the static rules of [reference.md §8](reference.md#8-rules-beyond-the-schema)), its inputs and `vars` are bound, and its `from_env` references are resolved ([variables.md](variables.md), VA-40).
 2. **Execution.** The root node runs. The run ends with a **run result** ([results.md](results.md)).
 
 - **EM-1.** Any plan or input error ends the run in the validation phase: no node runs, and no process or probe starts.
@@ -40,13 +40,13 @@ Entering a node means applying each layer in this order; leaving it unwinds them
 - **EM-5.** A node skipped by `when` takes no lock, creates no tempdir, starts no container or service, and runs no `finally`.
 - **EM-6.** `timeout` covers everything from lock wait to the end of the last attempt, but not `finally`.
 - **EM-7.** `finally` runs once per node, inside the node's tempdir, cwd, env, container and services, under its own `finally_timeout`, even after `timeout` fired.
-- **EM-8.** Probes in `if`, `while`, `until` and `retry` conditions run in the node's own scope (after `cwd`, `env`, `container`); `when` probes run in the parent's scope.
+- **EM-8.** Probes in `if`, `assert`, `while`, `until` and `retry` conditions run in the node's own scope (after `cwd`, `env`, `container`); `when` probes run in the parent's scope.
 
 ### 2.1 Locks and services
 
 - **EM-60.** A `lock` is acquired after the node's `timeout` starts and before anything else in the node; waiting counts against `timeout`. It is held until the node ends (after `finally`) and released when the run's process dies.
 - **EM-61.** `services` start after `container` and before `finally` and the body. They start one at a time, in list order, each after the previous one is ready. The body starts when every service is ready.
-- **EM-62.** Readiness is polled every 250ms until the `ready:` condition holds, for at most `ready_timeout` (default 30s), within the node's `timeout`.
+- **EM-62.** Readiness is polled, with at most 250ms between the end of one check and the start of the next, until the `ready:` condition holds, for at most `ready_timeout` (default 30s), within the node's `timeout`.
 - **EM-63.** If a service exits before it is ready or isn't ready in time, the services already started are stopped and the node fails (`BK_SERVICE_EXITED`, `BK_SERVICE_NOT_READY`). The body and the node's `finally` don't run, because `finally` sits inside `services` in the modifier order.
 - **EM-64.** If a ready service with `on_exit: fail` exits on its own, the body is cancelled (§6) and the node fails with `BK_SERVICE_EXITED`; `finally` still runs, with the remaining services. With `on_exit: ignore`, the exit is recorded and nothing else happens. A service that exits after the body ended (during `finally`) is recorded and is not a failure.
 - **EM-65.** After `finally`, services are stopped in reverse list order, each as a whole process tree (graceful, then forced, EM-26). An exit caused by stopping is not a failure.
@@ -67,7 +67,7 @@ Entering a node means applying each layer in this order; leaving it unwinds them
 ### 4.1 Launch
 
 - **EM-14.** A leaf's program is resolved before launch: `exec` argv[0], or the shell binary for `script`, against `PATH` from the environment the run started with, never the cwd ([shells.md §4](shells.md#4-executable-resolution)).
-- **EM-15.** Every leaf, with everything it starts, MUST be stoppable as one process tree. Leaves have no controlling terminal. (How: implementation-defined; for blokky-cli: own session and process group on Unix, own Job Object on Windows.)
+- **EM-15.** Every leaf, with everything it starts, MUST be stoppable as one process tree. Leaves have no controlling terminal on Unix; on Windows they have no visible console and receive no user input. (How: implementation-defined; for blokky-cli: own session and process group on Unix, own Job Object on Windows.) Implementations SHOULD give every Windows leaf its own hidden console, or its own process group on a shared console, so that the graceful stop (CTRL_BREAK) can be delivered.
 - **EM-16.** A leaf's environment is the environment the run started with, plus the `env` and `export` mappings of every enclosing scope, innermost last; `BASH_ENV` and `ENV` are then cleared ([variables.md §7](variables.md#7-environment)).
 - **EM-17.** A leaf's stdin is empty unless the plan sets `stdin`. A run never forwards its own stdin to leaves and never prompts.
 
@@ -76,7 +76,11 @@ Entering a node means applying each layer in this order; leaving it unwinds them
 - **EM-18.** A leaf's stdout and stderr are always consumed while it runs, so a leaf never blocks on a full pipe, whatever the implementation keeps of them.
 - **EM-19.** With `stderr: merge`, both streams share one pipe and their interleaving is kept.
 
-### 4.3 Completion
+### 4.3 Run-owned files
+
+- **EM-69.** Files and directories a run creates for itself (script files, capture files, tempdirs, env files) are created new, under a per-user root that only the run's user can write: never at an existing path and never through an existing symbolic link. Removing them, at node end (`tempdir.remove`) or later, never follows symbolic links or junctions, never crosses a file system boundary and never removes anything outside the file's own tree. The scripts directory a container sees holds only the run's script files.
+
+### 4.4 Completion
 
 - **EM-20.** A leaf **completes when its direct child process exits**. Output its descendants write after that is read for a bounded, implementation-defined time (for blokky-cli: `drain_timeout`, default 2s); if a descendant still holds the output open, the run result notes it.
 - **EM-21.** At completion, the leaf's remaining process tree is stopped (graceful, then forced), unless the leaf sets `keep_descendants: true` or `detach`.
@@ -110,8 +114,8 @@ All limits use a monotonic clock.
 
 Implementations MAY let users change the 30s and 5m defaults and the grace period below; plans that need a specific value set it explicitly.
 
-- **EM-25.** Nested limits combine: the effective limit at any point is the earliest deadline of all enclosing limits.
-- **EM-26.** **When a limit fires**, every process tree under that limit gets the graceful stop request (SIGTERM on Unix; CTRL_BREAK on Windows when the leaf has a console, otherwise none), then, after the **grace period** (default 5s), is killed. The grace period comes **after** the limit, not inside it ([ADR 0003](../adr/0003-execution-defaults.md), Q-k).
+- **EM-25.** Nested limits combine: the effective limit at any point is the earliest deadline of all enclosing limits. The one exception is `finally`: a `finally` list's deadline is its own `finally_timeout`, measured from when it starts, whatever limits of the node or its ancestors have expired (only an external stop may shorten it, EM-56). An ancestor's `finally` starts after the nested ones have ended.
+- **EM-26.** **When a limit fires**, every process tree under that limit gets the graceful stop request (SIGTERM on Unix; CTRL_BREAK on Windows when the leaf has a console, otherwise none), then, after the **grace period** (default 5s), is killed. A leaf with no graceful channel (a Windows process without a console) is killed at once, and the run result records `graceful: none` for it. The grace period comes **after** the limit, not inside it ([ADR 0003](../adr/0003-execution-defaults.md), Q-k).
 - **EM-27.** The node whose own limit fired is `timed_out`; its error code is always present, and leaves under it carry `killed_by: timeout` or `attempt_timeout`.
 - **EM-28.** `sleep` and `every` waits end immediately when their node is cancelled or a limit fires.
 
@@ -129,7 +133,7 @@ Rules:
 - **EM-29.** Cancellation propagates down: every running descendant is cancelled; nodes that haven't started never start.
 - **EM-30.** Cancelled processes get the graceful stop request, then are killed after the grace period (EM-26).
 - **EM-31.** `finally` of a cancelled node still runs, under `finally_timeout` (shortened during an external stop, §7).
-- **EM-32.** **Joins confirm.** An `all`, `any` or `race` completes only after its cancelled children are confirmed. A cancelled child is confirmed when it has completed, its `finally` included (bounded by its `finally_timeout`, EM-31), so cleanup never overlaps the nodes after the join. Each process being killed is waited for at most the grace period plus a fixed **reap timeout of 5s**; anything still alive then is listed as a survivor in the run result, and confirmation goes on without it ([ADR 0018](../adr/0018-review-semantics.md)).
+- **EM-32.** **Joins confirm.** An `all`, `any` or `race` completes only after its cancelled children are confirmed. A cancelled child is confirmed when it has completed, its `finally` included (bounded by its `finally_timeout`, EM-31), so cleanup never overlaps the nodes after the join. Each process being killed is waited for at most the grace period plus a **reap timeout** (implementation-defined, at least 1s; for blokky-cli: 5s); anything still alive then is listed as a survivor in the run result, and confirmation goes on without it ([ADR 0018](../adr/0018-review-semantics.md)).
 - **EM-33.** A cancelled node never retries and never starts another iteration.
 
 ## 7. External stops
@@ -149,8 +153,8 @@ An implementation can stop a whole run from outside the plan, for example when a
 |---|---|
 | `succeeded` | The node finished without failing. |
 | `failed` | The node failed. With `ignore_errors: true` it also carries `ignored: true`. |
-| `skipped` | The node didn't start: its `when` was false (`skip_reason: condition`), it was never reached because its parent ended early (`skip_reason: not_reached`), or a `return` ended its sequence before it (`skip_reason: returned`). |
-| `timed_out` | The node's **own** `timeout` or `attempt_timeout` fired. |
+| `skipped` | The node didn't start: its `when` was false (`skip_reason: condition`), it was never reached because its parent ended early (`skip_reason: not_reached`), a `return` ended its sequence before it (`skip_reason: returned`), or a `host:` condition was false on this machine (`skip_reason: pruned`, CO-7). |
+| `timed_out` | The node's **own** `timeout` or `attempt_timeout` fired. With `ignore_errors: true` it also carries `ignored: true`. |
 | `cancelled` | The node was running and was stopped from outside (§6, §7). |
 
 ### 8.2 Propagation
@@ -209,4 +213,4 @@ If the unit tests were a group with its own `finally` (say, uploading logs for 2
 
 ## 10. Conformance
 
-Every rule `EM-n` above has at least one conformance case in `conformance/cases/` that cites it. Timing rules are tested with the virtual clock where possible and with the tolerances in `conformance/README.md` otherwise.
+Every rule `EM-n` above has at least one conformance case in `conformance/cases/` that cites it, or is listed in `conformance/README.md` as not testable through the run result, with the reason (CF-51). Timing rules are tested with the virtual clock where possible and with the tolerances in `conformance/README.md` otherwise.

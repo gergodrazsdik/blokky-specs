@@ -43,7 +43,7 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 
 ### 2.2 `host`
 
-- **CO-7.** `host:` is the only subject evaluated statically: a branch whose `host:` condition is false on this machine is **pruned** before the shell and OS checks. Static views still show a pruned branch, marked as pruned with its condition, so a review on one OS sees what the plan runs on another ([ADR 0018](../adr/0018-review-semantics.md)). A `host:` condition inside a composite with other subjects is evaluated at run time like any other.
+- **CO-7.** `host:` is the only subject evaluated statically: a branch whose `host:` condition is false on this machine is **pruned** before the shell and OS checks. A pruned node is `skipped` with `skip_reason: pruned`. Static views still show a pruned branch, marked as pruned with its condition, so a review on one OS sees what the plan runs on another ([ADR 0018](../adr/0018-review-semantics.md)). A `host:` condition inside a composite with other subjects is evaluated at run time like any other.
 
 ### 2.3 `port` and `output` (services)
 
@@ -53,7 +53,7 @@ All subjects are evaluated by Blokky without starting a process, except `probe`.
 
 ### 2.4 `command`
 
-- **CO-45.** `{ command: NAME, exists: true }` is true if `NAME` resolves to a program by the rules for `exec` argv[0] ([shells.md §4](shells.md#4-executable-resolution)): on `PATH` from the environment the run started with (never the cwd), with the Windows `.com`/`.exe` rule, and as a path relative to the evaluating scope's cwd when `NAME` contains a separator. Nothing is started. `not_exists` is its negation.
+- **CO-45.** `{ command: NAME, exists: true }` is true if `NAME` resolves to a file that exists **and** that the current user may execute (a file that isn't executable is false, as an `exec` of it would fail with `BK_SPAWN_FAILED`), by the rules for `exec` argv[0] ([shells.md §4](shells.md#4-executable-resolution)): on `PATH` from the environment the run started with (never the cwd), with the Windows `.com`/`.exe` rule, and as a path relative to the evaluating scope's cwd when `NAME` contains a separator. Nothing is started. `not_exists` is its negation.
 - **CO-46.** `NAME` is a literal. Like `path:`, `command:` looks at the host, also under `container` (implementations SHOULD warn there). It is the portable way to choose between tools:
 
 ```yaml
@@ -173,6 +173,7 @@ A condition error makes a condition **neither true nor false**. The node that ow
   - a probe exit code outside both `true_exit` and `false_exit`, or not "true" when an operator is given;
   - a probe timeout without `timeout_result`;
   - probe output over the limit, or `result:` output over `max_capture_bytes`;
+  - probe stdout or `result:` output that isn't valid in its encoding (it is never replaced with U+FFFD for a condition);
   - a probe that can't be started (program not found; test for an installed program with the `command` subject instead, §2.4);
   - a permission error while checking a `path`.
 - **CO-39.** In `assert`, a condition error fails the node with the condition-error code, not the assertion's `code`; the assertion's `message` and `code` are attached as context ([ADR 0002](../adr/0002-language-core.md), Q-n).

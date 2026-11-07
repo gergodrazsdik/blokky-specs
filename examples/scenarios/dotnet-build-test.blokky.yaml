@@ -1,7 +1,8 @@
 # Build and test a .NET solution
 # Restores once while holding a lock on the shared NuGet cache, builds every project under src/
-# four at a time, runs every test project under tests/ and fails at the end with a per-project
-# summary, then checks the packages for known vulnerabilities. Changes only bin/ and obj/.
+# four at a time and runs every test project under tests/. If a test project failed, it fails
+# with a per-project summary; otherwise it checks the packages for known vulnerabilities.
+# Changes only bin/ and obj/.
 # Needs: the .NET SDK and jq; run from the directory with the solution file. Projects under src/
 # that reference each other can collide in parallel builds; lower the concurrency to 1 then.
 # Run: blokky run examples/scenarios/dotnet-build-test.blokky.yaml --input CONFIGURATION=Release

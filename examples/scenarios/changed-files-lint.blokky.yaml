@@ -25,25 +25,15 @@ do:
     return: "No files changed since ${BASE}; nothing to lint"
 
   - name: choose how to run ruff
-    any:
-      - name: ruff on PATH
-        do:
-          - assert:
-              probe:
-                script: |
-                  command -v ruff
-                shell: sh
-          - set: { PY_LINT: ruff }
-      - name: ruff through uvx
-        do:
-          - assert:
-              probe:
-                script: |
-                  command -v uvx
-                shell: sh
+    if: { command: ruff, exists: true }
+    then:
+      - set: { PY_LINT: ruff }
+    else:
+      - if: { command: uvx, exists: true }
+        then:
           - set: { PY_LINT: uvx }
-      - name: no Python linter
-        set: { PY_LINT: none }
+        else:
+          - set: { PY_LINT: none }
 
   - name: lint and summarize
     fail_fast: false    # the summary runs even when a file fails

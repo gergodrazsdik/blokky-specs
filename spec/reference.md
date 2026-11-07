@@ -61,8 +61,8 @@ Modifiers apply in a fixed order, outermost first: `when` → `timeout` → `loc
 
 Runs one program directly, without a shell.
 
-- **Array form (canonical):** `exec: [prog, arg, { var: X }]`. Element 0 MUST be a literal; other elements are literals or `{ var: X }`, each becoming exactly one argument.
-- **String form:** `exec: dotnet build -c Release` is split into argv with the rules in [shells.md](shells.md): whitespace, single and double quotes and backslash only; no expansion, globbing or operators. Unquoted shell metacharacters, and `$` or backticks outside single quotes, are plan errors that point to the array form or `script`.
+- **Array form:** `exec: [prog, arg, { var: X }]`. Element 0 MUST be a literal; other elements are literals or `{ var: X }`, each becoming exactly one argument. Canonical when an argument is a variable or needs quoting.
+- **String form** (canonical for a static argv that needs no quoting, SY-97): `exec: dotnet build -c Release` is split into argv with the rules in [shells.md](shells.md): whitespace, single and double quotes and backslash only; no expansion, globbing or operators. Unquoted shell metacharacters, and `$` or backticks outside single quotes, are plan errors that point to the array form or `script`.
 - argv[0] is resolved against `PATH` from Blokky's own environment (never the cwd); the resolved absolute path is part of the run result. A program that can't be found fails the node with a spawn error.
 - On Windows, `.bat` and `.cmd` targets are plan or run errors (cmd.exe re-parses them); the message suggests a PowerShell `script`.
 - The node succeeds if the process exits with 0 or a code listed in `ok_exit`.
@@ -107,7 +107,7 @@ Succeeds as soon as one child succeeds; fails only when all fail.
 - When a child succeeds, running children are cancelled and unstarted ones never start.
 - Only the winning child's captures are bound; different children MAY capture the same name (never an input's name).
 - **All children fail:** the node fails with `BK_ANY_ALL_FAILED`; every child's error is attached as a cause, in plan order ([ADR 0003](../adr/0003-execution-defaults.md)).
-- `fail_fast` and `on_body_failure` are not valid on `any`.
+- `fail_fast` is not valid on `any` (except inside `for:`).
 
 ### 2.6 `race`
 
@@ -235,7 +235,7 @@ Leaf options are node-level siblings of `exec` or `script`; on any other kind th
 | `secret` | `false` | Mark all captures of this node as secret. |
 
 - **`stdin`.** By default a leaf's stdin is empty (`/dev/null`, or `NUL` on Windows); leaves never read the terminal. `stdin: "text"` passes literal text; `stdin: { var: X }` passes a variable's value; `stdin: { file: P }` passes the content of host file `P` (literal or `{ var: X }`, relative to the node's cwd).
-- **`ok_exit`.** A list of integers; exit 0 always succeeds. On Windows, exit codes are unsigned 32-bit values.
+- **`ok_exit`.** A list of exit codes (0 to 4 294 967 295, SY-96); exit 0 always succeeds. On Windows, exit codes are unsigned 32-bit values.
 - **`stderr: merge`.** Both streams go to one pipe, so their interleaving is kept; captures and `result: stdout` then include stderr text.
 - **`encoding`.** `utf-8`, `utf-16le`, `utf-16be` or `latin1`. Invalid sequences become U+FFFD wherever output is shown as text; captures treat them as errors ([variables.md](variables.md)).
 - **`keep_descendants`.** By default, when the leaf's direct child exits, its remaining process group, session or job is killed. With `true` they keep running until the run ends. With `detach` they are never stopped by the run, not even at its end: the way to start a daemon, like `nohup x &` in bash. Static views show `detach`, and the run result lists the processes left running (EM-22, [ADR 0017](../adr/0017-review-features.md)).
@@ -277,7 +277,7 @@ There is no implicit `timeout` on groups or the root; `defaults.leaf_timeout` se
 
 ### 4.4 `lock`
 
-`lock: NAME` or `lock: { name: NAME, wait: 2m }` holds an exclusive lock named `NAME` for the node's duration (including its `finally`), so runs that use the same lock take turns.
+`lock: NAME` or `lock: { name: NAME, wait: 2m }` holds an exclusive lock named `NAME` for the node's duration (including its `finally`), so runs that use the same lock take turns. Waiting runs acquire it in no particular order.
 
 ```yaml
 - name: deploy staging, one at a time
@@ -286,7 +286,7 @@ There is no implicit `timeout` on groups or the root; `defaults.leaf_timeout` se
   exec: [./deploy.sh, staging]
 ```
 
-- **Scope:** lock names form one namespace per OS user on the machine: the same name in any plan, repository or run of that user is the same lock. Locks of other users never interact.
+- **Scope:** lock names form one namespace per OS user on the machine: the same name in any plan, repository or run of that user is the same lock. Locks of other users never interact, root included: a run under `sudo` and a run as the user don't exclude each other.
 - **Waiting:** without `wait`, the node waits as long as its `timeout` (and any external stop) allows. `wait` bounds the waiting time (`0s`: try once). Giving up fails the node with `BK_LOCK_TIMEOUT`. Waiting time counts against the node's `timeout`, and the run result records it.
 - **Release:** the lock is released when the node ends, and also when the run's process dies, so a crashed run never leaves a lock behind (implementations use OS advisory locks).
 - **No nesting:** a node with `lock` MUST NOT have a descendant with `lock`, including in `finally` and `services` ([ADR 0005](../adr/0005-containers-become-locks.md)). Locks are exclusive only ([ADR 0014](../adr/0014-remaining-features.md)).
@@ -371,7 +371,7 @@ A list of cleanup nodes that runs **once per node** (not per attempt or iteratio
 
 ### 4.11 `ignore_errors`
 
-`ignore_errors: true`: if the node fails, its parent treats it as not failed. The run result shows status `failed` with `ignored: true`. It never hides an outer cancellation, an ancestor's timeout or an external stop. A node whose failure is ignored binds no captures (use `ok_exit` when a capture should survive a known exit code).
+`ignore_errors: true`: if the node fails, its parent treats it as not failed. It covers every failure of the node itself, its own `timeout` and `attempt_timeout` included: the run result keeps the node's status (`failed` or `timed_out`) and adds `ignored: true`. It never hides an outer cancellation, an ancestor's timeout or an external stop. It isn't valid on the root (RF-33). A node whose failure is ignored binds no captures (use `ok_exit` when a capture should survive a known exit code).
 
 ### 4.12 `attempt_timeout`
 
@@ -383,29 +383,29 @@ A limit for each attempt (`retry`) or iteration (`while`, `until`, `for`), valid
 
 - A node has **at most one** of `retry`, `while`, `until`, `for`. Combinations are written by nesting nodes.
 - Repetition sits inside `finally` in the modifier order, so `finally`, `tempdir`, `cwd`, `env` and the scoping modifiers apply once around all attempts or iterations.
-- The run result records the number of attempts or iterations, which bound ended the loop (`condition`, `max`, `timeout`), the last condition result, and per-iteration entries (rendered name, index, item).
+- The run result records the number of attempts or iterations, what ended them (`ended_by`, [results.md §3](results.md#3-nodes)), the last condition result, and per-iteration entries (rendered name, index, item).
 
 ### 5.2 Sibling fields
 
-| Field | `retry` | `while` | `until` | Default |
-|---|---|---|---|---|
-| `max` (total attempts or iterations, integer ≥ 1) | yes | yes | yes | `retry`: 3; `while`/`until`: none (see §5.6) |
-| `every` (duration, `0s` allowed) | yes | yes | yes | 1s |
-| `attempt_timeout` | yes | yes | yes | none |
-| `backoff: { factor, max }` | yes | — | — | none (fixed delay) |
-| `jitter` | yes | — | — | none |
-| `on_body_failure: stop \| continue` | — | yes | yes | `while`: `stop`; `until`: `continue` |
-| `index` (§5.8) | yes | yes | yes | none |
-| `carry` (§5.8) | — | yes | yes | none |
-| `collect` (§5.8) | — | yes | yes | none (also valid on `for`) |
+| Field | `retry` | `while` | `until` | `for` | Default |
+|---|---|---|---|---|---|
+| `max` (total attempts or iterations, integer ≥ 1) | yes | yes | yes | — | `retry`: 3; `while`/`until`: none (see §5.6) |
+| `every` (duration, `0s` allowed) | yes | yes | yes | — | 1s |
+| `attempt_timeout` | yes | yes | yes | yes | none |
+| `backoff: { factor, max }` | yes | — | — | — | none (fixed delay) |
+| `jitter` | yes | — | — | — | none |
+| `on_body_failure: stop \| continue` | — | yes | yes | — | `while`: `stop`; `until`: `continue` |
+| `index` (§5.8) | yes | yes | yes | — | none |
+| `carry` (§5.8) | — | yes | yes | — | none |
+| `collect` (§5.8) | — | yes | yes | yes | none |
 
-Using a field where the table says "—" is a plan error.
+Using a field where the table says "—" is a plan error. `for` takes its own options inside `for:` (§5.7); its index is `<AS>_INDEX`.
 
 ### 5.3 `every`, `backoff` and `jitter`
 
 - **`every`** is the delay between the **end** of one attempt or iteration (including its condition check) and the **start** of the next. There is no delay before the first. The default is 1s, so a loop never runs back to back by accident; `every: 0s` removes the delay. Waits end immediately on cancellation.
 - **`backoff: { factor: F, max: D }`** (`retry` only) grows the delay: the delay before attempt n+1 is `every × F^(n−1)`, capped at `max`. `factor` is a decimal from 1 to 10 and required in the mapping; `max` is a duration, default 5m.
-- **`jitter: J`** (`retry` only, decimal 0 < J ≤ 1) multiplies each delay by a random value in [1 − J, 1], drawn from a seedable RNG so tests are reproducible.
+- **`jitter: J`** (`retry` only, decimal 0 < J ≤ 1) multiplies each delay by a random value in [1 − J, 1], drawn from a random source that implementations MAY make seedable, so tests can be reproducible.
 
 ### 5.4 `retry`
 
@@ -421,6 +421,8 @@ Using a field where the table says "—" is a plan error.
 `on_body_failure` is not valid on `retry`.
 
 ### 5.5 What `retry: true` retries
+
+This table summarizes the categories; [errors.md §5](errors.md#5-node-errors) gives the answer for every code.
 
 | Failure of an attempt | Retried by `retry: true` | Retried by a `retry:` condition |
 |---|---|---|
@@ -490,7 +492,7 @@ All `for` options live inside the `for:` mapping:
 
 **Glob rules:** patterns use the glob grammar of [syntax.md §6.9](syntax.md#69-glob-patterns), matched ordinally and case-sensitively on every OS; ordinal sort of the matches; no dotfiles unless the pattern names them; no symlink following; `/` separators in item values; no `..` escaping the cwd subtree; zero matches is an error unless `allow_empty: true`. Patterns are host paths relative to the node's cwd.
 
-**Iterations** never publish captures to the enclosing scope (only through `collect`, §5.8). A for-loop's iteration count and items are in the run result. Item values and inputs used as `exec` arguments should be preceded by `--` where the program supports it.
+**Iterations** never publish captures to the enclosing scope (only through `collect`, §5.8). A for-loop's iteration count and items are in the run result. Put `--` before item values and inputs used as `exec` arguments where the program supports it (§9).
 
 ### 5.8 Loop variables: `index`, `carry` and `collect`
 
@@ -531,7 +533,7 @@ Which modifiers and companion groups each kind accepts. ✓ = valid; — = plan 
 | `do` | ✓ | ✓ | ✓ | with repetition | — | `for` only | ✓ |
 | `all` | ✓ | ✓ | ✓ | with repetition | — | ✓ | ✓ |
 | `any` | ✓ | ✓ | ✓ | with repetition | — | ✓ | `for` only |
-| `race` | ✓ | ✓ | ✓ | with repetition | — | — | `for` only |
+| `race` | ✓ | ✓ | ✓ | with repetition | — | `for` only | `for` only |
 | `if` | ✓ | ✓ | ✓ | with repetition | — | `for` only | `for` only |
 | `assert` | ✓ | ✓ | ✓ | with repetition | — | `for` only | `for` only |
 | `log` | — | — | ✓ | — | — | `for` only | `for` only |
@@ -542,50 +544,54 @@ Which modifiers and companion groups each kind accepts. ✓ = valid; — = plan 
 
 "`for` only" means the field is valid only inside the `for:` mapping of that node. On a node that has `for`, node-level `concurrency` and `fail_fast` are plan errors for every kind: they would apply to the inner group, not the loop. The loop's settings go in `for:`; an inner `all` or `any` with its own settings is written as a child node (RF-31). `index`, `carry` and `collect` are valid wherever the repetition they belong to is (§5.2, §5.8). Companion fields of a kind (`then`/`else`, `shell`, `level`, `message`, `code`) are valid only on their kind.
 
-## 8. Rules the schema doesn't express
+## 8. Rules beyond the schema
 
-Implementations MUST enforce these as plan errors (unless noted) in addition to the schema. Rules carry IDs (`RF-n`) for conformance cases and for `detail.rule`.
+Implementations MUST enforce these as plan errors (unless noted). Rules carry IDs (`RF-n`) for conformance cases and for `detail.rule`. The schema also enforces the ones marked *(schema)*, so an editor with the schema catches them before an implementation runs; implementations report them with the rule's ID either way.
 
 - **RF-1.** Exactly one kind per node.
 - **RF-2.** At most one repetition modifier per node.
-- **RF-3.** The validity matrix (§7) and the per-repetition sibling table (§5.2).
-- **RF-4.** `attempt_timeout` only with a repetition modifier.
-- **RF-5.** `while` and `until` have `max` or `timeout` (or both).
+- **RF-3.** The validity matrix (§7) and the per-repetition sibling table (§5.2). *(schema)*
+- **RF-4.** `attempt_timeout` only with a repetition modifier. *(schema)*
+- **RF-5.** `while` and `until` have `max` or `timeout` (or both). *(schema)*
 - **RF-6.** Modifiers outside repetition (`when`, `timeout`, `lock`, `tempdir`, `cwd`, `env`, `container`, `services`) don't reference variables the node itself introduces (`as`, `tempdir.as`, its own captures): "move it into the body".
 - **RF-7.** Shadowing: no variable name is bound twice in nested scopes; inputs collide with every other binding.
 - **RF-8.** Two children of an `all` don't bind the same name anywhere in their subtrees.
 - **RF-9.** Inputs and variables never reach literal fields; argv[0] of an `exec` array is a literal.
 - **RF-10.** `env` doesn't set a forbidden key; `export` doesn't name a reserved environment name; no name is in both `env` and `export` on one node.
 - **RF-11.** An absolute `cwd` is not combined with `tempdir` on one node.
-- **RF-12.** Captures (`capture`, `capture_file`, `secret`) only on `exec` and `script` nodes.
+- **RF-12.** Captures (`capture`, `capture_file`, `secret`) only on `exec` and `script` nodes. *(schema)*
 - **RF-13.** The `result:` subject only in `until` and `retry` conditions; `result: stdout|stderr|exit` only when the node's kind is `exec` or `script`.
 - **RF-14.** `not:` isn't wrapped around a simple condition that has a `not_*` form.
 - **RF-15.** An `outputs` entry isn't bound only inside a loop body (unless gathered with `collect`).
 - **RF-16.** Captures under `finally` aren't referenced outside that `finally` list.
 - **RF-17.** No `lock` inside a `lock`.
-- **RF-18.** `as` is present for scalar `for` sources and absent for `matrix`.
+- **RF-18.** `as` is present for scalar `for` sources and absent for `matrix`. *(schema)*
 - **RF-19.** A secret marker is only on references, never on literals.
 - **RF-20.** An input's `default` satisfies its constraint; at most one of `in`/`matches`.
 - **RF-21.** Empty lists only in fields that allow them (`mounts`).
 - **RF-22.** A regex stays within the portable subset ([syntax.md §6.7](syntax.md#67-regular-expressions)).
 - **RF-23.** A reference (`${X}`, `{ var: X }`, a `var:` subject, an `outputs` entry) names a variable that some binding can provide before it: a syntactic scope check over the plan. A reference with no possible binding is a plan error; whether a possible binding actually happened is checked at run time ([variables.md §6](variables.md#6-scope-and-binding)).
 - **RF-24.** Service names are present and unique within a node.
-- **RF-25.** `fields` only with `items`; `keep_blank` only with `lines`; `allow_empty` only with `glob`.
+- **RF-25.** `fields` only with `items`; `keep_blank` only with `lines`; `allow_empty` only with `glob`. *(schema)*
 - **RF-26.** A name isn't bound twice: not by two sequential siblings, not by `set` for a bound name, not by `vars` for an input or another `vars` entry.
 - **RF-27.** Templates (`${…}` in executed values) appear only in `set` and `vars` values; `vars` values use only inputs, earlier `vars` and `from_env`.
-- **RF-28.** `timeout`, `finally`, `finally_timeout` and `ignore_errors` are not used on `sleep`, `log`, `fail`, `set` or `return`.
+- **RF-28.** `timeout`, `finally`, `finally_timeout` and `ignore_errors` are not used on `sleep`, `log`, `fail`, `set` or `return`. *(schema)*
 - **RF-29.** A `return`'s nearest enclosing sequence is not reached through an `all`, `any` or `race` (§2.13).
 - **RF-30.** `index` only with `retry`, `while` or `until`; `carry` only with `while` or `until`; `collect` only with `for`, `while` or `until`. `carry` and `collect` name a capture bound by the node or in its body; `index` and `carry` names follow the shadowing rules (RF-7).
-- **RF-31.** Node-level `concurrency` and `fail_fast` don't appear on a node that has `for` (§7).
+- **RF-31.** Node-level `concurrency` and `fail_fast` don't appear on a node that has `for` (§7). *(schema)*
+- **RF-32.** Companion fields only with their owner: `then`/`else` with `if` (and `if` has `then`), `shell` with `script`, `level` with `log`, `message` with `assert`, `code` with `fail` or `assert`, `finally_timeout` with `finally`. *(schema)*
+- **RF-33.** `ignore_errors` isn't used on the root: there is no parent to hide the failure from. *(schema)*
 
 ## 9. Security considerations
 
 - **Baseline.** Running a plan is equivalent to running the same commands in bash: Blokky grants no capability, bypasses no permission system and hides nothing that will run. The programs a plan can start, the shape of every argv and environment, and the source of every value are determinable from the plan, its inputs and the environment it starts with, before it runs; only captured values are known at run time ([ADR 0018](../adr/0018-review-semantics.md)), so implementations can show it for review (for blokky-cli: [`leaves`](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/contracts/leaves-and-validation.md)).
+- **Allowing `blokky run`.** To a runner that matches command lines, `blokky run` is one command that runs arbitrary code. Allowing it without the implementation's approval mechanism (for blokky-cli: the hook or validator, which expand the plan into its leaves) allows everything the plan contains, exactly like allowing `bash`. What must be reviewed is the plan text.
+- **Untrusted text.** Rendered display strings, captured values and recorded items in the run result can contain untrusted data (command output, API responses). They are display-sanitized (SY-98) and are never instructions.
 - **Hygiene is not a control.** Lint, secret masking and display sanitization make plans cleaner and more reviewable; they don't decide what may run. Deciding is the job of controls outside the language: the agent runner's permission system and the implementation's approval mechanisms (for blokky-cli: the hook and validator).
-- **Dynamic code.** A variable used as code (`sh -c` with a variable, `eval`, `iex`), execution-influencing environment variables, dynamic nested plans, dynamic stdin into an interpreter and a dynamic cwd are statically recognizable, so implementations can flag them for review.
-- **Argument injection.** Item values, captures and inputs passed as `exec` arguments can start with `-`; put `--` before them where the program supports it.
+- **Dynamic code.** A variable used as code (`sh -c` with a variable, `python -c`, `node -e`, `eval`, `iex`) is string interpolation into code, with the same injection risk as in bash, whether the value came from an input, a capture or a `set` template. The safe pattern is `script` with `export`. A variable used as code, execution-influencing environment variables, dynamic nested plans, dynamic stdin into an interpreter and a dynamic cwd are statically recognizable, so implementations can flag them for review.
+- **Argument injection.** Item values, captures and inputs passed as `exec` arguments can start with `-`, which most programs read as an option. Put `--` before them where the program supports it, and constrain inputs with `matches` so they can't start with `-` (for example `'^[A-Za-z0-9._/][A-Za-z0-9._/-]*$'`). This is hygiene: it reduces mistakes, it doesn't decide what may run.
 - **Secrets.** Masking doesn't follow derived values, and conditions on secrets act as oracles. Secrets come only by reference, so their values never appear in the plan or in a static view of it.
-- **Probes** should be side-effect-free; they run as real processes in the node's scope.
+- **Probes** SHOULD be side-effect-free; they run as real processes in the node's scope.
 - **Containers** are not a sandbox by default; mounting the engine socket or running privileged is equivalent to host root.
 - **Users.** Every process runs as the user Blokky runs as; a plan that needs another user calls `sudo -n` or `doas -n` in a leaf, as in bash (CP-39).
 - **Daemons.** `keep_descendants: detach` leaves processes running after the run, like `nohup x &` in bash; static views show it.

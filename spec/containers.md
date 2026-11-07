@@ -8,7 +8,7 @@ Decisions: [ADR 0005](../adr/0005-containers-become-locks.md), [ADR 0012](../adr
 
 ## 1. Path model
 
-- **CP-1.** `path:` subjects, `for: { glob }`, `tempdir`, `cwd`, `capture_file`, `stdin: { file }` and `mounts[].host` are **host** paths, evaluated on the host, whether or not a node runs in a container.
+- **CP-1.** `path:` subjects, `for: { glob }`, `tempdir`, `cwd` (except an absolute `cwd` under a container that isn't under a mount, CP-14), `capture_file`, `stdin: { file }` and `mounts[].host` are **host** paths, evaluated on the host, whether or not a node runs in a container.
 - **CP-2.** Under `container`, only processes run inside the container: leaves, probes and services. A `path:` condition on a container node still checks the host; implementations SHOULD warn about it.
 
 ## 2. `container`
@@ -41,7 +41,7 @@ Decisions: [ADR 0005](../adr/0005-containers-become-locks.md), [ADR 0012](../adr
 - **CP-36.** **Compatible images.** The image MUST provide `sh`, `sleep` and `kill` on its `PATH`: the idle process and in-container termination use them, and Blokky adds no helper to the container. An image without them fails the node when the container starts, with `BK_CONTAINER_FAILED` naming the missing program. Images without a shell (distroless, chiseled) are not supported.
 - **CP-5.** At node end (after `finally`), the container is **stopped, not removed**, so it can be inspected. Removing it later is the implementation's business (for blokky-cli: `blokky clean`).
 - **CP-6.** The run result records the engine, the image digest and the container id. The engine commands the implementation issues are part of what the plan executes, and are visible before the run like any other process ([reference.md §9](reference.md#9-security-considerations)).
-- **CP-7.** The engine CLI is started with Blokky's own environment, not the node's `env`, so a node can't redirect it (for example with `DOCKER_HOST`). Which engines are supported and how one is chosen is a later question (Q16b).
+- **CP-7.** The engine CLI is started with Blokky's own environment, not the node's `env`, so a node can't redirect it (for example with `DOCKER_HOST`). Which engines an implementation supports and how it chooses one is implementation-defined (for blokky-cli: its configuration and detection, decided after the engine spike).
 - **CP-8.** Terminating a leaf inside a container uses an in-container process group with a recorded PID: TERM, grace period, KILL through `<engine> exec … kill`, and stopping the container as the fallback. *Provisional — verify in spike.*
 
 ### 2.3 Mounts

@@ -82,7 +82,7 @@ conformance/
 | Conditions | `cond-var`, `cond-env`, `cond-path`, `cond-command`, `cond-host`, `cond-result`, `cond-probe`, `cond-json`, `cond-numeric`, `cond-composite` |
 | Values | `from-env`, `secret-ref`, `interpolation` |
 | Plan-level | `inputs`, `vars`, `outputs`, `defaults` |
-| Runner | `external-stop` (§3.4 `actions`) |
+| Runner | `external-stop`, `kill` (§3.4 `actions`) |
 
 New ids are added with the language features they name, in the same spec release; an id is never reused for something else.
 
@@ -110,7 +110,8 @@ New ids are added with the language features they name, in the same spec release
 - **CF-19.** `env` values are added to the base environment (§8.2), replacing a variable of the same name. A value of `null` removes the variable from the base environment.
 - **CF-20.** `files` maps a path relative to the work directory to its content. A string value is the content as UTF-8 (no newline added). A mapping value has `text` or `base64`, plus optional `executable: true` (mode 0755 on Unix; ignored on Windows); `{ dir: true }` creates a directory. Parent directories are created as needed. Paths use `/` on every platform.
 - **CF-21.** `programs` maps an alias name to the testkit arguments it stands for: `programs: { git: [print, --out, 'git version 2.0'] }` puts an executable named `git` on `PATH` that behaves like `blokky-testkit print --out 'git version 2.0'` followed by its own arguments ([testkit-interface.md](testkit-interface.md), TK-6).
-- **CF-22.** `actions` is a list of `{ after: <duration>, stop: true }` entries: at the given time after the run starts, the runner stops the run from outside (EM-55 to EM-57) with the means the adapter provides. Cases with `actions` list the `external-stop` feature. The stop cause is implementation-defined, so cases assert on `status: stopped` and the nodes, not on `stop_cause`.
+- **CF-22.** `actions` is a list of `{ after: <duration>, stop: true }` or `{ after: <duration>, kill: true }` entries. `stop` stops the run from outside at that time (EM-55 to EM-57) with the means the adapter provides; cases with it list the `external-stop` feature, and assert on `status: stopped` and the nodes, not on `stop_cause`, which is implementation-defined. `kill` kills the implementation's process at once (SIGKILL, `TerminateProcess`), with no run result expected; cases with it list the `kill` feature and check what survives with `after_run`.
+- **CF-64.** `after_run` is a list of testkit invocations (or a second plan) the runner runs after the case's run ended, each with an expected exit code: for example `alive --pids pids.txt` expecting 1 (nothing left running after a kill, EM-22), or a plan taking the same lock with `wait: 0s` (a lock released by a killed run, EM-60).
 
 ### 3.5 Expectations
 
@@ -289,7 +290,7 @@ expect:
 
 ### 5.1 Clock modes
 
-Implementations SHOULD let the runner replace the monotonic clock behind every language timer (`timeout`, `attempt_timeout`, `defaults.leaf_timeout`, probe timeouts, `finally_timeout`, `sleep`, `every`, `backoff`, `lock.wait`, `ready_timeout`, readiness polling, the grace period and the reap timeout) with a **test clock**. The suite knows three modes:
+Implementations SHOULD let the runner replace the monotonic clock behind every language timer (`timeout`, `attempt_timeout`, `defaults.leaf_timeout`, probe timeouts, `finally_timeout`, `sleep`, `every`, `backoff`, `lock.wait`, `ready_timeout`, readiness polling, lock polling, the drain bound, the grace period and the reap timeout) with a **test clock**. The suite knows three modes:
 
 | Mode | Plan time is | Support |
 |---|---|---|
@@ -298,13 +299,13 @@ Implementations SHOULD let the runner replace the monotonic clock behind every l
 | `virtual` | a simulated clock that jumps to the next timer deadline whenever the run waits only for timers: no leaf, probe or service is running. While a process runs, it advances like `real`. | MAY |
 
 - **CF-39.** `clock` on a case lists the modes it is valid in; the default is `[real, scaled]`. `virtual` is opted into by cases whose waits don't involve processes (`sleep`, `every` and `backoff` delays between attempts of a `fail` or `assert`), which then run in no time. The runner uses the fastest mode that both the case and the adapter support, unless told otherwise; a case valid in no supported mode is skipped (`requirement: clock`).
-- **CF-40.** In `scaled` mode the adapter reports durations in plan time (measured time multiplied by *k*), so case bounds don't depend on *k*. Runners SHOULD NOT use *k* above 20: process start-up and pipe latency don't scale.
-- **CF-41.** `jitter` (reference.md §5.3) draws from a seedable RNG. The runner passes a seed when the adapter supports one; cases with `jitter` assert bounds only, never the drawn values.
+- **CF-40.** In `scaled` mode the adapter reports durations in plan time (measured time multiplied by *k*), so case bounds don't depend on *k*. Runners SHOULD NOT use *k* above 20: process start-up and pipe latency don't scale. A runner MAY choose *k* per OS (default 1 on Windows, where process start-up is slow), and cases that use `script` leaves or probes default to `clock: [real]`.
+- **CF-41.** `jitter` (reference.md §5.3) draws from a random source that implementations MAY make seedable. The runner passes a seed when the adapter supports one; cases with `jitter` assert bounds only, never the drawn values.
 
 ### 5.2 Tolerances
 
 - **CF-42.** A `$min` bound is checked against the measured value plus a slack of 50ms (runners MAY raise it): limits never fire early, but measurement points differ between implementations.
-- **CF-43.** A `$max` bound is multiplied by the runner's **timing factor** (default 1; slow CI MAY raise it). Case authors set `$max` generously: at least twice the expected value or the expected value plus 2s, whichever is larger.
+- **CF-43.** A `$max` bound is multiplied by the runner's **timing factor** (default 1; slow CI MAY raise it, and runners MAY set a higher default per OS, for example on Windows). Case authors set `$max` generously: at least twice the expected value or the expected value plus 2s, whichever is larger.
 - **CF-44.** Case durations stay short: a case's expected run time in plan time SHOULD be under 15s, and every case has a harness deadline of 60s plan time multiplied by the timing factor, after which the runner stops the run and reports a fail.
 
 ## 6. Pairwise policy
@@ -334,7 +335,15 @@ Most modifiers can be combined on one node, and their order is fixed (EM-4). Tes
 - **CF-51.** **Coverage** is the share of rule IDs in `spec/*.md` that at least one case cites. Every rule ID SHOULD be cited by at least one case before `1.0.0`; execution-model.md §10 requires it for every `EM-n`. A rule that can't be tested through the run result (for example a recommendation to implementations) is listed below with the reason, and counts as covered.
 - **CF-52.** A coverage report lists, per spec file, the uncovered rule IDs and, per rule, the cases that cite it. It is computed from the case files alone.
 
-**Rules without cases:** none yet; the list is filled in as cases are written.
+**Rules without cases:** these can't be observed through the run result, so they count as covered:
+
+| Rule | Reason |
+|---|---|
+| EM-11 | A concurrency cap is implementation configuration; it changes no observable result. |
+| EM-56 | How far an implementation shortens `finally` during an external stop is its own choice. |
+| CP-7 | Which engines an implementation supports is implementation-defined. |
+
+The list grows as cases are written.
 
 ## 8. Runner contract
 
@@ -349,7 +358,7 @@ A **runner** reads the cases, prepares each one, runs it through the adapter and
 ### 8.2 What the runner provides
 
 - **CF-56.** **A fresh work directory** per case, empty except for `files`, used as the run's cwd. Nothing in it is shared between cases.
-- **CF-57.** **The base environment:** `PATH` with the directory holding the testkit and the case's aliases first, then the directories the OS's shells need; the variables the OS needs to run processes (`HOME`, `TMPDIR`; on Windows `SystemRoot`, `PATHEXT`, `COMSPEC`, `USERPROFILE`, `TEMP`, `TMP`); `TESTKIT_LOG` (TK-5) and `TESTKIT_TIME_SCALE` (TK-2); then the case's `env`. Nothing else is inherited from the runner's own environment, so `from_env` and `env:` cases are deterministic.
+- **CF-57.** **The base environment:** `PATH` with the directory holding the testkit and the case's aliases first, then the directories the OS's shells need; the variables the OS needs to run processes (`HOME`, `TMPDIR`; on Windows `SystemRoot`, `PATHEXT`, `COMSPEC`, `USERPROFILE`, `TEMP`, `TMP`); `TESTKIT_LOG` (TK-5) and `TESTKIT_TIME_SCALE` (TK-2); then a **passthrough** list per requirement, configured in the runner (for `shells: [pwsh]` or `[powershell]`: the Windows profile variables and `DOTNET_ROOT` when pwsh is a .NET tool; for `container-engine`: the engine's variables such as `DOCKER_HOST`, `XDG_RUNTIME_DIR`); then the case's `env`. Nothing else is inherited from the runner's own environment. Cases that test environment semantics (VA-39 to VA-44, `from_env`) assert only on names they set themselves, so the passthrough doesn't make them nondeterministic.
 - **CF-58.** **The testkit** ([testkit-interface.md](testkit-interface.md)) as `blokky-testkit` on `PATH`, and an alias for each entry of `programs` (TK-6).
 - **CF-59.** **Isolation:** cases MAY run in parallel, except cases that share a port (CF-14). Lock names are unique per case (CF-14), so parallel cases don't contend.
 
