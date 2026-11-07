@@ -13,7 +13,8 @@ expect:
     - code: BK_FROM_ENV_UNSET
       detail: { name: CONF_UNSET }
       line: 3
-      column: 3
+      column: 25   # the environment variable name (SY-1)
   exhaustive: true
 notes: >-
-  "At the entry" is read as the entry's key (SY-1: the offending key).
+  An unset from_env in vars is located at the environment variable name
+  (SY-1, ADR 0025).

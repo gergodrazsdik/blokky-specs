@@ -13,7 +13,8 @@ expect:
       detail: { rule: RF-6 }
       line: 4
       column: 18   # the variable name ITEM
+  exhaustive: true
 notes: >-
   when is evaluated before the node, in the parent's scope, where ITEM isn't
-  bound; the fix is a when inside the body. The scope check (RF-23) may
-  report the same reference too, so the case isn't exhaustive.
+  bound; the fix is a when inside the body. RF-6 wins over the scope check
+  (RF-23), so only RF-6 is reported (ADR 0025).

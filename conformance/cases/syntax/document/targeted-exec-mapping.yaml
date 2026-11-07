@@ -1,5 +1,5 @@
 title: A mapping as the value of exec is one targeted value error at the value
-rules: [SY-3, SY-91]
+rules: [SY-3, SY-88, SY-91]
 features: [do]
 plan: |
   blokky: 1.0
@@ -8,8 +8,11 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE
-      detail: { rule: SY-91 }
+      detail: { rule: SY-88 }
       line: 3
       column: 11
   exhaustive: true
-notes: The targeted error replaces the generic type and unknown-key errors (SY-3).
+notes: >-
+  The targeted error replaces the generic type and unknown-key errors and
+  reports the generic rule: exec is a list of strings or a string (SY-88; SY-3,
+  SY-91, ADR 0025).

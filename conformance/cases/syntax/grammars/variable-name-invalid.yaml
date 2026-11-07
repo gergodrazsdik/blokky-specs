@@ -18,3 +18,4 @@ expect:
       detail: { rule: SY-52 }
       line: 5
       column: 30
+  exhaustive: true

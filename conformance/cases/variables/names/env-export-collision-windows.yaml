@@ -14,4 +14,5 @@ expect:
   plan_errors:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-10 }
-notes: No position is asserted, because either the env key or the export entry can be the one reported.
+      line: 6      # the later of the two names, the export entry (SY-1)
+      column: 14

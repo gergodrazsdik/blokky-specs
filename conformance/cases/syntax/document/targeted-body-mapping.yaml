@@ -1,5 +1,5 @@
 title: A single node instead of a body list is a value error at the value
-rules: [SY-91]
+rules: [SY-88, SY-91]
 features: [do]
 plan: |
   blokky: 1.0
@@ -7,8 +7,10 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE
-      detail: { rule: SY-91 }
+      detail: { rule: SY-88 }
       line: 2
       column: 5
   exhaustive: true
-notes: The targeted error replaces the generic type error (SY-3); its fix-it is in the message.
+notes: >-
+  The targeted error replaces the generic type error and reports its rule: do
+  is a list of nodes (SY-88; SY-3, SY-91, ADR 0025). The fix-it is in the message.

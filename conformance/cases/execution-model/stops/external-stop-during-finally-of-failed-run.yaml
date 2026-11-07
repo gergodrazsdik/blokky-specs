@@ -1,5 +1,5 @@
 title: An external stop after the body failed still ends the run as stopped
-rules: [EM-50, EM-57]
+rules: [EM-50, EM-51, EM-57]
 features: [do, exec, finally, external-stop]
 clock: [real]   # the finally must be running when the stop comes
 plan: |
@@ -12,15 +12,17 @@ actions:
   - { after: 3s, stop: true }
 expect:
   status: stopped
+  error: { code: BK_EXIT, node: /do/0, detail: { exit_code: 3 } }   # the root's error (ADR 0025)
   nodes:
+    /: { error: { code: BK_EXIT, node: /do/0 } }   # the body's error, kept (EM-51)
     /do/0:
       status: failed
       exit_code: 3
   duration: { $max: 20s }
 notes: >-
   The root's body has already failed when the stop comes during its finally.
-  The run error is not asserted: whether a stop during finally replaces the
-  failed body's error is open (EM-51 vs EM-57, tracker F-0021).
+  The root keeps the body's error (EM-51), and the run's error is the root's
+  error, not BK_CANCELLED (ADR 0025).
   The run status is stopped, not failed: EM-50 derives it from the external
   stop. The finally node's status isn't asserted: EM-56 lets the
   implementation shorten its finally_timeout and grace period to zero.

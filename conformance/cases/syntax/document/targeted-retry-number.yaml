@@ -1,5 +1,5 @@
 title: retry with a number is a value error at the value
-rules: [SY-91]
+rules: [SY-88, SY-91]
 features: [exec, retry]
 plan: |
   blokky: 1.0
@@ -8,8 +8,11 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE
-      detail: { rule: SY-91 }
+      detail: { rule: SY-88 }
       line: 2
       column: 8
   exhaustive: true
-notes: The targeted error replaces the generic type error (SY-3).
+notes: >-
+  retry's scalar form is the boolean true. The targeted error changes the
+  message, not the rule: it reports the generic type rule (SY-88, errors.md §4; SY-3, SY-91,
+  ADR 0025).

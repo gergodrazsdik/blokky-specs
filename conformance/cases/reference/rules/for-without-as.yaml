@@ -9,4 +9,5 @@ expect:
   plan_errors:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-18 }
-      line: 2      # the missing as is required by the for mapping on this line
+      line: 2      # the for key (SY-1)
+      column: 1

@@ -13,4 +13,5 @@ expect:
       detail: { rule: RF-27 }
       line: 3
       column: 8    # the value; an error inside a string is at its start (SY-1)
+  exhaustive: true   # RF-6, RF-16 and RF-27 win over RF-23 (ADR 0025)
 notes: vars values use only inputs, earlier vars entries and from_env.

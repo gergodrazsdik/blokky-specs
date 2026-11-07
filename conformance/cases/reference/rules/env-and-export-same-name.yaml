@@ -11,5 +11,5 @@ expect:
   plan_errors:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-10 }
-      line: 4      # the later of the two (SY-1)
-notes: No column; the export entry MODE and the export key are both on line 4.
+      line: 4      # the later of the two names, the export entry (SY-1)
+      column: 10

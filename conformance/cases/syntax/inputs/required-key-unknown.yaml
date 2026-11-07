@@ -14,3 +14,4 @@ expect:
     - code: BK_PLAN_UNKNOWN_KEY
       line: 5
       column: 5
+  exhaustive: true

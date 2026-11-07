@@ -8,7 +8,7 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE
-      detail: { rule: { $one_of: [VA-6, SY-52] } }   # no RF rule; the spec names neither
+      detail: { rule: SY-52 }   # no RF rule: the grammar rule is reported (SY-3, ADR 0025)
       line: 3
       column: 23
   exhaustive: true

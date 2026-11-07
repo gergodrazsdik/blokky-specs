@@ -9,12 +9,14 @@ plan: |
 expect:
   plan_errors:
     - code: BK_PLAN_VALUE
+      detail: { rule: SY-88 }
       line: 2
       column: 7
     - code: BK_PLAN_VALUE
+      detail: { rule: SY-88 }
       line: 3
       column: 6
   exhaustive: true
 notes: >-
-  The type is decided by the value alone (errors.md §4). detail.rule isn't
-  asserted: the spec doesn't say which rule a type mismatch reports.
+  The type is decided by the value alone (errors.md §4). No RF rule applies,
+  so the rule is the per-field table's type (SY-88; SY-3, ADR 0025).

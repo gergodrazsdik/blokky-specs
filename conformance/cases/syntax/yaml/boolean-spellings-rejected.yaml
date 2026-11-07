@@ -1,5 +1,5 @@
 title: In a boolean field, True, yes, on and 1 are errors at the value
-rules: [SY-3, SY-24]
+rules: [SY-3, SY-24, SY-53]
 features: [do, exec, ignore-errors]
 plan: |
   blokky: 1.0
@@ -14,8 +14,8 @@ plan: |
       exec: [blokky-testkit, exit, '0']
 expect:
   plan_errors:
-    - { code: BK_PLAN_VALUE, line: 3, column: 20 }
-    - { code: BK_PLAN_VALUE, line: 5, column: 20 }
-    - { code: BK_PLAN_VALUE, line: 7, column: 20 }
-    - { code: BK_PLAN_VALUE, line: 9, column: 20 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-53 }, line: 3, column: 20 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-53 }, line: 5, column: 20 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-53 }, line: 7, column: 20 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SY-53 }, line: 9, column: 20 }
   exhaustive: true

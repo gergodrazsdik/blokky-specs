@@ -1,5 +1,5 @@
-title: A glob skips dotfiles unless the pattern names them with a leading dot
-rules: [SY-100]
+title: A glob skips dotfiles unless the pattern names them with a leading dot; ?, * and classes never match it
+rules: [SY-71, SY-100]
 features: [do, for-glob, exec]
 files:
   d/visible.md: visible
@@ -10,6 +10,10 @@ plan: |
     - for: { glob: 'd/*.md', as: FILE }
       exec: [blokky-testkit, exit, '0']
     - for: { glob: 'd/.*.md', as: FILE }
+      exec: [blokky-testkit, exit, '0']
+    - for: { glob: 'd/?hidden.md', as: FILE, allow_empty: true }
+      exec: [blokky-testkit, exit, '0']
+    - for: { glob: 'd/[.]hidden.md', as: FILE, allow_empty: true }
       exec: [blokky-testkit, exit, '0']
 expect:
   status: succeeded
@@ -24,6 +28,11 @@ expect:
         count: 1
         entries:
           - { item: { $regex: '(^|/)d/\.hidden\.md$' } }
+    /do/2:
+      repetition: { count: 0 }
+    /do/3:
+      repetition: { count: 0 }
 notes: >-
-  * doesn't match an entry whose name starts with a dot unless the pattern
-  segment starts with a dot, as .*.md does.
+  *, ? and a class don't match an entry whose name starts with a dot unless
+  the pattern segment starts with a dot, as .*.md does (SY-100, ADR 0025):
+  ?hidden.md and [.]hidden.md match nothing.

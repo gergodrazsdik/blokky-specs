@@ -8,7 +8,8 @@ plan: |
   log: building
 expect:
   plan_errors:
-    - code: BK_PLAN_VALUE   # a name that doesn't match its grammar (errors.md §4)
+    - code: BK_PLAN_VALUE   # SY-42 restates SY-52, which is reported (SY-3)
       detail: { rule: SY-52 }
       line: 3
       column: 3
+  exhaustive: true

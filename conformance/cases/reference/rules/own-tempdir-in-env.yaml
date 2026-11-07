@@ -12,4 +12,5 @@ expect:
       detail: { rule: RF-6 }
       line: 3
       column: 24   # the variable name WORK
+  exhaustive: true   # RF-6, RF-16 and RF-27 win over RF-23 (ADR 0025)
 notes: tempdir sits outside env in the modifier order, but RF-6 forbids every modifier outside repetition from using tempdir.as.
