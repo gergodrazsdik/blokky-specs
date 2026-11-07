@@ -1,0 +1,13 @@
+title: A node with two kinds is a plan error
+rules: [RF-1]
+features: [do, log, sleep]
+plan: |
+  blokky: 1.0
+  do:
+    - { log: hello, sleep: 1s }
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-1 }
+      line: 3
+      column: 19   # the later of the two kind keys (SY-1)

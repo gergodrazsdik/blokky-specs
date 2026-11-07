@@ -1,0 +1,19 @@
+title: ignore_errors on a child hides its failure from the root
+rules: [RF-33]
+spec: [reference.md§4.11]
+features: [do, exec, ignore-errors]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, exit, '1']
+      ignore_errors: true
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  nodes:
+    /do/0: { status: failed, ignored: true }
+    /do/1: { status: succeeded }
+  invocations:
+    - { argv: [exit, '1'] }
+    - { argv: [exit, '0'] }
+notes: Near miss for RF-33.

@@ -1,0 +1,18 @@
+title: The repetition condition may use the node's own capture
+rules: [RF-6, VA-32]
+features: [until, cond-var, exec, capture]
+plan: |
+  blokky: 1.0
+  until: { var: STATE, equals: ready }
+  max: 2
+  exec: [blokky-testkit, print, --out, ready]
+  capture: STATE
+expect:
+  status: succeeded
+  nodes:
+    /:
+      status: succeeded
+      repetition: { count: 1, ended_by: condition }
+  invocations:
+    - { argv: [print, --out, ready] }
+notes: Near miss for RF-6, which covers only the modifiers outside repetition.

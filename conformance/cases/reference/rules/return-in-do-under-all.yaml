@@ -1,0 +1,21 @@
+title: A return inside a do child of an all ends that do
+rules: [RF-29]
+spec: [reference.md§2.13]
+features: [all, do, return, exec]
+plan: |
+  blokky: 1.0
+  all:
+    - do:
+        - return: done early
+        - exec: [blokky-testkit, exit, '1']
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  nodes:
+    /all/0: { status: succeeded }
+    /all/0/do/0: { status: succeeded }
+    /all/0/do/1: { status: skipped, skip_reason: returned }
+    /all/1: { status: succeeded }
+  invocations:
+    - { argv: [exit, '0'] }
+notes: Near miss for RF-29; the nearest sequence is the inner do, not reached through the all.

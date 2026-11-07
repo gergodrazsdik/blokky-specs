@@ -1,0 +1,15 @@
+title: ignore_errors on a fail node is a plan error
+rules: [RF-28]
+features: [do, fail, ignore-errors, log]
+plan: |
+  blokky: 1.0
+  do:
+    - fail: stop here
+      ignore_errors: true
+    - log: after
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-28 }
+      line: 4
+      column: 5

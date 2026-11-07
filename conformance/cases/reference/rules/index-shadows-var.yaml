@@ -1,0 +1,17 @@
+title: An index name can't shadow a plan constant
+rules: [RF-7]
+features: [vars, until, cond-var, index, exec, capture]
+plan: |
+  blokky: 1.0
+  vars: { N: '0' }
+  until: { var: OUT, equals: done }
+  index: N
+  max: 3
+  exec: [blokky-testkit, print, --out, done]
+  capture: OUT
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-7 }
+      line: 4
+      column: 8    # the index name N

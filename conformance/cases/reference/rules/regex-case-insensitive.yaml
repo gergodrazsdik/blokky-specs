@@ -1,0 +1,13 @@
+title: A leading (?i) is within the portable subset
+rules: [RF-22]
+features: [vars, when, cond-var, exec]
+plan: |
+  blokky: 1.0
+  vars: { TAG: V1 }
+  when: { var: TAG, matches: '(?i)^v\d+$' }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  invocations:
+    - { argv: [exit, '0'] }
+notes: Near miss for RF-22; (?i) at the very start is the one inline option (syntax.md §6.7).

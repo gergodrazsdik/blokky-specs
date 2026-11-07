@@ -1,0 +1,16 @@
+title: Two sequential siblings can't capture the same name
+rules: [RF-26]
+features: [do, exec, capture]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, print, --out, a]
+      capture: OUT
+    - exec: [blokky-testkit, print, --out, b]
+      capture: OUT
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-26 }
+      line: 6      # the second binding: the name is already bound there (VA-36)
+      column: 14

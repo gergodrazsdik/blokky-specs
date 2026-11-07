@@ -1,0 +1,22 @@
+title: Children of an any may capture the same name
+rules: [RF-8, VA-30]
+features: [outputs, any, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [OUT]
+  any:
+    - exec: [blokky-testkit, exit, '1']
+      capture: OUT
+    - exec: [blokky-testkit, print, --out, b]
+      capture: OUT
+expect:
+  status: succeeded
+  outputs:
+    OUT: b
+  nodes:
+    /any/0: { status: failed }
+    /any/1: { status: succeeded }
+  invocations:
+    - { argv: [exit, '1'] }
+    - { argv: [print, --out, b] }
+notes: Near miss for RF-8, which is about all only.

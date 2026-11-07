@@ -1,0 +1,16 @@
+title: finally on a return node is a plan error
+rules: [RF-28]
+features: [do, return, finally, log]
+plan: |
+  blokky: 1.0
+  do:
+    - return: done
+      finally:
+        - log: cleanup
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-28 }
+      line: 4
+      column: 5
+notes: RF-28 and reference.md §7 include return; the modifier table in reference.md §4 doesn't list it.

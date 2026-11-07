@@ -1,0 +1,13 @@
+title: A reference to a name no binding provides is a plan error
+rules: [RF-23]
+features: [vars, exec]
+plan: |
+  blokky: 1.0
+  vars: { BRANCH: main }
+  exec: [blokky-testkit, argv, { var: BRANH }]
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-23 }
+      line: 3
+      column: 37   # the variable name BRANH

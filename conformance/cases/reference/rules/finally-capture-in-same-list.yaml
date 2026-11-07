@@ -1,0 +1,17 @@
+title: A capture under finally is visible to later nodes of the same finally list
+rules: [RF-16]
+features: [exec, finally, capture]
+plan: |
+  blokky: 1.0
+  exec: [blokky-testkit, exit, '0']
+  finally:
+    - exec: [blokky-testkit, print, --out, cleaned]
+      capture: CLEAN
+    - exec: [blokky-testkit, argv, { var: CLEAN }]
+expect:
+  status: succeeded
+  invocations:
+    - { argv: [exit, '0'] }
+    - { argv: [print, --out, cleaned] }
+    - { argv: [argv, cleaned] }
+notes: Near miss for RF-16.

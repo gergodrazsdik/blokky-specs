@@ -1,0 +1,19 @@
+title: A carry name can't shadow a capture of an enclosing scope
+rules: [RF-7]
+features: [do, exec, capture, until, cond-var, carry]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, print, --out, x]
+      capture: PREV
+    - until: { var: CUR, equals: done }
+      carry: { PREV: CUR }
+      max: 3
+      exec: [blokky-testkit, print, --out, done]
+      capture: CUR
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-7 }
+      line: 6
+      column: 14   # the carry name PREV

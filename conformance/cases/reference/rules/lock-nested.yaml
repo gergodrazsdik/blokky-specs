@@ -1,0 +1,15 @@
+title: A lock inside a lock is a plan error
+rules: [RF-17]
+features: [lock, do, exec]
+plan: |
+  blokky: 1.0
+  lock: conf-lock-nested-outer
+  do:
+    - lock: conf-lock-nested-inner
+      exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-17 }
+      line: 4      # the inner lock, the later key (SY-1)
+      column: 5

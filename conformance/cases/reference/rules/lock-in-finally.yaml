@@ -1,0 +1,17 @@
+title: A lock in the finally of a locked node is a nested lock
+rules: [RF-17]
+features: [lock, exec, finally]
+plan: |
+  blokky: 1.0
+  lock: conf-lock-in-finally-outer
+  exec: [blokky-testkit, exit, '0']
+  finally:
+    - lock: conf-lock-in-finally-inner
+      exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-17 }
+      line: 5      # the lock in finally, the later key (SY-1)
+      column: 5
+notes: reference.md §4.4 counts finally as a descendant.

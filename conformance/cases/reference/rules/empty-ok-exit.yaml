@@ -1,0 +1,13 @@
+title: An empty ok_exit list is a value error
+rules: [RF-21]
+features: [exec, ok-exit]
+plan: |
+  blokky: 1.0
+  exec: [blokky-testkit, exit, '0']
+  ok_exit: []
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: RF-21 }
+      line: 3
+      column: 10   # the empty list

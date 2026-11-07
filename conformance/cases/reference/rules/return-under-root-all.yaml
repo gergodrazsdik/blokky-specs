@@ -1,0 +1,15 @@
+title: A return directly under a root all has no enclosing sequence
+rules: [RF-29]
+features: [all, return, exec]
+plan: |
+  blokky: 1.0
+  all:
+    - return: done
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-29 }
+      line: 3
+      column: 5
+  exhaustive: true

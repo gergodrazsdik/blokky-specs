@@ -1,0 +1,16 @@
+title: collect naming a capture the loop doesn't bind is a plan error
+rules: [RF-30]
+features: [outputs, for-each, collect, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [ALL]
+  for: { each: [a, b], as: ITEM }
+  collect: { OUTT: ALL }
+  exec: [blokky-testkit, print, --out, { var: ITEM }]
+  capture: OUT
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-30 }
+      line: 4
+      column: 12   # the capture name OUTT

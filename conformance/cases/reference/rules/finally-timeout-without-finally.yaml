@@ -1,0 +1,13 @@
+title: finally_timeout without finally is a plan error
+rules: [RF-32]
+features: [exec]
+plan: |
+  blokky: 1.0
+  finally_timeout: 1m
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-32 }
+      line: 2
+      column: 1

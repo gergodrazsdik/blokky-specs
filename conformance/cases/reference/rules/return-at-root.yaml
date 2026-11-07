@@ -1,0 +1,13 @@
+title: A root return has no enclosing sequence
+rules: [RF-29]
+features: [return]
+plan: |
+  blokky: 1.0
+  return: nothing to do
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-29 }
+      line: 2
+      column: 1
+  exhaustive: true

@@ -1,0 +1,16 @@
+title: A node with two repetition modifiers is a plan error
+rules: [RF-2]
+features: [retry, for-each, exec]
+plan: |
+  blokky: 1.0
+  for: { each: [a, b], as: ITEM }
+  retry: true
+  exec: [blokky-testkit, argv, { var: ITEM }]
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-2 }
+      line: 3      # retry, the later of the two keys (SY-1)
+      column: 1
+notes: >-
+  No max or every, so no sibling-table error (RF-3) can fire as well.

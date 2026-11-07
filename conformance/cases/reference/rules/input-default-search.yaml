@@ -1,0 +1,17 @@
+title: An input default satisfies matches by unanchored search
+rules: [RF-20, VA-16]
+features: [inputs, log, interpolation]
+plan: |
+  blokky: 1.0
+  inputs:
+    ENVIRONMENT:
+      default: production
+      matches: 'prod'
+  log: "${ENVIRONMENT}"
+expect:
+  status: succeeded
+  nodes:
+    /:
+      status: succeeded
+      messages: [{ text: production, level: info }]
+notes: Near miss for RF-20; matches is a search, not a full match.

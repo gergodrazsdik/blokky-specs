@@ -1,0 +1,14 @@
+title: concurrency inside the for mapping is valid
+rules: [RF-31]
+features: [for-each, for-concurrency, exec]
+plan: |
+  blokky: 1.0
+  for: { each: [a, b], as: ITEM, concurrency: 2 }
+  exec: [blokky-testkit, argv, { var: ITEM }]
+expect:
+  status: succeeded
+  invocations:
+    $unordered:
+      - { argv: [argv, a] }
+      - { argv: [argv, b] }
+notes: Near miss for RF-31.

@@ -1,0 +1,14 @@
+title: A set template passed as a whole-value reference reaches the argument
+rules: [RF-9, RF-27]
+features: [vars, do, set, interpolation, exec]
+plan: |
+  blokky: 1.0
+  vars: { NAME: demo }
+  do:
+    - set: { ARG: '--name=${NAME}' }
+    - exec: [blokky-testkit, argv, { var: ARG }]
+expect:
+  status: succeeded
+  invocations:
+    - { argv: [argv, --name=demo] }
+notes: Near miss for RF-9 and RF-27, and the fix its error suggests (syntax.md §9).

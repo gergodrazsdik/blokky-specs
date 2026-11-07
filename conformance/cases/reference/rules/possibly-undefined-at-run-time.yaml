@@ -1,0 +1,20 @@
+title: A possibly undefined reference validates and fails at run time when unbound
+rules: [RF-23, VA-38]
+features: [vars, do, if, cond-var, set, log, interpolation]
+plan: |
+  blokky: 1.0
+  vars: { FLAG: 'no' }
+  do:
+    - if: { var: FLAG, equals: 'yes' }
+      then:
+        - set: { MODE: a }
+    - log: "mode ${MODE}"
+expect:
+  status: failed
+  error: { code: BK_UNDEFINED_VARIABLE, node: /do/1 }
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1:
+      status: failed
+      error: { code: BK_UNDEFINED_VARIABLE, detail: { name: MODE } }
+notes: Near miss for RF-23; a binding can come before the log, so only a warning is allowed (VA-31).

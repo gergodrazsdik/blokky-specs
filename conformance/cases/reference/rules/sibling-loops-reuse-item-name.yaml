@@ -1,0 +1,17 @@
+title: Two sequential loops may bind the same loop variable
+rules: [RF-26]
+features: [do, for-each, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - for: { each: [a, b], as: ITEM }
+      exec: [blokky-testkit, argv, { var: ITEM }]
+    - for: { each: [c], as: ITEM }
+      exec: [blokky-testkit, argv, { var: ITEM }]
+expect:
+  status: succeeded
+  invocations:
+    - { argv: [argv, a] }
+    - { argv: [argv, b] }
+    - { argv: [argv, c] }
+notes: Near miss for RF-26; each loop binds ITEM in its own iteration scope.

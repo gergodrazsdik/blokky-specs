@@ -1,0 +1,18 @@
+title: collect may name the loop leaf's own capture
+rules: [RF-30, VA-55]
+features: [outputs, for-each, collect, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [ALL]
+  for: { each: [a, b], as: ITEM }
+  collect: { OUT: ALL }
+  exec: [blokky-testkit, print, --out, { var: ITEM }]
+  capture: OUT
+expect:
+  status: succeeded
+  outputs:
+    ALL: '["a","b"]'
+  invocations:
+    - { argv: [print, --out, a] }
+    - { argv: [print, --out, b] }
+notes: Near miss for RF-30 ("a capture bound by the node or in its body").

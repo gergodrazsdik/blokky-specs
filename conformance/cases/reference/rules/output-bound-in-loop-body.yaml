@@ -1,0 +1,16 @@
+title: An output bound only inside a loop body is a plan error
+rules: [RF-15]
+features: [outputs, for-each, do, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [LAST]
+  for: { each: [a, b], as: ITEM }
+  do:
+    - exec: [blokky-testkit, print, --out, { var: ITEM }]
+      capture: LAST
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-15 }
+      line: 2
+      column: 11   # the outputs entry

@@ -1,0 +1,13 @@
+title: attempt_timeout without a repetition modifier is a plan error
+rules: [RF-4]
+features: [attempt-timeout, exec]
+plan: |
+  blokky: 1.0
+  attempt_timeout: 10s
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-4 }
+      line: 2
+      column: 1

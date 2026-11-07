@@ -1,0 +1,17 @@
+title: A capture under finally can't be used after the node
+rules: [RF-16]
+features: [do, exec, finally, capture, log, interpolation]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, exit, '0']
+      finally:
+        - exec: [blokky-testkit, print, --out, cleaned]
+          capture: CLEAN
+    - log: "cleanup: ${CLEAN}"
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-16 }
+      line: 7
+      column: 10   # the opening quote of the log message (SY-1)

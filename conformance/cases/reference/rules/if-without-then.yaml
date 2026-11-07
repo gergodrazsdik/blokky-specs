@@ -1,0 +1,15 @@
+title: An if without then is a plan error at the if key
+rules: [RF-32]
+features: [vars, if, cond-var, log]
+plan: |
+  blokky: 1.0
+  vars: { MODE: a }
+  if: { var: MODE, equals: a }
+  else:
+    - log: not a
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-32 }
+      line: 3      # the key that requires then (SY-1)
+      column: 1

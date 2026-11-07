@@ -1,0 +1,15 @@
+title: A name in both env and export on one node is a plan error
+rules: [RF-10]
+features: [vars, env, export, exec]
+plan: |
+  blokky: 1.0
+  vars: { MODE: fast }
+  env: { MODE: slow }
+  export: [MODE]
+  exec: [blokky-testkit, env, MODE]
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-10 }
+      line: 4      # the later of the two (SY-1)
+notes: No column; the export entry MODE and the export key are both on line 4.

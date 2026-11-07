@@ -1,0 +1,14 @@
+title: not around a simple condition with a not_ form is a plan error
+rules: [RF-14]
+features: [vars, when, cond-composite, cond-var, exec]
+plan: |
+  blokky: 1.0
+  vars: { MODE: fast }
+  when: { not: { var: MODE, equals: slow } }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-14 }
+      line: 3
+      column: 9    # the not key

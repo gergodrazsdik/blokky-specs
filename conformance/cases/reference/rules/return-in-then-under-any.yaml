@@ -1,0 +1,20 @@
+title: A return in a then branch whose sequence is reached through an any is a plan error
+rules: [RF-29]
+features: [vars, do, any, if, cond-var, return, exec]
+plan: |
+  blokky: 1.0
+  vars: { MODE: quick }
+  do:
+    - any:
+        - if: { var: MODE, equals: quick }
+          then:
+            - return: quick mode
+        - exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-29 }
+      line: 7
+      column: 13
+  exhaustive: true
+notes: then is transparent (reference.md §2.13), so the nearest sequence is the root do, reached through the any.

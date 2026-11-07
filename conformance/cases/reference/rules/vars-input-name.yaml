@@ -1,0 +1,17 @@
+title: A vars entry can't reuse an input's name
+rules: [RF-7]
+features: [inputs, vars, log, interpolation]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH: { default: main }
+  vars:
+    BRANCH: dev
+  log: "${BRANCH}"
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-7 }
+      line: 5
+      column: 3
+notes: An input is involved, so RF-7 wins over RF-26 (errors.md §4).

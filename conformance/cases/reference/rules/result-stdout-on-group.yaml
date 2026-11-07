@@ -1,0 +1,15 @@
+title: result stdout isn't valid on a group node
+rules: [RF-13]
+features: [until, cond-result, do, exec]
+plan: |
+  blokky: 1.0
+  until: { result: stdout, equals: done }
+  max: 3
+  do:
+    - exec: [blokky-testkit, print, --out, done]
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-13 }
+      line: 2
+      column: 18   # the value stdout

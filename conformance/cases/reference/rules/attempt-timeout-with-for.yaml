@@ -1,0 +1,14 @@
+title: attempt_timeout is valid with for, which counts as repetition
+rules: [RF-4]
+features: [for-count, attempt-timeout, exec]
+plan: |
+  blokky: 1.0
+  for: { count: 2, as: I }
+  attempt_timeout: 10s
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  invocations:
+    - { argv: [exit, '0'] }
+    - { argv: [exit, '0'] }
+notes: Near miss for RF-4; the validity matrix (reference.md §7) lists attempt_timeout "with repetition", and for is repetition.

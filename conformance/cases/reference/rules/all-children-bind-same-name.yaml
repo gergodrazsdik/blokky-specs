@@ -1,0 +1,17 @@
+title: Two children of an all can't bind the same name anywhere in their subtrees
+rules: [RF-8]
+features: [all, do, exec, capture]
+plan: |
+  blokky: 1.0
+  all:
+    - exec: [blokky-testkit, print, --out, a]
+      capture: OUT
+    - do:
+        - exec: [blokky-testkit, print, --out, b]
+          capture: OUT
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-8 }
+      line: 7      # the later binding (SY-1)
+      column: 18

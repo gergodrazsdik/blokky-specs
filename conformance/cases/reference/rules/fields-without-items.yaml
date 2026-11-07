@@ -1,0 +1,14 @@
+title: fields on a for over lines is a plan error
+rules: [RF-25]
+features: [vars, for-lines, exec]
+plan: |
+  blokky: 1.0
+  vars: { LIST: a }
+  for: { lines: { var: LIST }, as: LINE, fields: { N: .n } }
+  exec: [blokky-testkit, argv, { var: LINE }]
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-25 }
+      line: 3
+      column: 40   # the fields key

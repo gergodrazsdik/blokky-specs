@@ -1,0 +1,16 @@
+title: Node-level concurrency on a node with for is a plan error
+rules: [RF-31]
+features: [for-each, all, exec]
+plan: |
+  blokky: 1.0
+  for: { each: [a, b], as: ITEM }
+  concurrency: 2
+  all:
+    - exec: [blokky-testkit, argv, { var: ITEM }]
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-31 }
+      line: 3
+      column: 1
+notes: concurrency is a valid companion of all, but with for it would apply to the inner group, not the loop.
