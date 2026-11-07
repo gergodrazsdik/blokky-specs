@@ -1,0 +1,35 @@
+title: A lock is held until the node ends, after its finally, so a waiter gets it only then
+rules: [EM-60]
+spec: [reference.md§4.4]
+features: [all, do, sleep, exec, lock, finally]
+clock: [real]
+plan: |
+  blokky: 1.0
+  all:
+    - lock: conf-lock-held-through-finally
+      finally:
+        - exec: [blokky-testkit, sleep, 2s]
+      exec: [blokky-testkit, sleep, 1s]
+    - do:
+        - sleep: 500ms
+        - lock: conf-lock-held-through-finally
+          exec: [blokky-testkit, print, --out, got-lock]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /all/0:
+      status: succeeded
+      finally_status: succeeded
+      lock_wait: { $max: 2s }
+    /all/1/do/1:
+      status: succeeded
+      lock_wait: { $min: 2s, $max: 5s }
+  invocations:
+    - { argv: [sleep, 1s] }
+    - { argv: [sleep, 2s] }
+    - { argv: [print, --out, got-lock] }
+notes: >-
+  The holder's body ends at about 1s and its finally at about 3s. The waiter
+  asks at 0.5s; it gets the lock only after the finally, so it waits about
+  2.5s (about 0.5s if the lock were released after the body).

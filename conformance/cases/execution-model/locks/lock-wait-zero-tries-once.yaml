@@ -1,0 +1,29 @@
+title: A lock with wait 0s is tried once and a busy lock fails the node at once
+rules: [EM-60]
+spec: [reference.md§4.4]
+features: [all, do, sleep, exec, lock]
+clock: [real]
+plan: |
+  blokky: 1.0
+  fail_fast: false
+  all:
+    - lock: conf-lock-wait-zero-tries-once
+      exec: [blokky-testkit, sleep, 4s]
+    - do:
+        - sleep: 1s
+        - lock: { name: conf-lock-wait-zero-tries-once, wait: 0s }
+          exec: [blokky-testkit, print, --out, got-lock]
+expect:
+  status: failed
+  error: { code: BK_LOCK_TIMEOUT, node: /all/1/do/1 }
+  nodes:
+    /all/0: { status: succeeded }
+    /all/1/do/1:
+      status: failed
+      error: { code: BK_LOCK_TIMEOUT, node: /all/1/do/1 }
+      duration: { $max: 2s }
+  invocations:
+    - { argv: [sleep, 4s] }
+notes: >-
+  The lock is busy from the start until about 4s. The second child tries it
+  at 1s and gives up at once instead of waiting the 3s until it is free.

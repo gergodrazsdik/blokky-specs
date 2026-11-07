@@ -1,0 +1,37 @@
+title: A service that ignores the graceful stop is killed after the grace period, and that isn't a failure
+rules: [EM-15, EM-65]
+spec: [reference.md§4.9]
+features: [exec, services, cond-path]
+clock: [real]
+plan: |
+  blokky: 1.0
+  services:
+    - name: stubborn
+      exec: [blokky-testkit, sleep, 1m, --ignore-term, --record-signals, sig.txt, --pid-file, svc.pid]
+      ready: { path: svc.pid, is_file: true }
+  exec: [blokky-testkit, sleep, 1s]
+after_run:
+  - { argv: [alive, svc.pid], exit_code: 0 }
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      services:
+        - { name: stubborn, ended: stopped }
+  duration: { $min: 6s, $max: 20s }
+platforms:
+  unix:
+    expect:
+      files:
+        sig.txt: { contains: SIGTERM }
+  windows:
+    expect:
+      files:
+        sig.txt: { contains: CTRL_BREAK }
+notes: >-
+  The body takes 1s; then the service gets the graceful stop request, ignores
+  it, and is killed only after the 5s grace period (EM-26), so the run takes
+  at least 6s. On Windows the graceful request is CTRL_BREAK, which EM-15
+  makes reachable for services too.

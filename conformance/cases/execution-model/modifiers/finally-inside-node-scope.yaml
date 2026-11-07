@@ -1,0 +1,26 @@
+title: finally runs inside the node's tempdir and env
+rules: [EM-7]
+spec: [reference.md§4.10]
+features: [exec, tempdir, env, finally]
+plan: |
+  blokky: 1.0
+  tempdir: true
+  env: { CONF_SCOPE: node }
+  finally:
+    - exec: [blokky-testkit, read-file, made.txt]
+    - exec: [blokky-testkit, getenv, CONF_SCOPE]
+  exec: [blokky-testkit, write-file, made.txt, --text, made]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { status: succeeded, finally_status: succeeded }
+    /finally/0: { status: succeeded, exit_code: 0 }
+    /finally/1: { status: succeeded, exit_code: 0 }
+  files:
+    made.txt: { exists: false }
+notes: >-
+  The body writes made.txt in the tempdir, its cwd. read-file finds it there
+  (it exits with 3 for a missing file) and getenv finds CONF_SCOPE (3 if
+  unset), so the finally ran in the node's tempdir and env. The file isn't in
+  the work directory.

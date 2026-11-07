@@ -1,0 +1,31 @@
+title: A service that exits after the body ended, during finally, is recorded and isn't a failure
+rules: [EM-64]
+spec: [reference.md§4.9]
+features: [exec, services, finally]
+clock: [real]
+plan: |
+  blokky: 1.0
+  finally:
+    - exec: [blokky-testkit, sleep, 4s]
+  services:
+    - name: helper
+      exec: [blokky-testkit, print, --out, ready, --sleep, 2s, --exit, '7']
+      ready: { output: stdout, contains: ready }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      finally_status: succeeded
+      services:
+        - { name: helper, ended: exited, exit_code: 7 }
+    /finally/0: { status: succeeded }
+  invocations:
+    - { argv: [print, --out, ready, --sleep, 2s, --exit, '7'] }
+    - { argv: [exit, '0'] }
+    - { argv: [sleep, 4s] }
+notes: >-
+  on_exit is the default, fail. The body ends at once; the service exits with
+  7 about 2s later, while the finally sleeps, so the exit is only recorded.

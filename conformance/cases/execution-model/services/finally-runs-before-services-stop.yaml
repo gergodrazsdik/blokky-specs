@@ -1,0 +1,36 @@
+title: finally runs while the services are still up, and they are stopped after it
+rules: [EM-7, EM-65]
+spec: [reference.md§4.9, reference.md§4.10]
+features: [exec, services, finally, ok-exit]
+clock: [real]
+plan: |
+  blokky: 1.0
+  finally:
+    - exec: [blokky-testkit, alive, svc.pid]
+      ok_exit: [1]
+  services:
+    - name: svc
+      exec: [blokky-testkit, print, --out, ready, --hang, --pid-file, svc.pid]
+      ready: { output: stdout, contains: ready }
+  exec: [blokky-testkit, exit, '0']
+after_run:
+  - { argv: [alive, svc.pid], exit_code: 0 }
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      finally_status: succeeded
+      services:
+        - { name: svc, ended: stopped }
+    /finally/0:
+      status: succeeded
+      exit_code: 1
+  invocations:
+    - { argv: [print, --out, ready, --hang, --pid-file, svc.pid] }
+    - { argv: [exit, '0'] }
+    - { argv: [alive, svc.pid] }
+notes: >-
+  alive exits with 1 while the recorded process lives, so the finally sees the
+  service still running; after the run nothing recorded is alive.

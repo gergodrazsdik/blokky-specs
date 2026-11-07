@@ -1,0 +1,36 @@
+title: Services start one at a time in list order, each after the previous one is ready, and the body after all
+rules: [EM-61, EM-65]
+spec: [reference.md§4.9]
+features: [exec, services]
+clock: [real]
+requires:
+  ports: [47050]
+plan: |
+  blokky: 1.0
+  services:
+    - name: first
+      exec: [blokky-testkit, listen, --port, '47050', --after, 2s]
+      ready: { port: 47050, open: true }
+    - name: second
+      exec: [blokky-testkit, print, --out, ready, --hang]
+      ready: { output: stdout, contains: ready }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 0
+      services:
+        - { name: first, ready_after: { $min: 2s, $max: 6s }, ended: stopped }
+        - { name: second, ready_after: { $min: 2s, $max: 6s }, ended: stopped }
+  invocations:
+    - { argv: [listen, --port, '47050', --after, 2s] }
+    - { argv: [print, --out, ready, --hang] }
+    - { argv: [exit, '0'] }
+notes: >-
+  The first service opens its port after 2s. The second would be ready at
+  once, but it doesn't start before the first is ready, so its ready_after
+  (measured from the node's start) is at least 2s too. Both are stopped by
+  the run after the body, which isn't a failure.

@@ -1,0 +1,34 @@
+title: An until probe runs in the node's own env, a when probe in the parent's
+rules: [EM-8]
+spec: [conditions.md§6]
+features: [do, env, when, until, exec, cond-probe]
+clock: [real]
+plan: |
+  blokky: 1.0
+  do:
+    - env: { CONF_PROBE: node }
+      when: { probe: { exec: [blokky-testkit, getenv, CONF_PROBE] } }
+      exec: [blokky-testkit, print, --out, when-ran]
+    - env: { CONF_PROBE: node }
+      until: { probe: { exec: [blokky-testkit, getenv, CONF_PROBE] } }
+      max: 3
+      every: 0s
+      exec: [blokky-testkit, print, --out, until-ran]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: skipped, skip_reason: condition }
+    /do/1:
+      status: succeeded
+      repetition: { count: 1, ended_by: condition }
+  invocations:
+    - { argv: [getenv, CONF_PROBE] }
+    - { argv: [print, --out, until-ran] }
+    - { argv: [getenv, CONF_PROBE] }
+notes: >-
+  getenv exits with 3 (false, CO-33) when the variable is unset. The when
+  probe runs in the parent's scope, where CONF_PROBE isn't set, so the first
+  node is skipped. The until probe runs after the node's env applies, so it is
+  true after the first iteration (in the parent's scope the loop would reach
+  max).

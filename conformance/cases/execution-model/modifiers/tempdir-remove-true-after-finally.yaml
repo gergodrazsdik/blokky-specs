@@ -1,0 +1,25 @@
+title: tempdir with remove true is deleted at node end, after the node's finally used it
+rules: [EM-4, EM-7]
+spec: [reference.md§4.5]
+features: [do, exec, tempdir, finally, capture, assert, cond-path]
+plan: |
+  blokky: 1.0
+  do:
+    - tempdir: { as: WORK, remove: true }
+      finally:
+        - exec: [blokky-testkit, read-file, made.txt]
+      do:
+        - exec: [blokky-testkit, write-file, made.txt, --text, made]
+        - exec: [blokky-testkit, print, --out, { var: WORK }]
+          capture: DIR
+    - assert: { path: { var: DIR }, not_exists: true }
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded, finally_status: succeeded }
+    /do/0/finally/0: { status: succeeded, exit_code: 0 }
+    /do/1: { status: succeeded }
+notes: >-
+  The finally still reads the file the body wrote in the tempdir; after the
+  node ends, the directory whose path the body captured no longer exists.

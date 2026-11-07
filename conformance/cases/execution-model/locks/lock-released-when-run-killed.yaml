@@ -1,0 +1,26 @@
+title: A lock held by a run is released when the run's process is killed
+rules: [EM-60]
+spec: [reference.md§4.4]
+features: [exec, lock, kill]
+clock: [real]
+plan: |
+  blokky: 1.0
+  lock: conf-lock-released-when-run-killed
+  exec: [blokky-testkit, sleep, 10s]
+actions:
+  - { after: 2s, kill: true }
+after_run:
+  - plan: |
+      blokky: 1.0
+      lock: { name: conf-lock-released-when-run-killed, wait: 0s }
+      exec: [blokky-testkit, exit, '0']
+    expect:
+      status: succeeded
+      error: null
+expect:
+  no_result: true
+notes: >-
+  The run holds the lock when it is killed at 2s. The second plan tries the
+  same lock once (wait 0s) right after, and gets it, so the kill released it.
+  Whether the killed run's leaf survives (EM-22) doesn't matter: the lock
+  belongs to the run, not to the leaf.

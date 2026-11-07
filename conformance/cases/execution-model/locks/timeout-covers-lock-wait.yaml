@@ -1,0 +1,34 @@
+title: Waiting for a lock counts against the node's timeout, which can fire before the lock is free
+rules: [EM-6, EM-27, EM-60]
+spec: [reference.md§4.4]
+features: [all, do, sleep, exec, lock, timeout]
+clock: [real]
+plan: |
+  blokky: 1.0
+  fail_fast: false
+  all:
+    - lock: conf-timeout-covers-lock-wait
+      exec: [blokky-testkit, sleep, 4s]
+    - do:
+        - sleep: 1s
+        - lock: conf-timeout-covers-lock-wait
+          timeout: 1s
+          exec: [blokky-testkit, print, --out, got-lock]
+expect:
+  status: failed
+  error: { code: BK_TIMEOUT_TOTAL, node: /all/1/do/1 }
+  nodes:
+    /all/0:
+      status: succeeded
+      lock_wait: { $max: 2s }
+    /all/1/do/1:
+      status: timed_out
+      error: { code: BK_TIMEOUT_TOTAL, node: /all/1/do/1 }
+      duration: { $min: 1s, $max: 3s }
+  invocations:
+    - { argv: [sleep, 4s] }
+notes: >-
+  The first child holds the lock for 4s. The second asks for it after 1s,
+  without wait, so it waits as long as its 1s timeout allows (reference.md
+  §4.4); the timeout fires during the wait, so the node is timed_out with
+  BK_TIMEOUT_TOTAL, not BK_LOCK_TIMEOUT, and its program never starts.

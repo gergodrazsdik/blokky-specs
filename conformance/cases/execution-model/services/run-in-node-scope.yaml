@@ -1,0 +1,31 @@
+title: Services run in the node's cwd, and a service's relative cwd resolves inside it
+rules: [EM-4]
+spec: [reference.md§4.6, reference.md§4.9]
+features: [cwd, exec, services]
+clock: [real]
+files:
+  a/b: { dir: true }
+plan: |
+  blokky: 1.0
+  cwd: a
+  services:
+    - name: here
+      exec: [blokky-testkit, print, --out, ready, --hang]
+      ready: { output: stdout, contains: ready }
+    - name: nested
+      cwd: b
+      exec: [blokky-testkit, print, --out, ready, --hang]
+      ready: { output: stdout, contains: ready }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  error: null
+  invocations:
+    - { argv: [print, --out, ready, --hang], cwd: { $regex: '[/\\]a$' } }
+    - { argv: [print, --out, ready, --hang], cwd: { $regex: '[/\\]a[/\\]b$' } }
+    - { argv: [exit, '0'], cwd: { $regex: '[/\\]a$' } }
+notes: >-
+  cwd comes before services in the modifier order, so the services start in
+  a; the nested service's own cwd b is relative to that (reference.md §4.9:
+  the service runs in the node's scope). Services start in list order
+  (EM-61), which tells the two identical invocations apart.

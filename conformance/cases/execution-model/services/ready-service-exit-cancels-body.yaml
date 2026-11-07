@@ -1,0 +1,54 @@
+title: A ready service with on_exit fail that exits cancels the body, and finally runs with the remaining services
+rules: [EM-7, EM-64]
+spec: [reference.md§4.9, errors.md§5.5]
+features: [do, exec, services, finally, ok-exit]
+clock: [real]
+plan: |
+  blokky: 1.0
+  finally:
+    - exec: [blokky-testkit, alive, keep.pid]
+      ok_exit: [1]
+  services:
+    - name: keep
+      exec: [blokky-testkit, print, --out, ready, --hang, --pid-file, keep.pid]
+      ready: { output: stdout, contains: ready }
+    - name: crash
+      exec: [blokky-testkit, print, --out, ready, --sleep, 2s, --exit, '7']
+      ready: { output: stdout, contains: ready }
+  do:
+    - exec: [blokky-testkit, sleep, 1m]
+expect:
+  status: failed
+  error:
+    code: BK_SERVICE_EXITED
+    node: /
+    detail: { service: crash, exit_code: 7 }
+  nodes:
+    /:
+      status: failed
+      error:
+        code: BK_SERVICE_EXITED
+        node: /
+        detail: { service: crash, exit_code: 7 }
+      finally_status: succeeded
+      services:
+        - { name: keep, ended: stopped }
+        - { name: crash, ended: exited, exit_code: 7 }
+    /do/0:
+      status: cancelled
+      killed_by: cancel
+      error: { code: BK_CANCELLED, node: /do/0 }
+    /finally/0:
+      status: succeeded
+      exit_code: 1
+  invocations:
+    - { argv: [print, --out, ready, --hang, --pid-file, keep.pid] }
+    - { argv: [print, --out, ready, --sleep, 2s, --exit, '7'] }
+    - { argv: [sleep, 1m] }
+    - { argv: [alive, keep.pid] }
+  duration: { $min: 2s, $max: 15s }
+notes: >-
+  on_exit defaults to fail. The crash service is ready at once and exits with
+  7 after 2s, while the body sleeps; the body is cancelled. The finally's
+  alive exits with 1 because the keep service is still running then (EM-64:
+  finally runs with the remaining services).

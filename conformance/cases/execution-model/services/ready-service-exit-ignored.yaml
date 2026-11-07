@@ -1,0 +1,29 @@
+title: A ready service with on_exit ignore that exits is recorded, and the body goes on
+rules: [EM-64]
+spec: [reference.md§4.9]
+features: [exec, services]
+clock: [real]
+plan: |
+  blokky: 1.0
+  services:
+    - name: helper
+      exec: [blokky-testkit, print, --out, ready, --sleep, 1s, --exit, '7']
+      ready: { output: stdout, contains: ready }
+      on_exit: ignore
+  exec: [blokky-testkit, sleep, 4s]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 0
+      services:
+        - { name: helper, ended: exited, exit_code: 7 }
+  invocations:
+    - { argv: [print, --out, ready, --sleep, 1s, --exit, '7'] }
+    - { argv: [sleep, 4s] }
+  duration: { $min: 4s, $max: 10s }
+notes: >-
+  The service exits with 7 about 1s into the 4s body. With on_exit ignore the
+  body runs to its end and the node succeeds.

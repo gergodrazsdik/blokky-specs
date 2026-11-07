@@ -1,0 +1,30 @@
+title: finally runs after the node's timeout fired and isn't limited by it
+rules: [EM-6, EM-7]
+spec: [reference.md§4.10]
+features: [exec, timeout, finally]
+plan: |
+  blokky: 1.0
+  timeout: 1s
+  finally:
+    - exec: [blokky-testkit, sleep, 3s]
+  exec: [blokky-testkit, sleep, 1m]
+expect:
+  status: failed
+  error: { code: BK_TIMEOUT_TOTAL, node: / }
+  nodes:
+    /:
+      status: timed_out
+      killed_by: timeout
+      error: { code: BK_TIMEOUT_TOTAL, node: / }
+      finally_status: succeeded
+    /finally/0:
+      status: succeeded
+      exit_code: 0
+      duration: { $min: 3s, $max: 6s }
+  invocations:
+    - { argv: [sleep, 1m] }
+    - { argv: [sleep, 3s] }
+  duration: { $min: 4s, $max: 12s }
+notes: >-
+  The 1s timeout stops the body. The finally then runs for 3s, longer than the
+  timeout itself, under its own finally_timeout (default 5m), and succeeds.

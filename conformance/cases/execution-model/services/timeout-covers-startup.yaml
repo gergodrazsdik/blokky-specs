@@ -1,0 +1,30 @@
+title: The node's timeout covers service startup and fires before the default ready_timeout
+rules: [EM-6, EM-62]
+spec: [reference.md§4.3, reference.md§4.9, results.md§3]
+features: [exec, services, timeout]
+clock: [real]
+plan: |
+  blokky: 1.0
+  timeout: 2s
+  services:
+    - name: slow
+      exec: [blokky-testkit, sleep, 1m]
+      ready: { output: stdout, contains: ready }
+  exec: [blokky-testkit, print, --out, body]
+expect:
+  status: failed
+  error: { code: BK_TIMEOUT_TOTAL, node: / }
+  nodes:
+    /:
+      status: timed_out
+      error: { code: BK_TIMEOUT_TOTAL, node: / }
+      services:
+        - { name: slow, ended: never_ready }
+  invocations:
+    - { argv: [sleep, 1m] }
+  duration: { $min: 2s, $max: 15s }
+notes: >-
+  The service never prints its ready text. Readiness would be polled for the
+  default 30s, but only within the node's 2s timeout, which fires first; the
+  body never starts. A service stopped by a timeout during startup ended
+  never_ready.
