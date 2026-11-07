@@ -1,0 +1,22 @@
+title: env_pass can't name a forbidden or a reserved environment name
+rules: [CP-42, RF-10, VA-41, VA-42]
+spec: [errors.md§4]
+features: [container, exec]
+plan: |
+  blokky: 1.0
+  container:
+    image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+    env_pass: [PATH, BASH_ENV, HOME, TMPDIR, CONF_OK]
+  exec: [sh, -c, 'exit 0']
+expect:
+  plan_errors:
+    - { code: BK_PLAN_INVALID, detail: { rule: RF-10 }, line: 4, column: 14 }
+    - { code: BK_PLAN_INVALID, detail: { rule: RF-10 }, line: 4, column: 20 }
+    - { code: BK_PLAN_INVALID, detail: { rule: RF-10 }, line: 4, column: 30 }
+    - { code: BK_PLAN_INVALID, detail: { rule: RF-10 }, line: 4, column: 36 }
+  exhaustive: true
+notes: >-
+  env_pass passes a host variable through like export, so PATH and BASH_ENV
+  are forbidden as in env (VA-41) and HOME and TMPDIR are reserved as in
+  export (VA-42); each entry is one error, reported as RF-10 (CP-42, ADR
+  0026). CONF_OK is valid.

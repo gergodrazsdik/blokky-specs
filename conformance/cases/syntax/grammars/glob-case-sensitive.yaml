@@ -11,6 +11,12 @@ expect:
   status: failed
   error: { code: BK_GLOB_EMPTY, node: / }
   nodes:
-    /: { status: failed, error: { code: BK_GLOB_EMPTY } }
+    /:
+      status: failed
+      error: { code: BK_GLOB_EMPTY }
+      repetition: { count: 0, ended_by: failure }
   invocations: []
-notes: Also on case-insensitive file systems (Windows, macOS by default), where the OS itself would match.
+notes: >-
+  Also on case-insensitive file systems (Windows, macOS by default), where the
+  OS itself would match. The node failed before its first iteration, so its
+  repetition has count 0 and ended_by failure (results.md §3).

@@ -1,9 +1,8 @@
 title: A container cwd that doesn't exist in the container fails the node
-rules: [CP-14]
+rules: [CP-14, CP-41]
 spec: [reference.md§4.6]
 features: [cwd, container, exec]
 requires:
-  os: [linux, macos]
   container-engine: true
 clock: [real]
 plan: |
@@ -18,3 +17,6 @@ expect:
   error: { code: BK_CWD_INVALID, node: / }
   nodes:
     /: { status: failed }
+notes: >-
+  /conf-missing isn't under the mounts (there are none), so it is a container
+  path, checked inside, on every host OS (CP-41).

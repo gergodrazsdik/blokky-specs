@@ -22,7 +22,11 @@ expect:
       status: timed_out
       killed_by: timeout
       error: { code: BK_TIMEOUT_TOTAL, node: / }
-      repetition: { count: 1, ended_by: timeout }
+      repetition:
+        count: 1
+        ended_by: timeout
+        entries:
+          - { index: 0, status: cancelled, error: { code: BK_CANCELLED } }   # EM-53
       duration: { $min: 1s, $max: 10s }
   invocations:
     - { argv: [sleep, 30s] }

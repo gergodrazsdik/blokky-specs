@@ -1,5 +1,5 @@
 title: A node whose when is false applies none of its other layers, from timeout to the body's capture
-rules: [EM-4, EM-5, RS-6]
+rules: [EM-4, EM-5, RS-6, RS-7]
 spec: [reference.md§4.2]
 features: [vars, do, exec, when, cond-var, timeout, lock, tempdir, cwd, env, services, finally, retry, attempt-timeout, capture]
 clock: [real]
@@ -43,6 +43,7 @@ expect:
       finally_status: { $absent: true }
       repetition: { $absent: true }
       bindings: { $absent: true }
+    /do/0/finally/0: { $absent: true }
     /do/1: { status: succeeded, exit_code: 0 }
   invocations:
     - { argv: [print, --out, after] }
@@ -52,6 +53,7 @@ notes: >-
   layer (EM-4), so a false when stops everything below it (EM-5): the missing
   cwd raises no BK_CWD_INVALID, no service, attempt, body or finally process
   starts (the invocation log holds only the second node), and the skipped
-  node has no result fields beyond its status and skip reason (RS-6). Its
+  node has no result fields beyond its status and skip reason (RS-6), and
+  its finally node isn't in the result (RS-7). Its
   capture OUT is never bound, so the second node's when is true; that node
   also gets the lock with wait 0s.

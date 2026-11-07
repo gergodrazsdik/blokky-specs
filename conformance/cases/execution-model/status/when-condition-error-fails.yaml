@@ -1,5 +1,5 @@
 title: A condition error in when fails the node, which runs no finally, and stops its do
-rules: [EM-47]
+rules: [EM-47, RS-8]
 features: [vars, do, exec, when, cond-var, cond-numeric, finally]
 plan: |
   blokky: 1.0
@@ -18,6 +18,11 @@ expect:
     node: /do/0
     detail: { reason: not_a_number }
   nodes:
-    /do/0: { status: failed, error: { code: BK_CONDITION_ERROR, node: /do/0 } }
+    /do/0:
+      status: failed
+      error: { code: BK_CONDITION_ERROR, node: /do/0 }
+      duration: { $absent: true }
+      finally_status: { $absent: true }
+    /do/0/finally/0: { $absent: true }
     /do/1: { status: skipped, skip_reason: not_reached }
   invocations: []

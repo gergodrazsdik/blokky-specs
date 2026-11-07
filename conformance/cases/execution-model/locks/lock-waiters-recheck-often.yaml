@@ -1,0 +1,44 @@
+title: A waiter checks a busy lock again within 250ms, so a chain of short holders hands it on quickly
+rules: [EM-60]
+spec: [reference.md§4.4]
+features: [all, exec, lock]
+clock: [real]
+plan: |
+  blokky: 1.0
+  all:
+    - lock: conf-lock-waiters-recheck-often
+      exec: [blokky-testkit, sleep, 100ms]
+    - lock: conf-lock-waiters-recheck-often
+      exec: [blokky-testkit, sleep, 100ms]
+    - lock: conf-lock-waiters-recheck-often
+      exec: [blokky-testkit, sleep, 100ms]
+    - lock: conf-lock-waiters-recheck-often
+      exec: [blokky-testkit, sleep, 100ms]
+    - lock: conf-lock-waiters-recheck-often
+      exec: [blokky-testkit, sleep, 100ms]
+    - lock: conf-lock-waiters-recheck-often
+      exec: [blokky-testkit, sleep, 100ms]
+    - lock: conf-lock-waiters-recheck-often
+      exec: [blokky-testkit, sleep, 100ms]
+    - lock: conf-lock-waiters-recheck-often
+      exec: [blokky-testkit, sleep, 100ms]
+    - lock: conf-lock-waiters-recheck-often
+      exec: [blokky-testkit, sleep, 100ms]
+    - lock: conf-lock-waiters-recheck-often
+      exec: [blokky-testkit, sleep, 100ms]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /all/0: { status: succeeded }
+    /all/9: { status: succeeded }
+  duration: { $min: 1s, $max: 6500ms }
+notes: >-
+  Ten children of all ask for the same lock at once; each holds it for about
+  100ms, so they run one after another, in an unspecified order (EM-60). Each
+  release is followed by the next acquisition within 250ms, because every
+  waiter checks again at most 250ms after its previous check (EM-60, ADR
+  0026): at most 1s of holding plus nine hand-offs of 250ms, about 3.25s
+  (the bound is that plus 2s, rounded up, CF-43). Waiters that started
+  together and checked only every second would get the lock about once a
+  second, about 10s in all.

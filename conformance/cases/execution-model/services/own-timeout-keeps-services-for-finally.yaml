@@ -1,0 +1,43 @@
+title: When the node's own timeout fires during the body, only the body is stopped, and the services stay up for finally
+rules: [EM-6, EM-7, EM-26, EM-27, EM-65]
+spec: [reference.md§4.3, reference.md§4.9, reference.md§4.10]
+features: [exec, timeout, services, finally, ok-exit]
+clock: [real]
+plan: |
+  blokky: 1.0
+  timeout: 3s
+  finally:
+    - exec: [blokky-testkit, alive, svc.pid]
+      ok_exit: [1]
+  services:
+    - name: svc
+      exec: [blokky-testkit, print, --out, ready, --hang, --pid-file, svc.pid]
+      ready: { output: stdout, contains: ready }
+  exec: [blokky-testkit, sleep, 30s]
+after_run:
+  - { argv: [alive, svc.pid], exit_code: 0 }
+expect:
+  status: failed
+  error: { code: BK_TIMEOUT_TOTAL, node: / }
+  nodes:
+    /:
+      status: timed_out
+      killed_by: timeout
+      error: { code: BK_TIMEOUT_TOTAL, node: / }
+      finally_status: succeeded
+      services:
+        - { name: svc, ended: stopped }
+      duration: { $min: 3s, $max: 12s }
+    /finally/0: { status: succeeded, exit_code: 1 }
+  invocations:
+    - { argv: [print, --out, ready, --hang, --pid-file, svc.pid] }
+    - { argv: [sleep, 30s] }
+    - { argv: [alive, svc.pid] }
+notes: >-
+  The node's 1s timeout fires while the body sleeps. Services belong to the
+  node's scope, not its body (EM-65, ADR 0026): the body is stopped (killed_by
+  timeout), but the service keeps running, so the finally, which runs after
+  the timeout (EM-7), sees it alive (alive exits 1). The service is stopped
+  after the finally, ended stopped, and after the run nothing recorded is
+  alive. Stopped together with the body, alive would exit 0 and the finally
+  would fail.

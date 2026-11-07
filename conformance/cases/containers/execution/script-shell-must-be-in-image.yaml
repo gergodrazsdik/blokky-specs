@@ -1,5 +1,6 @@
 title: A script's shell must be in the image, even when the host has it
 rules: [CP-15]
+spec: [errors.md§5.1]
 features: [container, script, shell-bash]
 requires:
   shells: [bash]
@@ -13,9 +14,10 @@ plan: |
     exit 0
 expect:
   status: failed
-  error: { node: / }
+  error: { code: BK_SHELL_UNAVAILABLE, node: / }
   nodes:
-    /: { status: failed }
+    /: { status: failed, error: { code: BK_SHELL_UNAVAILABLE, node: / } }
 notes: >-
-  The pinned busybox image has sh but no bash. The error code isn't specified
-  for a shell missing from the image, so only the status is asserted.
+  The pinned busybox image has sh but no bash, so the named shell isn't in
+  the image: BK_SHELL_UNAVAILABLE (CP-15, ADR 0026), although the host has
+  bash.

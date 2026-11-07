@@ -1,5 +1,6 @@
 title: A program that exists only on the host isn't found inside the container
 rules: [CP-15]
+spec: [errors.md§5.1]
 features: [container, exec]
 requires:
   container-engine: true
@@ -10,11 +11,13 @@ plan: |
   exec: [blokky-testkit, exit, '0']
 expect:
   status: failed
-  error: { node: / }
+  error: { code: BK_SPAWN_NOT_FOUND, node: /, detail: { program: blokky-testkit } }
   nodes:
-    /: { status: failed }
+    /:
+      status: failed
+      error: { code: BK_SPAWN_NOT_FOUND, node: /, detail: { program: blokky-testkit } }
   invocations: []
 notes: >-
   The testkit is on the host's PATH but not in the image; argv[0] resolves
-  inside (the engine's lookup), so the host's testkit never runs. Which error
-  code the failed lookup gets isn't specified, so only the status is asserted.
+  inside (the engine's lookup), so the host's testkit never runs. The failed
+  lookup is BK_SPAWN_NOT_FOUND, with argv[0] as written (CP-15, ADR 0026).

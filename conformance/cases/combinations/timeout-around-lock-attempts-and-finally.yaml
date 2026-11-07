@@ -47,7 +47,7 @@ expect:
         ended_by: timeout
         entries:
           - { index: 0, status: timed_out, error: { code: BK_TIMEOUT_ATTEMPT } }
-          - { index: 1, error: { code: BK_CANCELLED } }
+          - { index: 1, status: cancelled, error: { code: BK_CANCELLED } }
       duration: { $min: 7500ms, $max: 15s }   # 5.5s timeout, then a 2s finally
     /all/1/do/1/finally/0:
       status: succeeded
@@ -75,7 +75,7 @@ notes: >-
   2.5s for the lock, which counts against the timeout (EM-6, EM-60). Attempt 1
   runs from about 3s and is ended by its 2s attempt_timeout at about 5s
   (timed_out entry, EM-27); retry true retries it; attempt 2 starts at about
-  5s and is interrupted by the node's own timeout at about 6s (EM-25, EM-53),
+  5s and is interrupted by the node's own timeout at about 6s (EM-25, EM-53; its entry is cancelled),
   about 1s before a third attempt could start. Without the lock wait counted,
   the timeout would end at about 8.5s and a third attempt would start at
   about 7s. The finally runs once, after all attempts, inside the tempdir and

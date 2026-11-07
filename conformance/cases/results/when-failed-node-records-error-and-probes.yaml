@@ -1,0 +1,42 @@
+title: A node that failed in its when records only its error and when probes, without its descendants and finally nodes
+rules: [RS-8, EM-47, CO-41]
+spec: [reference.md§4.2]
+features: [do, exec, when, cond-probe, cond-numeric, finally, log, ignore-errors]
+clock: [real]
+plan: |
+  blokky: 1.0
+  do:
+    - when: { probe: { exec: [blokky-testkit, print, --out, many] }, gt: '1' }
+      ignore_errors: true
+      finally:
+        - log: cleanup
+      do:
+        - exec: [blokky-testkit, print, --out, first]
+        - log: second
+    - log: after
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0:
+      status: failed
+      ignored: true
+      kind: do
+      error: { code: BK_CONDITION_ERROR, node: /do/0, detail: { reason: not_a_number } }
+      probes:
+        - { invocation: [blokky-testkit, print, --out, many], exit_code: 0 }
+      children: { $absent: true }
+      finally_status: { $absent: true }
+      duration: { $absent: true }
+    /do/0/do/0: { $absent: true }
+    /do/0/do/1: { $absent: true }
+    /do/0/finally/0: { $absent: true }
+    /do/1: { status: succeeded }
+  invocations:
+    - { argv: [print, --out, many] }
+notes: >-
+  The probe prints many, which isn't a number, so the when is a condition
+  error (EM-47). ignore_errors applies to it (CO-41), so the run goes on. The
+  failed node records its id, kind, status, ignored, error and when probe and
+  nothing else: no duration, no children, no finally status, and its
+  descendants and finally node are absent (RS-8, ADR 0026).

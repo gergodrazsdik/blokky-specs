@@ -1,9 +1,8 @@
 title: An absolute cwd that isn't a host path under a mount is a container path, checked inside
-rules: [CP-1, CP-14]
+rules: [CP-1, CP-14, CP-41]
 spec: [reference.md§4.6]
 features: [outputs, cwd, container, exec, capture]
 requires:
-  os: [linux, macos]
   container-engine: true
 clock: [real]
 files:
@@ -24,4 +23,6 @@ expect:
     SEEN: "/conf-mounted/inner\nmounted"
 notes: >-
   /conf-mounted/inner doesn't exist on the host, so a host check would fail
-  the node with BK_CWD_INVALID; inside, it is sub/inner through the mount.
+  the node with BK_CWD_INVALID; inside, it is sub/inner through the mount. On
+  Windows too: a container path is a POSIX path on every host, and /... is
+  never an absolute host path there (CP-41).

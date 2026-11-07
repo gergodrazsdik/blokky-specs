@@ -1,5 +1,5 @@
-title: A container leaf's result records the container
-rules: [CP-6]
+title: A container leaf's result records the container and the argv run inside it
+rules: [CP-6, CP-38]
 spec: [results.md§3.1]
 features: [container, do, exec]
 requires:
@@ -15,8 +15,21 @@ expect:
   status: succeeded
   error: null
   nodes:
-    /do/0: { status: succeeded, container: { $present: true } }
-    /do/1: { status: succeeded, container: { $present: true } }
+    /do/0:
+      status: succeeded
+      invocation: [sh, -c, 'exit 0']
+      container:
+        engine: { $present: true }
+        image_digest: { $present: true }
+        id: { $present: true }
+        labelling_disabled: { $one_of: [true, false] }
+    /do/1:
+      status: succeeded
+      invocation: [sh, -c, 'exit 0']
+      container: { id: { $present: true } }
 notes: >-
-  The field holds the engine, the image digest and the container id, but the
-  result document doesn't name its keys yet, so only its presence is asserted.
+  The field holds the engine, the image digest, the container id and whether
+  labelling was disabled (results.md §3.1, ADR 0026); which engine, which
+  digest of the multi-arch image and the id's form are engine-defined. The
+  invocation is the argv run inside the container, not the engine command
+  (CP-38).

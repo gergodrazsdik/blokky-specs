@@ -1,25 +1,31 @@
 title: An image without sh, sleep and kill fails the node when the container starts
-rules: [CP-36]
+rules: [CP-36, EM-63]
 spec: [errors.md§5.5]
-features: [container, exec]
+features: [container, exec, finally]
 requires:
   container-engine: true
 clock: [real]
 plan: |
   blokky: 1.0
   container: { image: gcr.io/distroless/static-debian12@sha256:d75cdd72874d4790092fcb1b058493ecf6bb5bf2b2b897045b00ff01d91843f2 }
+  finally:
+    - exec: [sh, -c, 'exit 0']
   exec: [sh, -c, 'exit 0']
 expect:
   status: failed
   error:
     code: BK_CONTAINER_FAILED
     node: /
-    detail: { missing: { $present: true }, engine: { $present: true } }
+    detail: { missing: { $unordered: [sh, sleep, kill] }, engine: { $present: true } }
   nodes:
-    /: { status: failed }
+    /:
+      status: failed
+      finally_status: { $absent: true }
+    /finally/0: { status: skipped, skip_reason: not_reached }
 notes: >-
   gcr.io/distroless/static-debian12, pinned by digest (multi-arch index,
   looked up 2026-11-07), has no shell, sleep or kill. It is the suite's second
   pinned image, used only by this case; runners pre-pull it like the busybox
-  image, and the case is skipped without it. Which of the three
-  detail.missing names, and in which form, isn't specified.
+  image, and the case is skipped without it. detail.missing lists all three
+  names (CP-36). The container is a layer outside finally, so the finally
+  doesn't run (EM-63).

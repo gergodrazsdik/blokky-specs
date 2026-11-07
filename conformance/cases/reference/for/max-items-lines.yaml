@@ -16,6 +16,10 @@ expect:
     /do/1:
       status: failed
       error: { code: BK_ITEMS_TOO_MANY, node: /do/1 }
+      repetition: { count: 0, ended_by: failure }
   invocations:
     - { argv: [print, --out, a, --out, b, --out, c] }
-notes: Items are never truncated to max_items; no argv invocation runs.
+notes: >-
+  Items are never truncated to max_items; no argv invocation runs. The node
+  failed before its first iteration, so its repetition has count 0 and
+  ended_by failure (results.md §3).

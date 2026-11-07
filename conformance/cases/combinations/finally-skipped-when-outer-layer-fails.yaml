@@ -1,0 +1,81 @@
+title: A node failed by its lock wait, a timeout during it, its cwd or its env runs neither its body nor its finally
+rules: [EM-4, EM-7, EM-52, EM-60, EM-63]
+spec: [reference.md§4.4, reference.md§4.10]
+features: [vars, all, do, sleep, exec, when, cond-var, set, lock, timeout, cwd, env, finally, retry]
+clock: [real]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: quick
+  fail_fast: false
+  all:
+    - lock: conf-finally-skipped-when-outer-layer-fails
+      exec: [blokky-testkit, sleep, 3s]
+    - do:
+        - sleep: 500ms
+        - lock: { name: conf-finally-skipped-when-outer-layer-fails, wait: 500ms }
+          finally:
+            - exec: [blokky-testkit, print, --out, fin-lock]
+          retry: true
+          max: 2
+          every: 0s
+          exec: [blokky-testkit, print, --out, body-lock]
+    - do:
+        - sleep: 500ms
+        - lock: conf-finally-skipped-when-outer-layer-fails
+          timeout: 500ms
+          finally:
+            - exec: [blokky-testkit, print, --out, fin-timeout]
+          exec: [blokky-testkit, print, --out, body-timeout]
+    - cwd: missing
+      finally:
+        - exec: [blokky-testkit, print, --out, fin-cwd]
+      exec: [blokky-testkit, print, --out, body-cwd]
+    - do:
+        - when: { var: MODE, equals: full }
+          set: { SUFFIX: full }
+        - env: { CONF_SUFFIX: { var: SUFFIX } }
+          finally:
+            - exec: [blokky-testkit, print, --out, fin-env]
+          exec: [blokky-testkit, print, --out, body-env]
+expect:
+  status: failed
+  error: { code: BK_LOCK_TIMEOUT, node: /all/1/do/1 }
+  nodes:
+    /all/0: { status: succeeded }
+    /all/1/do/1:
+      status: failed
+      error: { code: BK_LOCK_TIMEOUT, node: /all/1/do/1 }
+      lock_wait: { $min: 500ms, $max: 2500ms }
+      finally_status: { $absent: true }
+      repetition: { count: 0, ended_by: failure }
+    /all/1/do/1/finally/0: { status: skipped, skip_reason: not_reached }
+    /all/2/do/1:
+      status: timed_out
+      error: { code: BK_TIMEOUT_TOTAL, node: /all/2/do/1 }
+      finally_status: { $absent: true }
+    /all/2/do/1/finally/0: { status: skipped, skip_reason: not_reached }
+    /all/3:
+      status: failed
+      error: { code: BK_CWD_INVALID, node: /all/3 }
+      finally_status: { $absent: true }
+    /all/3/finally/0: { status: skipped, skip_reason: not_reached }
+    /all/4/do/1:
+      status: failed
+      error: { code: BK_UNDEFINED_VARIABLE, node: /all/4/do/1 }
+      finally_status: { $absent: true }
+    /all/4/do/1/finally/0: { status: skipped, skip_reason: not_reached }
+  invocations:
+    - { argv: [sleep, 3s] }
+notes: >-
+  finally sits inside lock, cwd and env (EM-4), so it runs only when the node
+  got past them (EM-63, ADR 0026). The first child holds the lock until about
+  3s. The second asks at 0.5s with wait 500ms and gives up at about 1s
+  (BK_LOCK_TIMEOUT); it failed before its first attempt, so its repetition
+  has count 0 and ended_by failure. The third asks at 0.5s without wait, and
+  its 500ms timeout fires during the wait (BK_TIMEOUT_TOTAL). The fourth has a
+  missing cwd. The fifth sets CONF_SUFFIX from SUFFIX, which the skipped set
+  never bound, so its env fails at run time. None of the four bodies or
+  finally lists runs: the invocation log holds only the holder, the finally
+  nodes are skipped with not_reached, and no finally status is recorded. The
+  run's error is the first failure in plan order (EM-52).
