@@ -1,0 +1,21 @@
+title: An exec leaf runs inside the container, with the image's PATH and no host programs
+rules: [CP-15, CP-16]
+features: [outputs, container, exec, capture]
+requires:
+  container-engine: true
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+  exec: [sh, -c, 'echo "$PATH"; command -v blokky-testkit || echo no-testkit']
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\nno-testkit"
+  invocations: []
+notes: >-
+  The pinned image's config sets only PATH, to the value above. The host's PATH
+  starts with the testkit's directory (CF-57); it isn't passed (CP-16), and sh
+  and its lookup are the image's (CP-15).

@@ -1,0 +1,31 @@
+title: Probes of nodes in a container run inside it, while the container node's when runs outside
+rules: [CP-18, CP-19]
+features: [when, cond-probe, container, do, exec, assert]
+requires:
+  container-engine: true
+clock: [real]
+plan: |
+  blokky: 1.0
+  when: { probe: { exec: [blokky-testkit, exit, '0'] } }
+  container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+  do:
+    - exec: [sh, -c, 'echo inside > /tmp/conf-probe']
+    - assert: { probe: { exec: [test, -f, /tmp/conf-probe] } }
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      probes:
+        - { exit_code: 0, result: true }
+    /do/1:
+      status: succeeded
+      probes:
+        - { exit_code: 0, result: true }
+  invocations:
+    - { argv: [exit, '0'] }
+notes: >-
+  The when probe is the testkit, which exists only on the host, and it is
+  logged there. The assert's probe finds a file in the container's own /tmp,
+  which isn't on the host.

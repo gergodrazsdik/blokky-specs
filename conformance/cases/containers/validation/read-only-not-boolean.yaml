@@ -1,0 +1,18 @@
+title: A mount's read_only is a boolean, exactly true or false
+rules: [SY-53]
+spec: [containers.md§2.3]
+features: [container, exec]
+plan: |
+  blokky: 1.0
+  container:
+    image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+    mounts:
+      - { host: ., path: /conf-work, read_only: yes }
+  exec: [sh, -c, 'exit 0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: SY-53 }
+      line: 5
+      column: 47
+  exhaustive: true

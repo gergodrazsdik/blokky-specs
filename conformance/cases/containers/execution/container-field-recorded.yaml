@@ -1,0 +1,22 @@
+title: A container leaf's result records the container
+rules: [CP-6]
+spec: [results.md§3.1]
+features: [container, do, exec]
+requires:
+  container-engine: true
+clock: [real]
+plan: |
+  blokky: 1.0
+  container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+  do:
+    - exec: [sh, -c, 'exit 0']
+    - exec: [sh, -c, 'exit 0']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded, container: { $present: true } }
+    /do/1: { status: succeeded, container: { $present: true } }
+notes: >-
+  The field holds the engine, the image digest and the container id, but the
+  result document doesn't name its keys yet, so only its presence is asserted.

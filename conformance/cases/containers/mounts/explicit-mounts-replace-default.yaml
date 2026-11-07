@@ -1,0 +1,22 @@
+title: A mounts list replaces the default cwd mount, so an unmapped cwd is an error
+rules: [CP-12, CP-14]
+spec: [errors.md§5.5]
+features: [container, exec]
+requires:
+  container-engine: true
+clock: [real]
+files:
+  sub: { dir: true }
+plan: |
+  blokky: 1.0
+  container:
+    image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+    mounts:
+      - { host: sub, path: /conf-sub }
+  exec: [pwd]
+expect:
+  status: failed
+  error: { code: BK_CWD_UNMAPPED, node: / }
+  nodes:
+    /: { status: failed }
+notes: The node's cwd is the work directory, which contains the mounted sub but isn't under it.

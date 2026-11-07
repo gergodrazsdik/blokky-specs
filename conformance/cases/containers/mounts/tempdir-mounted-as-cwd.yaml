@@ -1,0 +1,28 @@
+title: The node's tempdir is mounted read-write as its cwd, also with mounts []
+rules: [CP-11]
+features: [outputs, do, tempdir, container, exec, set, interpolation, cwd, capture]
+requires:
+  container-engine: true
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  do:
+    - tempdir: { as: WORK_DIR }
+      container:
+        image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+        mounts: []
+      do:
+        - exec: [sh, -c, 'echo made > made.txt']
+        - set: { MADE_IN: '${WORK_DIR}' }
+    - cwd: { var: MADE_IN }
+      exec: [blokky-testkit, read-file, made.txt]
+      capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: made
+notes: >-
+  The tempdir is kept (no remove), so the host leaf reads the file the
+  container leaf wrote into it; set publishes its host path past the tempdir
+  node (VA-28).

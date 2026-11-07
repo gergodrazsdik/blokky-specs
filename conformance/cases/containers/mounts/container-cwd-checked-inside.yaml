@@ -1,0 +1,27 @@
+title: An absolute cwd that isn't a host path under a mount is a container path, checked inside
+rules: [CP-1, CP-14]
+spec: [reference.md§4.6]
+features: [outputs, cwd, container, exec, capture]
+requires:
+  os: [linux, macos]
+  container-engine: true
+clock: [real]
+files:
+  sub/inner/marker.txt: mounted
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  cwd: /conf-mounted/inner
+  container:
+    image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+    mounts:
+      - { host: sub, path: /conf-mounted }
+  exec: [sh, -c, 'pwd && cat marker.txt']
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: "/conf-mounted/inner\nmounted"
+notes: >-
+  /conf-mounted/inner doesn't exist on the host, so a host check would fail
+  the node with BK_CWD_INVALID; inside, it is sub/inner through the mount.

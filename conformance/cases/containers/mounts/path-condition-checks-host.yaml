@@ -1,0 +1,23 @@
+title: A path condition on a container node checks the host, not the container
+rules: [CP-1, CP-2]
+features: [cwd, container, assert, cond-path]
+requires:
+  container-engine: true
+clock: [real]
+files:
+  top.txt: host only
+  sub: { dir: true }
+plan: |
+  blokky: 1.0
+  cwd: sub
+  container:
+    image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+    mounts:
+      - { host: sub, path: /conf-sub }
+  assert: { path: ../top.txt, is_file: true }
+expect:
+  status: succeeded
+  error: null
+notes: >-
+  On the host, ../top.txt from sub is the work directory's top.txt. In the
+  container, the cwd is /conf-sub and /top.txt doesn't exist.

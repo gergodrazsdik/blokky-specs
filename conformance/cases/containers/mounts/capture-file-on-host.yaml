@@ -1,0 +1,19 @@
+title: A container leaf's capture_file is a host file
+rules: [CP-1]
+features: [outputs, do, container, exec, capture-file, capture]
+requires:
+  container-engine: true
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  do:
+    - container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+      exec: [echo, inside]
+      capture_file: OUT_FILE
+    - exec: [blokky-testkit, read-file, { var: OUT_FILE }]
+      capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: inside

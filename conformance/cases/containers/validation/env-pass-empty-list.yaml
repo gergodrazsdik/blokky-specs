@@ -1,0 +1,17 @@
+title: An empty env_pass list is a plan error
+rules: [RF-21]
+features: [container, exec]
+plan: |
+  blokky: 1.0
+  container:
+    image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+    env_pass: []
+  exec: [sh, -c, 'exit 0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      detail: { rule: RF-21 }
+      line: 4
+      column: 13
+  exhaustive: true
+notes: Only mounts allows an empty list (syntax.md §7.4); see mounts/empty-mounts-container-cwd for the valid near miss.

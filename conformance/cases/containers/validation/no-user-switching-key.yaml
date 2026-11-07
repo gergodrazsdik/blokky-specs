@@ -1,0 +1,14 @@
+title: The language has no key to switch users
+rules: [CP-39, SY-19]
+features: [exec]
+plan: |
+  blokky: 1.0
+  become: root
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_UNKNOWN_KEY
+      line: 2
+      column: 1
+  exhaustive: true
+notes: become was cut (ADR 0017 D-1); a plan that needs another user runs sudo -n or doas -n in a leaf.

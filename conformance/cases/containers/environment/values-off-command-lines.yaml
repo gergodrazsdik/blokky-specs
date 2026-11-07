@@ -1,0 +1,47 @@
+title: Environment values reach the container without appearing on any command line
+rules: [CP-38]
+features: [env, from-env, all, container, script, shell-sh]
+env:
+  CONF_SOURCE: conf-transport-value
+requires:
+  os: [linux]
+  shells: [sh]
+  container-engine: true
+clock: [real]
+plan: |
+  blokky: 1.0
+  env:
+    CONF_TRANSPORT: { from_env: CONF_SOURCE }
+  all:
+    - container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+      shell: sh
+      script: |
+        printf '%s\n' "$CONF_TRANSPORT" > seen.txt
+        : > started.txt
+        sleep 3
+    - shell: sh
+      script: |
+        i=0
+        while [ ! -e started.txt ]; do
+          i=$((i + 1))
+          if [ "$i" -gt 300 ]; then exit 2; fi
+          sleep 0.1
+        done
+        printf '%s\n' "$CONF_TRANSPORT" > pattern.txt
+        ! grep -qsF -f pattern.txt /proc/[0-9]*/cmdline
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /all/0: { status: succeeded, exit_code: 0 }
+    /all/1: { status: succeeded, exit_code: 0 }
+  files:
+    seen.txt: { text: "conf-transport-value\n" }
+notes: >-
+  The host script waits until the container leaf runs, then searches every
+  process's command line on the host (the engine's exec and the processes in
+  the container included) for the value, read from a file so that grep's own
+  command line doesn't hold it. With -q and -s, grep exits with 0 on a match even
+  if a process vanished during the search, so only a leak fails the leaf. The container leaf writes the value it got
+  into the cwd mount. The value comes from the run's environment (CF-19), so it
+  isn't in the plan text either.

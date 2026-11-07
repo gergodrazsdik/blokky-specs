@@ -1,0 +1,21 @@
+title: mounts [] is valid, and an absolute cwd under no mount is a container path
+rules: [RF-21, CP-12, CP-14]
+features: [outputs, cwd, container, exec, capture]
+requires:
+  os: [linux, macos]
+  container-engine: true
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [CONTAINER_CWD]
+  cwd: /
+  container:
+    image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+    mounts: []
+  exec: [pwd]
+  capture: CONTAINER_CWD
+expect:
+  status: succeeded
+  outputs:
+    CONTAINER_CWD: /
+notes: The near miss of RF-21 - mounts is the only field where an empty list is valid (syntax.md §7.4).

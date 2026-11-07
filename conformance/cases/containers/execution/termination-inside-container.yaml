@@ -1,0 +1,26 @@
+title: A leaf in a container that ignores the graceful stop is killed after the grace period
+rules: [CP-8]
+features: [container, do, timeout, exec]
+requires:
+  container-engine: true
+clock: [real]
+plan: |
+  blokky: 1.0
+  container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+  do:
+    - timeout: 2s
+      exec: [sh, -c, "trap '' TERM; sleep 60"]
+expect:
+  status: failed
+  error: { code: BK_TIMEOUT_TOTAL, node: /do/0 }
+  nodes:
+    /do/0:
+      status: timed_out
+      killed_by: timeout
+      error: { code: BK_TIMEOUT_TOTAL, node: /do/0 }
+      duration: { $min: 7s, $max: 14s }   # 2s timeout + 5s grace
+notes: >-
+  The ignored TERM is inherited by sleep, so only the KILL ends the leaf. CP-8
+  is provisional; the outcome follows from the timeout and grace rules (EM-26,
+  EM-27) whatever the mechanism. The timeout is on the leaf, so container
+  start-up doesn't count against it.

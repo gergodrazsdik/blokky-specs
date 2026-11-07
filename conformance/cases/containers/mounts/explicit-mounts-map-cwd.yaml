@@ -1,0 +1,31 @@
+title: Explicit mounts resolve relative hosts against the invocation cwd and map the node's cwd
+rules: [CP-13, CP-14]
+features: [outputs, cwd, do, container, exec, capture]
+requires:
+  container-engine: true
+clock: [real]
+files:
+  data/marker.txt: invocation cwd
+  sub/data/marker.txt: node cwd
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  cwd: sub
+  do:
+    - container:
+        image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+        mounts:
+          - { host: data, path: /conf-data, read_only: true }
+          - { host: sub, path: /conf-sub }
+      exec: [sh, -c, 'pwd && cat /conf-data/marker.txt && echo made > made.txt']
+      capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: "/conf-sub\ninvocation cwd"
+  files:
+    sub/made.txt: { text: "made\n" }
+notes: >-
+  The node's cwd is sub (inherited), which the second mount maps to /conf-sub.
+  data resolves against the invocation cwd, not the node's cwd sub. The second
+  mount has no read_only, so it is writable.

@@ -1,0 +1,19 @@
+title: A container in the finally of a container node is nested in that container's scope
+rules: [CP-19]
+spec: [execution-model.md§2]
+features: [container, exec, finally]
+plan: |
+  blokky: 1.0
+  container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+  exec: [sh, -c, 'exit 0']
+  finally:
+    - container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+      exec: [sh, -c, 'exit 0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: CP-19 }
+      line: 5      # the container in the finally list
+      column: 5
+  exhaustive: true
+notes: finally runs inside the node's container (EM-7), so the finally list is in its scope.

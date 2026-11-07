@@ -1,0 +1,21 @@
+title: A script's shell must be in the image, even when the host has it
+rules: [CP-15]
+features: [container, script, shell-bash]
+requires:
+  shells: [bash]
+  container-engine: true
+clock: [real]
+plan: |
+  blokky: 1.0
+  container: { image: docker.io/library/busybox@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec }
+  shell: bash
+  script: |
+    exit 0
+expect:
+  status: failed
+  error: { node: / }
+  nodes:
+    /: { status: failed }
+notes: >-
+  The pinned busybox image has sh but no bash. The error code isn't specified
+  for a shell missing from the image, so only the status is asserted.
