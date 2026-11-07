@@ -10,7 +10,7 @@ blokky-specs holds the Blokky **language specification**: spec documents (`spec/
 
 The design brief is in blokky-cli: `../blokky-cli/docs/design/brief.md` when both repos are checked out side by side ([on GitHub](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/design/brief.md)). It is the source of truth for the current phase. Read it before any non-trivial work. Its §4 open questions are asked, not decided silently; its §8 defines the process.
 
-**Current phase: specification.** No implementation code. Spike code is allowed only on unmerged `spikes/*` branches in blokky-cli, after the maintainer approves the spike plan.
+**Current phase: incremental CLI implementation** in blokky-cli ([cli ADR 0007](https://github.com/gergodrazsdik/blokky-cli/blob/main/docs/adr/0007-runtime-plan.md)). This repo stays language-only: the spec draft (`1.0.0-draft.N`) is refined through ADRs as the runtime validates it, and its conformance suite is the CLI's measure. No implementation code here.
 
 Shared files in this repo are owned by the main agent; subagents propose changes to them in their PR description: `spec/glossary.md`, `schema/blokky.schema.json`, `spec/errors.md`, `adr/README.md`.
 
