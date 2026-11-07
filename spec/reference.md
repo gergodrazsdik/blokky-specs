@@ -64,7 +64,7 @@ Runs one program directly, without a shell.
 - **Array form:** `exec: [prog, arg, { var: X }]`. Element 0 MUST be a literal; other elements are literals or `{ var: X }`, each becoming exactly one argument. Canonical when an argument is a variable or needs quoting.
 - **String form** (canonical for a static argv that needs no quoting, SY-97): `exec: dotnet build -c Release` is split into argv with the rules in [shells.md](shells.md): whitespace, single and double quotes and backslash only; no expansion, globbing or operators. Unquoted shell metacharacters, and `$` or backticks outside single quotes, are plan errors that point to the array form or `script`.
 - argv[0] is resolved against `PATH` from Blokky's own environment (never the cwd); the resolved absolute path is part of the run result. A program that can't be found fails the node with a spawn error.
-- On Windows, `.bat` and `.cmd` targets are plan or run errors (cmd.exe re-parses them); the message suggests a PowerShell `script`.
+- A literal argv[0] ending in `.bat` or `.cmd` (case-insensitive) is a plan error, and on Windows a bare name is never resolved to one (cmd.exe would re-parse the arguments; SH-10, SH-27); the message suggests a PowerShell `script`.
 - The node succeeds if the process exits with 0 or a code listed in `ok_exit`.
 
 ### 2.2 `script`
@@ -147,7 +147,7 @@ Starts all children at once, in declaration order; the **first child to complete
 
 - `if:` takes a condition ([conditions.md](conditions.md)). **Companions:** `then` (required, list of nodes) and `else` (optional, list of nodes). An else-if is an `if` node inside `else`.
 - The condition is evaluated once, in the node's own scope (after its `cwd`, `env` and other scoping modifiers). True runs `then`, false runs `else` (or nothing). A condition error fails the node.
-- The node's status is that of the branch that ran; with no `else` and a false condition, the node succeeds. The nodes of the branch that didn't run are in the run result as `skipped` with skip reason `not_taken` ([ADR 0022](../adr/0022-wave-b-gaps.md)).
+- The node's status is that of the branch that ran; with no `else` and a false condition, the node succeeds. The nodes of the branch that didn't run are in the run result as `skipped` with skip reason `not_taken` ([ADR 0022](../adr/0022-wave-b-gaps.md)), or `pruned` when a `host:` condition decided the branch statically (CO-7).
 - A branch runs its nodes in order and stops at the first failure, like a `do` with `fail_fast: true`. Implementations SHOULD suggest `when` for an `if` without `else`.
 
 ### 2.8 `sleep`
@@ -353,7 +353,7 @@ Background processes that live for the node's duration: a database, a dev server
 | `on_exit` | no | `fail` (default) or `ignore`: what happens if the service exits on its own after it was ready. |
 
 - **Start:** services start one at a time, in list order; each starts after the previous one is ready. The node's body starts when every service is ready.
-- **Readiness:** `ready:` is polled every 250ms. A service that exits before it is ready, or isn't ready within `ready_timeout`, fails the node (`BK_SERVICE_EXITED`, `BK_SERVICE_NOT_READY`); services already started are stopped.
+- **Readiness:** `ready:` is first checked right after the service process starts, then 250ms after the previous check ends. A service that exits before it is ready, or isn't ready within `ready_timeout`, fails the node (`BK_SERVICE_EXITED`, `BK_SERVICE_NOT_READY`); services already started are stopped.
 - **While the body runs:** a service with `on_exit: fail` that exits on its own cancels the body and fails the node with `BK_SERVICE_EXITED` (with the service name and exit code). With `on_exit: ignore`, the exit is recorded and the body continues. A service that exits after the body ended (for example during `finally`) is recorded, not a failure.
 - **Stop:** after the node's `finally`, services are stopped in reverse list order, each as a whole process tree (graceful, then forced). An exit caused by stopping is not a failure.
 - **Visibility:** services bind no variables. The run result records each service's readiness time and how it ended ([results.md](results.md)). Services are processes the plan executes, like leaves.
@@ -491,7 +491,7 @@ All `for` options live inside the `for:` mapping:
   exec: [gh, pr, checks, { var: NUM }]
 ```
 
-**Glob rules:** patterns use the glob grammar of [syntax.md §6.9](syntax.md#69-glob-patterns), matched ordinally and case-sensitively on every OS; ordinal sort of the matches; no dotfiles unless the pattern names them; no symlink following; `/` separators in item values; no `..` escaping the cwd subtree; zero matches is an error unless `allow_empty: true`. Patterns are host paths relative to the node's cwd.
+**Glob rules:** patterns use the glob grammar of [syntax.md §6.9](syntax.md#69-glob-patterns), matched ordinally and case-sensitively on every OS; files and directories match (SY-99); ordinal sort of the matches; no dot-entries unless the pattern segment starts with `.` (SY-100); symbolic links match as entries but are never followed into (SY-101); `/` separators in item values; a `..` segment is a plan error (SY-102); zero matches is an error unless `allow_empty: true`. Patterns are host paths relative to the node's cwd.
 
 **Iterations** never publish captures to the enclosing scope (only through `collect`, §5.8). A for-loop's iteration count and items are in the run result. Put `--` before item values and inputs used as `exec` arguments where the program supports it (§9).
 

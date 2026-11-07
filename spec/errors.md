@@ -40,7 +40,7 @@ Plan errors carry a line and column. `detail.rule` is the ID of the rule that wa
 - **`BK_PLAN_VALUE`**: anything one value decides alone: its grammar or type, an empty value or list, a regex outside the subset or that doesn't compile, a reserved prefix (`BLOKKY_`, a `BK_` user code). `detail.rule` names the rule.
 - **`BK_PLAN_INVALID`**: a language key in the wrong place, and every rule relating keys, values or scopes. `detail.rule` names the rule.
 
-One mistake is one error with one rule. The [reference.md §8](reference.md#8-rules-beyond-the-schema) rule is canonical: a rule elsewhere that restates it is reported as the `RF-n` rule. Where §8 rules overlap, the more specific one wins: RF-4, RF-12, RF-28, RF-30, RF-31 and RF-32 over RF-3; RF-7 over RF-26 when an input or an enclosing scope is involved; RF-9 over RF-27 for `${…}` in a literal field; RF-27 over RF-23 for a template outside `set` and `vars`.
+One mistake is one error with one rule. The [reference.md §8](reference.md#8-rules-beyond-the-schema) rule is canonical: a rule elsewhere that restates it is reported as the `RF-n` rule. Where §8 rules overlap, the more specific one wins: RF-4, RF-12, RF-28, RF-30, RF-31 and RF-32 over RF-3; RF-7 over RF-26 when an input or an enclosing scope is involved; RF-9 over RF-27 for `${…}` in a literal field; RF-27 over RF-23 for a template outside `set` and `vars`. A `{ var: X }` in a literal field is RF-9 alone. A targeted error is reported as SY-91 rather than CO-4, and a unary operator's value as SY-53 rather than CO-8; a probe with both or neither of `exec:` and `script:`, or with `shell:` but no `script:`, is `BK_PLAN_INVALID` with rule CO-26; a node used as a condition is `BK_PLAN_INVALID` at its kind key ([ADR 0023](../adr/0023-wave-c-gaps.md)).
 
 | Code | Meaning |
 |---|---|
@@ -66,7 +66,7 @@ One mistake is one error with one rule. The [reference.md §8](reference.md#8-ru
 | `BK_EXIT` | The leaf exited with a code that isn't 0 or in `ok_exit`. `detail.exit_code`. | yes |
 | `BK_SIGNAL` | The leaf was killed by a signal it didn't get from Blokky (Unix). `detail.signal`: the signal's name (`SIGSEGV`). | yes |
 | `BK_SPAWN_NOT_FOUND` | The program or shell couldn't be resolved. `detail.program`: argv[0] (or the shell) as written. | no |
-| `BK_SPAWN_FAILED` | The OS refused to start the process (not executable, permission denied, a `.bat`/`.cmd` target, a PowerShell execution policy or AppLocker rule that blocks the script). `detail.reason`: `not_executable`, `permission_denied`, `bad_format` or `blocked`. | no |
+| `BK_SPAWN_FAILED` | The OS refused to start the process (not executable, permission denied, a file format it can't run, a PowerShell execution policy or AppLocker rule that blocks the script). `detail.reason`: `not_executable`, `permission_denied`, `bad_format` or `blocked`. A literal argv[0] ending in `.bat` or `.cmd` is a plan error instead (`BK_PLAN_VALUE`, SH-10). | no |
 | `BK_ENV_TOO_LARGE` | The leaf's environment or one value exceeds the OS limit. `detail.name`. | no |
 | `BK_SHELL_UNAVAILABLE` | The `script` shell isn't supported on this OS or isn't configured (Git Bash on Windows). | no |
 | `BK_CWD_INVALID` | The node's cwd doesn't exist, isn't a directory or can't be entered. | no |
@@ -84,7 +84,7 @@ One mistake is one error with one rule. The [reference.md §8](reference.md#8-ru
 
 | Code | Meaning | Retried |
 |---|---|---|
-| `BK_CONDITION_ERROR` | A condition was neither true nor false ([conditions.md §7](conditions.md#7-condition-errors)). `detail.reason`: `undefined_variable`, `not_a_number`, `json_invalid`, `json_path`, `probe_exit`, `probe_timeout`, `probe_output_too_large`, `probe_spawn`, `output_too_large`, `output_encoding`, `path_access`. In `assert`, `context` holds the assertion's `message` and `code`. | no |
+| `BK_CONDITION_ERROR` | A condition was neither true nor false ([conditions.md §7](conditions.md#7-condition-errors)). `detail.reason`: `undefined_variable`, `not_a_number`, `json_invalid`, `json_path`, `probe_exit`, `probe_timeout`, `probe_output_too_large`, `probe_spawn`, `output_too_large`, `output_encoding`, `path_access`; CO-38 gives the reason for each condition error (an unset environment variable is `undefined_variable`). In `assert`, `context` holds the assertion's `message` and `code`. | no |
 | `BK_UNDEFINED_VARIABLE` | A display string or reference used a variable that isn't bound at that point. `detail.name`. | no |
 | `BK_FROM_ENV_UNSET` | A `{ from_env: NAME }` names an unset environment variable. `detail.name`. | no |
 | `BK_CAPTURE_TOO_LARGE` | stdout exceeded `max_capture_bytes`. | yes |

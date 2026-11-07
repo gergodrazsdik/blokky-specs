@@ -200,6 +200,7 @@ SUBJECTS = {
     "result": "cond-result",
     "probe": "cond-probe",
 }
+SHELLS = ("bash", "sh", "pwsh", "powershell", "zsh")
 DISPLAY = ("name", "log", "fail", "message", "return")
 # Ids the derivation can't decide on its own: a case may list them freely.
 UNDERIVED = {"shell-bash", "shell-sh", "shell-pwsh", "shell-powershell", "shell-zsh"}
@@ -217,7 +218,7 @@ def derive_features(plan: Any) -> set[str]:
     for key in ("inputs", "vars", "outputs", "defaults"):
         if key in plan:
             found.add(key)
-    if isinstance(plan.get("defaults"), dict) and "shell" in plan["defaults"]:
+    if isinstance(plan.get("defaults"), dict) and plan["defaults"].get("shell") in SHELLS:
         found.add("shell-" + plan["defaults"]["shell"])
     for value in _mapping(plan.get("vars")).values():
         _values(value, found, template=True)
@@ -261,7 +262,7 @@ def _process(spec: dict, found: set[str]) -> None:
     """exec/script/shell/env of a node, probe or service."""
     if isinstance(spec.get("exec"), str):
         found.add("exec-string")
-    if "script" in spec and "shell" in spec:
+    if "script" in spec and spec.get("shell") in SHELLS:
         found.add("shell-" + spec["shell"])
     argv = spec.get("exec")
     for item in argv if isinstance(argv, list) else []:
@@ -365,6 +366,27 @@ def check_matchers(where: Path, value: Any, path: str) -> None:
             check_matchers(where, sub, f"{path}[{i}]")
 
 
+def check_positions(where: Path, text: str, plan_errors: list) -> None:
+    """Each asserted line exists, and each asserted column lands on a character that isn't
+    whitespace (SY-1: lines end at LF, CRLF or a lone CR; columns are code points; a BOM
+    isn't counted)."""
+    lines = re.split(r"\r\n|\r|\n", text.removeprefix("\ufeff"))
+    for error in plan_errors:
+        line, column = error.get("line"), error.get("column")
+        if not isinstance(line, int):
+            continue
+        if line > len(lines):
+            finding(where, f"{error['code']} at line {line}: the plan has {len(lines)} lines")
+        elif error["code"] in ("BK_PLAN_CHARACTER", "BK_PLAN_ENCODING"):
+            # these point at the offending character, which may end the line (a lone CR)
+            if isinstance(column, int) and column > len(lines[line - 1]) + 1:
+                finding(where, f"{error['code']} at {line}:{column} is past the end of the line")
+        elif isinstance(column, int) and not (
+            column <= len(lines[line - 1]) and not lines[line - 1][column - 1].isspace()
+        ):
+            finding(where, f"{error['code']} at {line}:{column} points at no token (SY-1, CF-15)")
+
+
 def plan_of(case: dict) -> tuple[str | None, str | None]:
     """The plan text, or an error why it can't be read."""
     if "plan" in case:
@@ -451,6 +473,8 @@ def check_case(
             finding(path, f"unknown feature id {feature!r} (conformance/README.md §3.2)")
 
     text, problem = plan_of(case)
+    if text is not None:
+        check_positions(path, text, plan_errors)
     if text is None:
         if not plan_errors:
             finding(path, problem or "no plan")

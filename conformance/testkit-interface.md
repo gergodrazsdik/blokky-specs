@@ -54,6 +54,7 @@ Cases MUST NOT expect 123–125 as a command's result; a runner MAY report a lea
 | `listen` | Listen on a loopback TCP port after a delay. | TK-20 |
 | `die` | Terminate by a signal. | TK-21 |
 | `symlink` | Create a symbolic link. | TK-22 |
+| `chmod` | Change a file's permission bits. | TK-23 |
 
 ### 2.1 `exit`
 
@@ -185,6 +186,10 @@ Cases MUST NOT expect 123–125 as a command's result; a runner MAY report a lea
 
 - **TK-22.** `symlink TARGET LINK` (Unix) creates a symbolic link `LINK` (relative to the cwd) pointing at `TARGET`, which need not exist, so cases can check that run-owned files never follow links (EM-69). On Windows it exits with 123.
 
+### 2.15 `chmod`
+
+- **TK-23.** `chmod MODE PATH` (Unix) sets the permission bits of `PATH` (relative to the cwd) to `MODE`, an octal number (`000`, `0755`), so cases can make a path unreadable and check `path_access` condition errors (CO-38). On Windows it exits with 123.
+
 ## 3. Platform summary
 
 | Behaviour | Unix | Windows |
@@ -194,6 +199,7 @@ Cases MUST NOT expect 123–125 as a command's result; a runner MAY report a lea
 | `argv --raw` | 123 | the raw command line |
 | `die` | the named signal | 123 |
 | `symlink` | a symbolic link | 123 |
+| `chmod` | the permission bits | 123 |
 | Exit code range | 0–255 | 0–4294967295 |
 | `info.tty` | controlling terminal | console attached |
 | Alias executable | any name, with `<name>.testkit-args` | `<name>.exe`, with `<name>.testkit-args` |
