@@ -1,0 +1,33 @@
+title: A race completes only after the cancelled losers' finally has ended
+rules: [EM-32, EM-58]
+spec: [reference.md§2.6]
+features: [do, race, exec, finally]
+plan: |
+  blokky: 1.0
+  do:
+    - race:
+        - exec: [blokky-testkit, sleep, 1m]
+          finally:
+            - exec: [blokky-testkit, print, --sleep, 2s, --out, cleaning]
+            - exec: [blokky-testkit, write-file, cleaned.txt, --text, done]
+        - exec: [blokky-testkit, print, --sleep, 3s, --out, decided]
+    - exec: [blokky-testkit, read-file, cleaned.txt]
+expect:
+  status: succeeded
+  nodes:
+    /do/0:
+      status: succeeded
+      duration: { $min: 5s, $max: 20s }   # 3s until the decider, then 2s of finally
+    /do/0/race/0:
+      status: cancelled
+      killed_by: cancel
+      error: { code: BK_CANCELLED, node: /do/0/race/0 }
+      finally_status: succeeded
+    /do/0/race/1: { status: succeeded }
+    /do/1:
+      status: succeeded
+      exit_code: 0
+notes: >-
+  The second child completes first and decides the race; the sleeping first
+  child is cancelled. The node after the race reads the file the loser's
+  finally writes after a 2s pause, so it succeeds only if the race waited.

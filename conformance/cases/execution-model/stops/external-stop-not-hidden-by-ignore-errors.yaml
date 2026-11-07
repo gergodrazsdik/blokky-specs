@@ -1,0 +1,29 @@
+title: ignore_errors never hides an external stop
+rules: [EM-36, EM-57]
+spec: [reference.md§4.11]
+features: [do, exec, ignore-errors, external-stop]
+clock: [real]   # the leaf must be running when the stop comes
+plan: |
+  blokky: 1.0
+  do:
+    - ignore_errors: true
+      exec: [blokky-testkit, sleep, 1m]
+    - exec: [blokky-testkit, write-file, marker.txt, --text, reached]
+actions:
+  - { after: 3s, stop: true }
+expect:
+  status: stopped
+  error: { code: BK_CANCELLED, node: /, detail: { reason: { $present: true } } }
+  nodes:
+    /do/0:
+      status: cancelled
+      ignored: { $absent: true }
+      error: { code: BK_CANCELLED, node: /do/0 }
+    /do/1:
+      status: skipped
+      skip_reason: not_reached
+  files:
+    marker.txt: { exists: false }
+notes: >-
+  If ignore_errors hid the stop, the do would go on to its second child and
+  the marker would exist.

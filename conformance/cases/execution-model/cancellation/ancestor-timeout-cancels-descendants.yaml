@@ -1,0 +1,30 @@
+title: An ancestor's timeout cancels the running leaf, which carries killed_by timeout
+rules: [EM-27, EM-29, EM-43]
+features: [do, exec, timeout]
+plan: |
+  blokky: 1.0
+  timeout: 3s
+  do:
+    - exec: [blokky-testkit, sleep, 1m]
+    - exec: [blokky-testkit, write-file, marker.txt, --text, reached]
+expect:
+  status: failed
+  error: { code: BK_TIMEOUT_TOTAL, node: / }
+  nodes:
+    /:
+      status: timed_out
+      error: { code: BK_TIMEOUT_TOTAL, node: / }
+    /do/0:
+      status: cancelled
+      killed_by: timeout
+      error: { code: BK_CANCELLED, node: /do/0 }
+    /do/1:
+      status: skipped
+      skip_reason: not_reached
+  files:
+    marker.txt: { exists: false }
+  duration: { $min: 3s, $max: 20s }
+notes: >-
+  The root's own limit fired, so it is timed_out (EM-27). The leaf was
+  stopped by an ancestor's limit, so it is cancelled (EM-43, §6) and carries
+  killed_by timeout (EM-27).
