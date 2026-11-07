@@ -1,0 +1,22 @@
+title: A while loop whose timeout fires fails with BK_TIMEOUT_TOTAL and ended_by timeout
+spec: [reference.md§5.6]
+features: [vars, do, log, while, cond-var, timeout]
+clock: [virtual, scaled, real]
+plan: |
+  blokky: 1.0
+  vars:
+    X: a
+  while: { var: X, equals: a }
+  timeout: 2500ms
+  every: 1s
+  do:
+    - log: tick
+expect:
+  status: failed
+  error: { code: BK_TIMEOUT_TOTAL, node: / }
+  nodes:
+    /:
+      status: timed_out
+      repetition: { count: 3, ended_by: timeout }
+  duration: { $min: 2500ms, $max: 5s }
+notes: Iterations start at 0s, 1s and 2s; the timeout fires during the following wait.

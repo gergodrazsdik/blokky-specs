@@ -1,0 +1,29 @@
+title: Of two nested timeouts the earlier deadline fires; the inner node is timed_out, its parent failed
+rules: [EM-25, EM-27, EM-43]
+spec: [reference.md§4.3]
+features: [do, exec, timeout]
+plan: |
+  blokky: 1.0
+  timeout: 20s
+  do:
+    - timeout: 1s
+      exec: [blokky-testkit, sleep, 30s]
+expect:
+  status: failed
+  error: { code: BK_TIMEOUT_TOTAL, node: /do/0 }
+  nodes:
+    /:
+      status: failed
+      error: { code: BK_TIMEOUT_TOTAL, node: /do/0 }
+    /do/0:
+      status: timed_out
+      killed_by: timeout
+      error: { code: BK_TIMEOUT_TOTAL, node: /do/0 }
+      duration: { $min: 1s, $max: 10s }
+  invocations:
+    - { argv: [sleep, 30s] }
+  duration: { $max: 10s }
+notes: >-
+  The inner 1s deadline is the earliest, so it fires; the outer 20s limit never
+  does (the run ends well before it). The parent doesn't inherit timed_out
+  (EM-43); it carries the child's error (EM-66).

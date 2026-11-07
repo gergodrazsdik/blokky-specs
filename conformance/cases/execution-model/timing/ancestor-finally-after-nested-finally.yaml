@@ -1,0 +1,36 @@
+title: When an ancestor's timeout fires, the nested node's finally ends before the ancestor's finally starts
+rules: [EM-25, EM-31, EM-70]
+features: [do, exec, timeout, finally]
+plan: |
+  blokky: 1.0
+  timeout: 1s
+  finally:
+    - exec: [blokky-testkit, write-file, order.txt, --text, outer, --append]
+  do:
+    - finally:
+        - exec: [blokky-testkit, sleep, 2s]
+        - exec: [blokky-testkit, write-file, order.txt, --text, inner]
+      exec: [blokky-testkit, sleep, 30s]
+expect:
+  status: failed
+  error: { code: BK_TIMEOUT_TOTAL, node: / }
+  nodes:
+    /:
+      status: timed_out
+      finally_status: succeeded
+      duration: { $min: 3s, $max: 10s }   # includes both finally lists (EM-70)
+    /do/0:
+      status: cancelled
+      killed_by: timeout
+      finally_status: succeeded
+      duration: { $min: 2s, $max: 10s }   # includes its finally (EM-70)
+    /do/0/finally/0: { status: succeeded }
+    /do/0/finally/1: { status: succeeded }
+    /finally/0: { status: succeeded }
+  files:
+    order.txt: { text: "inner\nouter\n" }
+  duration: { $min: 3s, $max: 10s }
+notes: >-
+  The inner finally creates order.txt (no --append) after a 2s pause; the
+  root's finally appends to it. Had the root's finally run first or alongside,
+  the inner write would have replaced its line.

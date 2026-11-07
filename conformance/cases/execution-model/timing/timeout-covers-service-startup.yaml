@@ -1,0 +1,27 @@
+title: Waiting for a service to become ready counts against the node's timeout
+rules: [EM-6, EM-62]
+spec: [reference.md§4.3]
+features: [services, exec, timeout]
+clock: [real]
+plan: |
+  blokky: 1.0
+  timeout: 1s
+  services:
+    - name: slow
+      exec: [blokky-testkit, print, --sleep, 30s, --out, up, --hang]
+      ready: { output: stdout, contains: up }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: failed
+  error: { code: BK_TIMEOUT_TOTAL, node: / }
+  nodes:
+    /:
+      status: timed_out
+      error: { code: BK_TIMEOUT_TOTAL, node: / }
+  invocations:
+    - { argv: [print, --sleep, 30s, --out, up, --hang] }
+  duration: { $min: 1s, $max: 10s }
+notes: >-
+  The default ready_timeout (30s) is far away; the node's 1s timeout fires
+  first (EM-62: readiness polling is within the node's timeout), and the body
+  never starts.

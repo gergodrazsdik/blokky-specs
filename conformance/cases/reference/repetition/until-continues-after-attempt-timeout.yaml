@@ -1,0 +1,34 @@
+title: In until with on_body_failure continue, an iteration ended by attempt_timeout counts as not done yet
+rules: [EM-27]
+spec: [reference.md§5.6]
+features: [do, exec, until, index, when, cond-var, attempt-timeout]
+plan: |
+  blokky: 1.0
+  until: { var: I, equals: '1' }
+  index: I
+  max: 3
+  every: 0s
+  attempt_timeout: 1s
+  do:
+    - when: { var: I, equals: '0' }
+      exec: [blokky-testkit, sleep, 30s]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      repetition:
+        count: 2
+        ended_by: condition
+        last_condition: true
+        entries:
+          - { index: 0, status: timed_out, error: { code: BK_TIMEOUT_ATTEMPT } }
+          - { index: 1, status: succeeded }
+  invocations:
+    - { argv: [sleep, 30s] }
+  duration: { $min: 1s, $max: 10s }
+notes: >-
+  on_body_failure defaults to continue for until. Iteration 0 is ended after
+  1s and no condition is checked; iteration 1 succeeds and the condition ends
+  the loop.

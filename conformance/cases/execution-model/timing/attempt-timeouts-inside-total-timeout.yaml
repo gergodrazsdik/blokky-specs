@@ -1,0 +1,30 @@
+title: attempt_timeout ends each attempt, and the node's own timeout ends the whole retry loop
+rules: [EM-25, EM-27, EM-53]
+spec: [reference.md§4.3, reference.md§5.5]
+features: [exec, retry, timeout, attempt-timeout]
+plan: |
+  blokky: 1.0
+  timeout: 3500ms
+  retry: true
+  max: 10
+  every: 0s
+  attempt_timeout: 1s
+  exec: [blokky-testkit, sleep, 30s]
+expect:
+  status: failed
+  error:
+    code: BK_TIMEOUT_TOTAL
+    node: /
+    causes:
+      - { code: BK_CANCELLED }   # the interrupted attempt is the last one (EM-53)
+  nodes:
+    /:
+      status: timed_out
+      error: { code: BK_TIMEOUT_TOTAL, node: / }
+      repetition: { count: { $min: 2, $max: 4 }, ended_by: timeout }
+      duration: { $min: 3500ms, $max: 10s }
+notes: >-
+  Each attempt ends with BK_TIMEOUT_ATTEMPT after 1s and is retried; the 3.5s
+  timeout covers every repetition (reference.md §4.3) and ends the node during
+  the fourth attempt at the latest, long before max. The count allows for
+  attempt teardown time.

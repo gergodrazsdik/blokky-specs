@@ -1,0 +1,30 @@
+title: In while, the every wait comes before the next condition check
+spec: [reference.md§5.3, reference.md§5.6]
+features: [do, log, while, cond-probe, timeout]
+clock: [real]
+plan: |
+  blokky: 1.0
+  while: { probe: { exec: [blokky-testkit, count, --state, checks.txt] } }
+  timeout: 1s
+  every: 2s
+  do:
+    - log: tick
+expect:
+  status: failed
+  error: { code: BK_TIMEOUT_TOTAL, node: / }
+  nodes:
+    /:
+      status: timed_out
+      repetition: { count: 1, ended_by: timeout }
+      probes:
+        - { exit_code: 0, result: true }
+  invocations:
+    - { argv: [count, --state, checks.txt] }
+  files:
+    checks.txt: { text: "1\n" }
+  duration: { $min: 1s, $max: 4s }
+notes: >-
+  The first check runs at once (no delay before the first iteration). After
+  iteration 0 the 2s wait starts; the 1s timeout fires inside it, before the
+  second check, so the probe ran only once. Checking first and waiting after
+  would have run it twice.

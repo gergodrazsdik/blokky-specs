@@ -1,0 +1,34 @@
+title: After the node's timeout fired, its finally runs to completion under its own finally_timeout
+rules: [EM-6, EM-7, EM-25, EM-70]
+spec: [reference.md§4.10]
+features: [exec, timeout, finally]
+plan: |
+  blokky: 1.0
+  timeout: 1s
+  finally_timeout: 10s
+  finally:
+    - exec: [blokky-testkit, sleep, 2s]
+    - exec: [blokky-testkit, write-file, cleaned.txt, --text, cleaned]
+  exec: [blokky-testkit, sleep, 30s]
+expect:
+  status: failed
+  error: { code: BK_TIMEOUT_TOTAL, node: / }
+  nodes:
+    /:
+      status: timed_out
+      killed_by: timeout
+      finally_status: succeeded
+      duration: { $min: 3s, $max: 10s }   # includes finally (EM-70)
+    /finally/0: { status: succeeded }
+    /finally/1: { status: succeeded }
+  files:
+    cleaned.txt: { text: "cleaned\n" }
+  invocations:
+    - { argv: [sleep, 30s] }
+    - { argv: [sleep, 2s] }
+    - { argv: [write-file, cleaned.txt, --text, cleaned] }
+  duration: { $min: 3s, $max: 10s }
+notes: >-
+  The finally list starts after the 1s deadline expired and runs for 2s more:
+  its deadline is its own finally_timeout from when it starts (EM-25), and the
+  node's timeout doesn't cover it (EM-6).

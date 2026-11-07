@@ -1,0 +1,22 @@
+title: backoff multiplies the delay by factor after each attempt
+spec: [reference.md§5.3]
+features: [vars, assert, cond-var, retry-condition, cond-result, backoff]
+clock: [virtual, scaled, real]
+plan: |
+  blokky: 1.0
+  vars:
+    X: a
+  retry: { result: error, equals: BK_ASSERT }
+  max: 4
+  every: 1s
+  backoff: { factor: 2 }
+  assert: { var: X, equals: b }
+expect:
+  status: failed
+  error: { code: BK_RETRIES_EXHAUSTED, node: / }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 4, ended_by: max }
+  duration: { $min: 7s, $max: 14s }
+notes: Delays of 1s, 2s and 4s (every × factor^(n−1)); without backoff they would total 3s.

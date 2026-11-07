@@ -1,0 +1,19 @@
+title: A sleep ends at once when a failing sibling cancels it
+rules: [EM-28]
+spec: [reference.md§2.8]
+features: [all, sleep, fail]
+clock: [virtual, scaled, real]
+plan: |
+  blokky: 1.0
+  all:
+    - sleep: 30s
+    - fail: stop now
+expect:
+  status: failed
+  error: { code: BK_FAIL, node: /all/1 }
+  nodes:
+    /all/0:
+      status: cancelled
+      error: { code: BK_CANCELLED, node: /all/0 }
+    /all/1: { status: failed }
+  duration: { $max: 2s }

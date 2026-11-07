@@ -1,0 +1,36 @@
+title: defaults.leaf_timeout on a retrying leaf limits each attempt and fails it with BK_TIMEOUT_ATTEMPT
+rules: [EM-27]
+spec: [execution-model.md§5, reference.md§4.3, errors.md§5.2]
+features: [defaults, exec, retry]
+plan: |
+  blokky: 1.0
+  defaults:
+    leaf_timeout: 1s
+  retry: true
+  max: 2
+  every: 0s
+  exec: [blokky-testkit, sleep, 30s]
+expect:
+  status: failed
+  error:
+    code: BK_RETRIES_EXHAUSTED
+    node: /
+    causes:
+      - { code: BK_TIMEOUT_ATTEMPT }
+  nodes:
+    /:
+      status: failed
+      killed_by: attempt_timeout
+      repetition:
+        count: 2
+        ended_by: max
+        entries:
+          - { index: 0, status: timed_out, error: { code: BK_TIMEOUT_ATTEMPT } }
+          - { index: 1, status: timed_out, error: { code: BK_TIMEOUT_ATTEMPT } }
+      duration: { $min: 2s, $max: 10s }
+  invocations:
+    - { argv: [sleep, 30s] }
+    - { argv: [sleep, 30s] }
+notes: >-
+  Like an implicit attempt_timeout (ADR 0018 S-9): each attempt times out with
+  BK_TIMEOUT_ATTEMPT, which retry true retries, until max.

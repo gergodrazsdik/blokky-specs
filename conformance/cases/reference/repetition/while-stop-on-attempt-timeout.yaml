@@ -1,0 +1,29 @@
+title: With on_body_failure stop, an iteration ended by attempt_timeout fails the loop with BK_TIMEOUT_ATTEMPT
+rules: [EM-27]
+spec: [reference.md§5.6]
+features: [vars, exec, while, cond-var, attempt-timeout]
+plan: |
+  blokky: 1.0
+  vars:
+    X: a
+  while: { var: X, equals: a }
+  max: 3
+  every: 0s
+  on_body_failure: stop
+  attempt_timeout: 1s
+  exec: [blokky-testkit, sleep, 30s]
+expect:
+  status: failed
+  error: { code: BK_TIMEOUT_ATTEMPT, node: / }
+  nodes:
+    /:
+      status: timed_out
+      killed_by: attempt_timeout
+      repetition:
+        count: 1
+        ended_by: failure
+        entries:
+          - { index: 0, status: timed_out, error: { code: BK_TIMEOUT_ATTEMPT } }
+  invocations:
+    - { argv: [sleep, 30s] }
+  duration: { $min: 1s, $max: 10s }

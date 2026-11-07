@@ -1,0 +1,29 @@
+title: An ancestor's earlier deadline wins over a leaf's own longer timeout; the leaf is cancelled with killed_by timeout
+rules: [EM-25, EM-27, EM-43]
+spec: [reference.md§4.3]
+features: [do, exec, timeout]
+plan: |
+  blokky: 1.0
+  timeout: 1s
+  do:
+    - timeout: 30s
+      exec: [blokky-testkit, sleep, 1m]
+expect:
+  status: failed
+  error: { code: BK_TIMEOUT_TOTAL, node: / }
+  nodes:
+    /:
+      status: timed_out
+      error: { code: BK_TIMEOUT_TOTAL, node: / }
+    /do/0:
+      status: cancelled
+      killed_by: timeout
+      error: { code: BK_CANCELLED, node: /do/0 }
+  invocations:
+    - { argv: [sleep, 1m] }
+  duration: { $min: 1s, $max: 10s }
+notes: >-
+  The effective limit of the leaf is the root's 1s deadline (EM-25). The root's
+  own limit fired, so the root is timed_out; the leaf was stopped from outside,
+  so it is cancelled (EM-43, errors.md §5.2), and as a leaf under the fired
+  limit it carries killed_by timeout (EM-27).

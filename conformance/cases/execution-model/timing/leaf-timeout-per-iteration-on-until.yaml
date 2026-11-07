@@ -1,0 +1,27 @@
+title: defaults.leaf_timeout on an until leaf limits each iteration, not the whole loop
+spec: [execution-model.md§5, reference.md§4.3]
+features: [defaults, exec, until, index, cond-var]
+clock: [real]   # each iteration's margin under the limit includes process start-up
+plan: |
+  blokky: 1.0
+  defaults:
+    leaf_timeout: 2s
+  until: { var: I, equals: '2' }
+  index: I
+  max: 3
+  every: 0s
+  exec: [blokky-testkit, print, --sleep, 1s, --out, tick]
+expect:
+  status: succeeded
+  nodes:
+    /:
+      status: succeeded
+      repetition: { count: 3, ended_by: condition }
+  invocations:
+    - { argv: [print, --sleep, 1s, --out, tick] }
+    - { argv: [print, --sleep, 1s, --out, tick] }
+    - { argv: [print, --sleep, 1s, --out, tick] }
+  duration: { $min: 3s, $max: 10s }
+notes: >-
+  Three iterations of about 1s each take longer than the 2s leaf_timeout in
+  total, but each one stays under it, so the loop succeeds.

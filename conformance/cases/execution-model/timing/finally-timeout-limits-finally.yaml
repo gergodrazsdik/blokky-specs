@@ -1,0 +1,33 @@
+title: When finally_timeout fires, the running finally node is cancelled and BK_TIMEOUT_FINALLY fails an otherwise successful node
+rules: [EM-7, EM-51]
+spec: [reference.md§4.10, errors.md§5.2]
+features: [exec, finally]
+plan: |
+  blokky: 1.0
+  finally_timeout: 1s
+  finally:
+    - exec: [blokky-testkit, sleep, 30s]
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: failed
+  error:
+    code: BK_FINALLY_FAILED
+    node: /
+    causes:
+      - { code: BK_TIMEOUT_FINALLY }
+  nodes:
+    /:
+      status: failed
+      exit_code: 0
+      finally_status: failed
+    /finally/0:
+      status: cancelled
+      killed_by: finally_timeout
+  invocations:
+    - { argv: [exit, '0'] }
+    - { argv: [sleep, 30s] }
+  duration: { $min: 1s, $max: 10s }
+notes: >-
+  The body succeeds, so the finally list's BK_TIMEOUT_FINALLY is the cause of
+  BK_FINALLY_FAILED (EM-51). Only the node's own timeout or attempt_timeout
+  makes it timed_out, so it is failed (EM-7, EM-27).

@@ -1,0 +1,21 @@
+title: A sleep ends at once when an enclosing timeout fires
+rules: [EM-28]
+spec: [reference.md§2.8]
+features: [do, sleep, timeout]
+clock: [virtual, scaled, real]
+plan: |
+  blokky: 1.0
+  timeout: 1s
+  do:
+    - sleep: 30s
+expect:
+  status: failed
+  error: { code: BK_TIMEOUT_TOTAL, node: / }
+  nodes:
+    /:
+      status: timed_out
+      error: { code: BK_TIMEOUT_TOTAL, node: / }
+    /do/0:
+      status: cancelled
+      error: { code: BK_CANCELLED, node: /do/0 }
+  duration: { $min: 1s, $max: 3s }

@@ -1,0 +1,28 @@
+title: retry true retries an attempt that failed because a descendant's own timeout fired
+spec: [reference.md§5.5, errors.md§5.2]
+features: [do, exec, retry, timeout]
+plan: |
+  blokky: 1.0
+  retry: true
+  max: 2
+  every: 0s
+  do:
+    - timeout: 1s
+      exec: [blokky-testkit, sleep, 30s]
+expect:
+  status: failed
+  error:
+    code: BK_RETRIES_EXHAUSTED
+    node: /
+    causes:
+      - { code: BK_TIMEOUT_TOTAL, node: /do/0 }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 2, ended_by: max }
+  invocations:
+    - { argv: [sleep, 30s] }
+    - { argv: [sleep, 30s] }
+notes: >-
+  The descendant's limit ends only that attempt (ADR 0018 S-2); the group
+  carries its BK_TIMEOUT_TOTAL (EM-66), which retry true retries.

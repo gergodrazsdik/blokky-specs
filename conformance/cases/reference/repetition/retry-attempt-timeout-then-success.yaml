@@ -1,0 +1,30 @@
+title: An attempt ended by attempt_timeout is retried, and the next attempt can succeed
+rules: [EM-27]
+spec: [reference.md§4.12, reference.md§5.4, reference.md§5.5]
+features: [do, exec, retry, index, when, cond-var, attempt-timeout]
+plan: |
+  blokky: 1.0
+  retry: true
+  index: I
+  max: 2
+  every: 0s
+  attempt_timeout: 1s
+  do:
+    - when: { var: I, equals: '0' }
+      exec: [blokky-testkit, sleep, 30s]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      repetition:
+        count: 2
+        ended_by: success
+        entries:
+          - { index: 0, status: timed_out, error: { code: BK_TIMEOUT_ATTEMPT } }
+          - { index: 1, status: succeeded }
+  invocations:
+    - { argv: [sleep, 30s] }
+  duration: { $min: 1s, $max: 10s }
+notes: Attempt 0 sleeps and is ended after 1s; in attempt 1 the sleep is skipped, so the group succeeds (EM-44).
