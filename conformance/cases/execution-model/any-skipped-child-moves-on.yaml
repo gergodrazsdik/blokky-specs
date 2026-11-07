@@ -1,0 +1,26 @@
+title: An ordered any moves past a child skipped by its when
+rules: [EM-45]
+features: [vars, any, exec, when, cond-var]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: slow
+  any:
+    - when: { var: MODE, equals: fast }
+      exec: [blokky-testkit, exit, '0']
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      kind: any
+      status: succeeded
+    /any/0:
+      status: skipped
+      skip_reason: condition
+    /any/1:
+      status: succeeded
+      exit_code: 0
+  invocations:
+    - { argv: [exit, '0'] }

@@ -1,0 +1,18 @@
+title: A return whose nearest sequence is reached through an all is a plan error
+rules: [RF-29]
+features: [do, all, return, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - all:
+        - return: early
+        - exec: [blokky-testkit, exit, '0']
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-29 }
+      line: 4
+      column: 9
+  exhaustive: true
+notes: The children of an all aren't a sequence, so the nearest sequence is the root do, reached through the all.

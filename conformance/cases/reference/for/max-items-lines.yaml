@@ -1,0 +1,21 @@
+title: A for over lines with more items than max_items fails before the first iteration
+spec: [reference.md§5.7]
+features: [do, exec, capture, for-lines]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, print, --out, a, --out, b, --out, c]
+      capture: LIST
+    - for: { lines: { var: LIST }, as: LINE, max_items: 2 }
+      exec: [blokky-testkit, argv, { var: LINE }]
+expect:
+  status: failed
+  error: { code: BK_ITEMS_TOO_MANY, node: /do/1 }
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1:
+      status: failed
+      error: { code: BK_ITEMS_TOO_MANY, node: /do/1 }
+  invocations:
+    - { argv: [print, --out, a, --out, b, --out, c] }
+notes: Items are never truncated to max_items; no argv invocation runs.
