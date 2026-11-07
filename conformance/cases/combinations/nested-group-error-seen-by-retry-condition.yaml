@@ -1,0 +1,56 @@
+title: A retry condition on a group sees the error of a leaf three groups down, unchanged
+rules: [EM-66, EM-53]
+spec: [reference.md§5.4, reference.md§5.5]
+features: [do, all, fail, retry-condition, cond-result, ignore-errors]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  do:
+    - retry: { result: error, equals: DEEP_FAIL }
+      max: 2
+      every: 0s
+      ignore_errors: true
+      do:
+        - all:
+            - do:
+                - fail: deep failure
+                  code: DEEP_FAIL
+    - retry: { result: error, equals: BK_FAIL }
+      max: 2
+      every: 0s
+      do:
+        - all:
+            - do:
+                - fail: deep failure
+                  code: DEEP_FAIL
+expect:
+  status: failed
+  error: { code: DEEP_FAIL, node: /do/1/do/0/all/0/do/0 }
+  nodes:
+    /:
+      status: failed
+      error: { code: DEEP_FAIL, node: /do/1/do/0/all/0/do/0 }
+    /do/0:
+      status: failed
+      ignored: true
+      error:
+        code: BK_RETRIES_EXHAUSTED
+        node: /do/0
+        causes:
+          - { code: DEEP_FAIL, node: /do/0/do/0/all/0/do/0 }
+      repetition: { count: 2 }
+    /do/1:
+      status: failed
+      error: { code: DEEP_FAIL, node: /do/1/do/0/all/0/do/0 }
+      repetition: { count: 1 }
+  invocations: []
+notes: >-
+  CF-47 (a failed group at several nesting depths). The fail's user code
+  passes up through a do, an all and a do unchanged (EM-66), so the first
+  node's retry condition, which sees the group's error (reference.md §5.5),
+  matches DEEP_FAIL and retries; retry true would not retry a user code. Its
+  attempts reach max, so it fails with BK_RETRIES_EXHAUSTED nesting the last
+  attempt's error (EM-53), ignored. The second node's condition looks for
+  BK_FAIL, which a fail with its own code doesn't raise, so it fails after one
+  attempt with the attempt's error itself (reference.md §5.4 step 4), and the
+  root carries it unchanged, with the node id of the fail.

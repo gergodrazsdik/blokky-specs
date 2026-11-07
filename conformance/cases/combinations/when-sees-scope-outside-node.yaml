@@ -1,0 +1,40 @@
+title: when is evaluated before the node's own tempdir, cwd and env apply
+rules: [EM-4, EM-8]
+spec: [conditions.md§6]
+features: [do, exec, when, cond-path, cond-env, tempdir, cwd, env]
+files:
+  marker.txt: x
+  sub: { dir: true }
+plan: |
+  blokky: 1.0
+  do:
+    - cwd: sub
+      when: { path: marker.txt, exists: true }
+      exec: [blokky-testkit, print, --out, cwd-node]
+    - tempdir: true
+      when: { path: marker.txt, exists: true }
+      exec: [blokky-testkit, print, --out, tempdir-node]
+    - env: { CONF_WHEN: node }
+      when: { env: CONF_WHEN, not_defined: true }
+      exec: [blokky-testkit, getenv, CONF_WHEN]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: succeeded }
+    /do/1: { status: succeeded }
+    /do/2: { status: succeeded, exit_code: 0 }
+  invocations:
+    - { argv: [print, --out, cwd-node], cwd: { $regex: '[/\\]sub$' } }
+    - { argv: [print, --out, tempdir-node] }
+    - { argv: [getenv, CONF_WHEN] }
+notes: >-
+  Pairs covered (CF-46): when with cwd, with tempdir and with env, each seen
+  from the when's side. marker.txt exists only in the work directory, not in
+  sub or the fresh temp dir, and CONF_WHEN is set only by the node's env. All
+  three when conditions are true, so each was evaluated in the parent's scope,
+  before the layers that follow it (EM-4, EM-8); in the node's own scope all
+  three nodes would be skipped. The bodies then do run inside those layers:
+  the first in sub, the third with CONF_WHEN set (getenv exits 3 if unset).
+  The first two nodes get the when-scope warning (CO-37), which cases can't
+  assert (SY-8).

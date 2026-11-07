@@ -1,0 +1,30 @@
+title: A for loop with the default fail_fast stops at the first failed iteration and ends with ended_by failure
+rules: [EM-29, EM-66]
+spec: [reference.md§5.7, results.md§3]
+features: [exec, for-each]
+plan: |
+  blokky: 1.0
+  for: { each: ['0', '3', '0'], as: CODE }
+  exec: [blokky-testkit, exit, { var: CODE }]
+expect:
+  status: failed
+  error: { code: BK_EXIT, detail: { exit_code: 3 } }
+  nodes:
+    /:
+      status: failed
+      error: { code: BK_EXIT, detail: { exit_code: 3 } }
+      repetition:
+        count: 2
+        ended_by: failure
+        entries:
+          - { index: 0, item: '0', status: succeeded }
+          - { index: 1, item: '3', status: failed, error: { code: BK_EXIT } }
+  invocations:
+    - { argv: [exit, '0'] }
+    - { argv: [exit, '3'] }
+notes: >-
+  CF-47 (fail_fast on for). fail_fast defaults to true and acts as for all
+  (reference.md §5.7); with the default concurrency of 1 the third iteration
+  hasn't started when the second fails, so it never starts (EM-29) and the
+  loop ends with ended_by failure (results.md §3). The loop fails with the
+  failed iteration's error (EM-66).

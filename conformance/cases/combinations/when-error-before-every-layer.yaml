@@ -1,0 +1,46 @@
+title: A condition error in when fails the node before any of its other layers apply
+rules: [EM-4, EM-47, CO-41]
+features: [vars, do, exec, when, cond-var, cond-numeric, timeout, lock, tempdir, cwd, env, services, finally, retry-condition, cond-result, attempt-timeout, ignore-errors]
+clock: [real]
+plan: |
+  blokky: 1.0
+  vars:
+    COUNT: many
+  do:
+    - when: { var: COUNT, gt: '1' }
+      ignore_errors: true
+      timeout: 5s
+      lock: conf-when-error-before-every-layer
+      tempdir: true
+      cwd: missing
+      env: { CONF_LAYER: node }
+      services:
+        - name: svc
+          exec: [blokky-testkit, print, --out, ready, --hang]
+          ready: { output: stdout, contains: ready }
+      finally:
+        - exec: [blokky-testkit, print, --out, cleanup]
+      retry: { result: error, equals: BK_CONDITION_ERROR }
+      max: 2
+      every: 0s
+      attempt_timeout: 2s
+      exec: [blokky-testkit, print, --out, body]
+    - exec: [blokky-testkit, print, --out, next]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0:
+      status: failed
+      ignored: true
+      error: { code: BK_CONDITION_ERROR, node: /do/0, detail: { reason: not_a_number } }
+    /do/1: { status: succeeded }
+  invocations:
+    - { argv: [print, --out, next] }
+notes: >-
+  COUNT isn't a number, so the when is a condition error. when is the first
+  layer (EM-4, EM-47): the node fails with BK_CONDITION_ERROR, not with the
+  BK_CWD_INVALID its missing cwd would raise, starts no service, attempt, body
+  or finally, and its retry condition, which would match the code, doesn't
+  retry it because repetition sits inside when. ignore_errors on the node
+  applies to the error (CO-41), so the run goes on.
