@@ -1,0 +1,12 @@
+title: A blokky version part with a leading zero is malformed
+rules: [SY-51]
+features: [log]
+plan: |
+  blokky: 01.0
+  log: hello
+expect:
+  plan_errors:
+    - code: BK_PLAN_VERSION
+      line: 1
+      column: 9
+  exhaustive: true

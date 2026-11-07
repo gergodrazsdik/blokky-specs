@@ -1,0 +1,16 @@
+title: '** inside a glob segment is a plan error'
+rules: [SY-72]
+features: [do, for-glob, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - for: { glob: 'src/a**b/x.md', as: FILE }
+      exec: [blokky-testkit, exit, '0']
+    - for: { glob: 'docs/**.md', as: FILE }
+      exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, line: 3 }
+    - { code: BK_PLAN_VALUE, line: 5 }
+  exhaustive: true
+notes: Columns are left out (quoted scalars, see regex-outside-subset-engine).

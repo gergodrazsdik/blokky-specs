@@ -1,0 +1,24 @@
+title: Inputs with every declaration key are accepted, and an input with a default is optional
+rules: [SY-40, SY-41, SY-44]
+features: [inputs, outputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH: { description: Branch to build }
+    TAG:
+      matches: '^v[0-9]+$'
+    ENVIRONMENT:
+      default: staging
+      in: [staging, production]
+    NOTE:
+      default: ''
+  outputs: [BRANCH, TAG, ENVIRONMENT, NOTE]
+  log: building
+inputs: [BRANCH=main, TAG=v2]
+expect:
+  status: succeeded
+  outputs:
+    BRANCH: main
+    TAG: v2
+    ENVIRONMENT: staging
+    NOTE: ''

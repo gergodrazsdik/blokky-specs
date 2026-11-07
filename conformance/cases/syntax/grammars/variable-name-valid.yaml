@@ -1,0 +1,12 @@
+title: Variable names may hold digits and underscores after the first letter
+rules: [SY-52]
+features: [outputs, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [R2_D2_]
+  exec: [blokky-testkit, print, --out, beep]
+  capture: R2_D2_
+expect:
+  status: succeeded
+  outputs:
+    R2_D2_: beep

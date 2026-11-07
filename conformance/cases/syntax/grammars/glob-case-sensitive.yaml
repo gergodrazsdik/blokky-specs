@@ -1,0 +1,16 @@
+title: Glob matching is case-sensitive on every OS, so *.CS doesn't match Program.cs
+rules: [SY-74]
+features: [for-glob, exec]
+files:
+  src/Program.cs: class Program {}
+plan: |
+  blokky: 1.0
+  for: { glob: 'src/*.CS', as: FILE }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  status: failed
+  error: { code: BK_GLOB_EMPTY, node: / }
+  nodes:
+    /: { status: failed, error: { code: BK_GLOB_EMPTY } }
+  invocations: []
+notes: Also on case-insensitive file systems (Windows, macOS by default), where the OS itself would match.

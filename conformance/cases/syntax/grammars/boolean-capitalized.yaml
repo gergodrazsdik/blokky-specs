@@ -1,0 +1,14 @@
+title: A boolean is exactly true or false; True is a plan error
+rules: [SY-53]
+features: [do, ignore-errors, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - ignore_errors: True
+      exec: [blokky-testkit, exit, '1']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      line: 3
+      column: 20
+  exhaustive: true

@@ -1,0 +1,19 @@
+title: An input has at most one constraint, in or matches
+rules: [SY-45, RF-20]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    ENVIRONMENT:
+      default: staging
+      in: [staging, production]
+      matches: '^[a-z]+$'
+  log: deploying
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-20 }
+notes: >-
+  Position not asserted: either constraint key could be the offending one
+  (SY-1 doesn't say which). detail.rule is RF-20, the reference.md §8 rule
+  that restates SY-45 (reference.md §8: rules carry RF IDs for detail.rule).

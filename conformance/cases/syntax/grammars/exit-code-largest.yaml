@@ -1,0 +1,12 @@
+title: Exit codes up to 4294967295 are valid on every OS
+rules: [SY-96]
+features: [exec, ok-exit]
+plan: |
+  blokky: 1.0
+  ok_exit: [3, 4294967295]
+  exec: [blokky-testkit, exit, '3']
+expect:
+  status: succeeded
+  nodes:
+    /: { status: succeeded, exit_code: 3 }
+notes: 4294967295 can't occur on Unix; it is valid anyway (SY-96) and MAY get a warning.

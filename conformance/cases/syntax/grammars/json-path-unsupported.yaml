@@ -1,0 +1,22 @@
+title: Wildcards, negative indices, slices, recursive descent, filters and pipes are not JSON paths
+rules: [SY-68]
+features: [exec, capture-fields]
+plan: |
+  blokky: 1.0
+  exec: [blokky-testkit, print, --out, '{"items":[{"name":"a","ok":true}]}']
+  capture:
+    ALL: '.items[]'
+    LAST: '.items[-1]'
+    FIRST2: '.items[0:2]'
+    NAMES: '..name'
+    COUNT: '.items | length'
+    OKAY: '.items[] | select(.ok)'
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, line: 4 }
+    - { code: BK_PLAN_VALUE, line: 5 }
+    - { code: BK_PLAN_VALUE, line: 6 }
+    - { code: BK_PLAN_VALUE, line: 7 }
+    - { code: BK_PLAN_VALUE, line: 8 }
+    - { code: BK_PLAN_VALUE, line: 9 }
+  exhaustive: true

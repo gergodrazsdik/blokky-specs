@@ -1,0 +1,13 @@
+title: A blokky version with a patch part is malformed
+rules: [SY-51]
+features: [log]
+plan: |
+  blokky: 1.0.0
+  log: hello
+expect:
+  plan_errors:
+    - code: BK_PLAN_VERSION
+      line: 1
+      column: 9
+  exhaustive: true
+notes: SY-36 adds that plans never name a patch version.

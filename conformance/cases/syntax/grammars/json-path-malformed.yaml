@@ -1,0 +1,24 @@
+title: JSON paths start with a dot, use .name only for identifier keys and double-quote bracket keys
+rules: [SY-64, SY-65, SY-66, SY-67]
+features: [exec, capture-fields]
+plan: |
+  blokky: 1.0
+  exec: [blokky-testkit, print, --out, '{"a-b":1,"c":[1]}']
+  capture:
+    NO_DOT: c
+    DASHED: .a-b
+    SINGLE: ".['a-b']"
+    BARE_BRACKET: '["a-b"]'
+    NOT_INDEX: '.c[x]'
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, line: 4, column: 11 }
+    - { code: BK_PLAN_VALUE, line: 5, column: 11 }
+    - { code: BK_PLAN_VALUE, line: 6 }
+    - { code: BK_PLAN_VALUE, line: 7 }
+    - { code: BK_PLAN_VALUE, line: 8 }
+  exhaustive: true
+notes: >-
+  c lacks the leading dot (SY-64, SY-65); a-b isn't an identifier, so it
+  needs .["a-b"] (SY-65, SY-66); bracket keys are double-quoted (SY-66) and
+  a bracket path starts with a dot (SY-66); an index is decimal (SY-67).

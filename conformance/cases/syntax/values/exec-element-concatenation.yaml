@@ -1,0 +1,14 @@
+title: An exec element doesn't concatenate; ${X} inside an argument is a plan error
+rules: [SY-79, SY-82, RF-27]
+features: [vars, exec]
+plan: |
+  blokky: 1.0
+  vars:
+    NAME: world
+  exec: [blokky-testkit, argv, '--name=${NAME}']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-27 }
+      line: 4
+  exhaustive: true

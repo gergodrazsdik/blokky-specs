@@ -1,0 +1,17 @@
+title: An input name with no value is an empty value, not an input without keys
+rules: [SY-41]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH:
+  log: building
+inputs: [BRANCH=main]
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE   # "an empty value" (errors.md §4)
+      line: 3
+notes: >-
+  SY-41 says `NAME:` with no value is an empty value (SY-20). The column is
+  left out: the value is absent, so whether it points at the key or the end
+  of the line isn't fixed.

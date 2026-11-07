@@ -1,0 +1,14 @@
+title: A quoted 'true' is the boolean true
+rules: [SY-53]
+features: [do, ignore-errors, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - ignore_errors: 'true'
+      exec: [blokky-testkit, exit, '1']
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  nodes:
+    /do/0: { status: failed, ignored: true }
+    /do/1: { status: succeeded }

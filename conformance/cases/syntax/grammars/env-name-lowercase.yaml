@@ -1,0 +1,14 @@
+title: Environment variable names may be lowercase, unlike plan variable names
+rules: [SY-52]
+features: [outputs, env, exec, capture-fields]
+plan: |
+  blokky: 1.0
+  outputs: [VALUE]
+  env:
+    my_var: hello
+  exec: [blokky-testkit, env, my_var]
+  capture: { VALUE: .my_var }
+expect:
+  status: succeeded
+  outputs:
+    VALUE: hello

@@ -1,0 +1,13 @@
+title: An input name follows the variable-name grammar
+rules: [SY-42, SY-52]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    branch: { description: Branch to build }
+  log: building
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE   # a name that doesn't match its grammar (errors.md §4)
+      line: 3
+      column: 3

@@ -1,0 +1,14 @@
+title: ${X} in a log message is replaced by the plan variable's value
+rules: [SY-82, SY-83]
+features: [vars, log, interpolation]
+plan: |
+  blokky: 1.0
+  vars:
+    TARGET: world
+  log: 'hello ${TARGET}, again ${TARGET}'
+expect:
+  status: succeeded
+  nodes:
+    /:
+      messages:
+        - { text: 'hello world, again world', level: info }

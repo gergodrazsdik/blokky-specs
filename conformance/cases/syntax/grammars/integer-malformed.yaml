@@ -1,0 +1,26 @@
+title: Integers have no leading zeros, no sign and no exponent
+rules: [SY-54]
+features: [do, retry, exec, for-count, all]
+plan: |
+  blokky: 1.0
+  do:
+    - retry: true
+      max: 03
+      exec: [blokky-testkit, exit, '0']
+    - for: { count: +2, as: I }
+      exec: [blokky-testkit, exit, '0']
+    - concurrency: 1e3
+      all:
+        - exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      line: 4
+      column: 10
+    - code: BK_PLAN_VALUE
+      line: 6
+      column: 19
+    - code: BK_PLAN_VALUE
+      line: 8
+      column: 18
+  exhaustive: true

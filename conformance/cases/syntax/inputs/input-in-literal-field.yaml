@@ -1,0 +1,20 @@
+title: An input never reaches a literal field such as a condition operand
+rules: [SY-50, SY-76, RF-9]
+features: [inputs, when, cond-var, exec]
+plan: |
+  blokky: 1.0
+  inputs:
+    EXPECTED: { description: Branch that may deploy }
+    BRANCH: { description: Branch being built }
+  when: { var: BRANCH, equals: '${EXPECTED}' }
+  exec: [blokky-testkit, exit, '0']
+inputs: [EXPECTED=main, BRANCH=main]
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-9 }
+      line: 5
+notes: >-
+  Operator values are literal (SY-88, conditions table), so `${` there is a
+  plan error (SY-76). The column is left out: whether a quoted scalar's
+  position is its quote or its first character isn't fixed.

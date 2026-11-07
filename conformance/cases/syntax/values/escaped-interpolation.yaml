@@ -1,0 +1,22 @@
+title: $${ produces a literal ${ in display strings and templates
+rules: [SY-84]
+features: [vars, outputs, do, set, log, interpolation]
+plan: |
+  blokky: 1.0
+  vars:
+    TARGET: world
+  outputs: [LITERAL]
+  do:
+    - set: { LITERAL: '$${HOME} and ${TARGET}' }
+    - log: 'cost $${TARGET} for ${TARGET}'
+expect:
+  status: succeeded
+  outputs:
+    LITERAL: '${HOME} and world'
+  nodes:
+    /do/1:
+      messages:
+        - { text: 'cost ${TARGET} for world' }
+notes: >-
+  $${HOME} names no plan variable; escaped, it is no reference, so the scope
+  check doesn't reject it.

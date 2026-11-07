@@ -1,0 +1,27 @@
+title: Patterns using the constructs of the portable regex subset are accepted and match as specified
+rules: [SY-61]
+features: [inputs, outputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    CODE:
+      matches: '(?i)^ab\-\d{2,3}(?:\s|\t)x+?y{2}z{1,}w?\b$'
+    PATH_LIKE:
+      matches: '^[^a-z]\x41\u{42}.\/\w+\W\S*$'
+    WORD:
+      matches: '\Bo\B|^\D*$'
+  outputs: [CODE, PATH_LIKE, WORD]
+  log: checked
+inputs: [CODE=Ab-12 xyyzzw, PATH_LIKE=1AB:/a_1!zz, WORD=foo]
+expect:
+  status: succeeded
+  outputs:
+    CODE: Ab-12 xyyzzw
+    PATH_LIKE: 1AB:/a_1!zz
+    WORD: foo
+notes: >-
+  Each value satisfies its pattern only if the construct means what the
+  SY-61 table says: (?i) at the start, \- and \/ escapes, \d \s \w \W \S \D,
+  \xHH and \u{H}, classes and negated classes, counted, lazy and optional
+  repetition, a non-capturing group with alternation, \b and \B. A value
+  that didn't match would be BK_INPUT_INVALID.

@@ -1,0 +1,27 @@
+title: Named groups, Unicode classes, other inline options and \A \z anchors are outside the regex subset
+rules: [SY-61, SY-62, RF-22]
+features: [vars, do, when, cond-var, exec]
+plan: |
+  blokky: 1.0
+  vars:
+    X: abc
+  do:
+    - when: { var: X, matches: '(?<word>a)' }
+      exec: [blokky-testkit, exit, '0']
+    - when: { var: X, matches: '\p{L}' }
+      exec: [blokky-testkit, exit, '0']
+    - when: { var: X, matches: '(?m)^a' }
+      exec: [blokky-testkit, exit, '0']
+    - when: { var: X, matches: 'a(?i)B' }
+      exec: [blokky-testkit, exit, '0']
+    - when: { var: X, matches: '\Aabc\z' }
+      exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - { code: BK_PLAN_INVALID, detail: { rule: RF-22 }, line: 5 }
+    - { code: BK_PLAN_INVALID, detail: { rule: RF-22 }, line: 7 }
+    - { code: BK_PLAN_INVALID, detail: { rule: RF-22 }, line: 9 }
+    - { code: BK_PLAN_INVALID, detail: { rule: RF-22 }, line: 11 }
+    - { code: BK_PLAN_INVALID, detail: { rule: RF-22 }, line: 13 }
+  exhaustive: true
+notes: (?i) is in the subset only at the very start of the pattern (SY-61), so a(?i)B is outside it.

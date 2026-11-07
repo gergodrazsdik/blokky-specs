@@ -1,0 +1,19 @@
+title: A literal field doesn't accept a whole-value reference
+rules: [SY-76, SY-77, SY-88, RF-9]
+features: [vars, timeout, exec]
+plan: |
+  blokky: 1.0
+  vars:
+    LIMIT: 30s
+  timeout: { var: LIMIT }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_INVALID
+      detail: { rule: RF-9 }
+      line: 4
+      column: 10
+notes: >-
+  timeout is L in the per-field table (SY-88), so it never accepts a
+  reference (SY-76, SY-77). Not exhaustive: an implementation may also report
+  the mapping as a value that isn't a duration (BK_PLAN_VALUE).

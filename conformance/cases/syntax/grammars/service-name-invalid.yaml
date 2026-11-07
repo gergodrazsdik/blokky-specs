@@ -1,0 +1,16 @@
+title: A service name must be lowercase and start with a letter or digit
+rules: [SY-52]
+features: [services, cond-path, exec]
+plan: |
+  blokky: 1.0
+  services:
+    - name: Web
+      exec: [blokky-testkit, sleep, 1m]
+      ready: { path: ready.txt, exists: true }
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      line: 3
+      column: 11
+  exhaustive: true

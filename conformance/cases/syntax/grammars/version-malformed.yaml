@@ -1,0 +1,12 @@
+title: A blokky version without a minor part is malformed
+rules: [SY-51]
+features: [log]
+plan: |
+  blokky: 1
+  log: hello
+expect:
+  plan_errors:
+    - code: BK_PLAN_VERSION
+      line: 1
+      column: 9
+  exhaustive: true

@@ -1,0 +1,13 @@
+title: A required input (no default) given an empty value is an input error
+rules: [SY-44]
+features: [inputs, log]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH: { description: Branch to build }
+  log: building
+inputs: [BRANCH=]
+expect:
+  input_errors:
+    - { code: BK_INPUT_EMPTY }
+  exhaustive: true

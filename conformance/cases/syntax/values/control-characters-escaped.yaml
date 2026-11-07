@@ -1,0 +1,19 @@
+title: A control character from a variable's value is shown escaped in rendered text
+rules: [SY-98]
+features: [do, exec, capture, log, interpolation]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, print, --out-hex, '611b5b326a62']
+      capture: VALUE
+    - log: 'v=${VALUE}'
+expect:
+  status: succeeded
+  nodes:
+    /do/1:
+      messages:
+        - { text: { $regex: '^v=a[^\x1b]+\[2jb$' } }
+notes: >-
+  The captured value is a, ESC, [2j, b: an ANSI clear-screen sequence. How
+  the ESC is escaped isn't fixed, so the case only asserts that the raw
+  character is gone and something stands in its place.

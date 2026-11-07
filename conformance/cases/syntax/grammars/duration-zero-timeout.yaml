@@ -1,0 +1,13 @@
+title: A zero duration is a plan error in a field that doesn't allow 0s
+rules: [SY-58]
+features: [timeout, exec]
+plan: |
+  blokky: 1.0
+  timeout: 0s
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      line: 2
+      column: 10
+  exhaustive: true

@@ -1,0 +1,14 @@
+title: An env key must match the environment-variable-name grammar
+rules: [SY-52]
+features: [env, exec]
+plan: |
+  blokky: 1.0
+  env:
+    9LIVES: cat
+  exec: [blokky-testkit, exit, '0']
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      line: 3
+      column: 3
+  exhaustive: true

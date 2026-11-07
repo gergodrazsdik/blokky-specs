@@ -1,0 +1,16 @@
+title: ${…} in script text is the shell's own syntax, passed unchanged
+rules: [SY-76]
+features: [outputs, script, shell-sh, capture]
+requires: { shells: [sh] }
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [OUT]
+  shell: sh
+  script: |
+    printf '%s\n' "${unset_var:-fallback}"
+  capture: OUT
+expect:
+  status: succeeded
+  outputs:
+    OUT: fallback

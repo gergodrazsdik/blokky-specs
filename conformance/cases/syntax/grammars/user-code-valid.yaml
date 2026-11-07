@@ -1,0 +1,12 @@
+title: A valid user error code becomes the node's error code
+rules: [SY-52]
+features: [fail]
+plan: |
+  blokky: 1.0
+  fail: not deployed
+  code: E_404
+expect:
+  status: failed
+  error: { code: E_404, node: / }
+  nodes:
+    /: { status: failed, error: { code: E_404 } }

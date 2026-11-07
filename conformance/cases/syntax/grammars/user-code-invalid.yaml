@@ -1,0 +1,18 @@
+title: A user error code matches the code grammar and doesn't start with BK_
+rules: [SY-52]
+features: [do, fail]
+plan: |
+  blokky: 1.0
+  do:
+    - fail: reserved prefix
+      code: BK_MINE
+    - fail: lowercase
+      code: not_found
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE
+      line: 4
+      column: 11
+    - code: BK_PLAN_VALUE
+      line: 6
+      column: 11

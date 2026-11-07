@@ -1,0 +1,44 @@
+title: Every form of the JSON-path subset selects what it names
+rules: [SY-63, SY-64, SY-65, SY-66, SY-67, SY-68]
+features: [outputs, do, exec, capture-fields]
+plan: |
+  blokky: 1.0
+  outputs: [NUM, REF, LABEL, LABEL_OBJ, WEIRD, BC, BC_DOT, DEEP, QUOTE, FIRST, TOP, WHOLE]
+  do:
+    - exec:
+        - blokky-testkit
+        - print
+        - --out
+        - '{"number":7,"head":{"ref":"main"},"labels":[{"name":"a"},{"name":"b"}],"weird-key":{"x":"w"},"a":{"b-c":"bc"},"list":[["deep"]],"q\"k":"quoted"}'
+      capture:
+        NUM: .number
+        REF: .head.ref
+        LABEL: .labels[1].name
+        LABEL_OBJ: .labels[1]
+        WEIRD: '.["weird-key"].x'
+        BC: '.a["b-c"]'
+        BC_DOT: '.a.["b-c"]'
+        DEEP: '.list[0][0]'
+        QUOTE: '.["q\"k"]'
+    - exec: [blokky-testkit, print, --out, '[{"id":5}]']
+      capture: { FIRST: '.[0].id', TOP: . }
+    - exec: [blokky-testkit, print, --out, '"just text"']
+      capture: { WHOLE: . }
+expect:
+  status: succeeded
+  outputs:
+    NUM: '7'
+    REF: main
+    LABEL: b
+    LABEL_OBJ: '{"name":"b"}'
+    WEIRD: w
+    BC: bc
+    BC_DOT: bc
+    DEEP: deep
+    QUOTE: quoted
+    FIRST: '5'
+    TOP: '[{"id":5}]'
+    WHOLE: just text
+notes: >-
+  Values are converted to strings as in VA-23. The key q"k is written with a
+  JSON string escape inside the bracket form (SY-66).

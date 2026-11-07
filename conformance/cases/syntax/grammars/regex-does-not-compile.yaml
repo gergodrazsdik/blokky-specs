@@ -1,0 +1,17 @@
+title: A regex that doesn't compile is a plan error, in an input and in a condition
+rules: [SY-61]
+features: [inputs, when, cond-var, exec]
+plan: |
+  blokky: 1.0
+  inputs:
+    BRANCH:
+      matches: '(main'
+  when: { var: BRANCH, matches: '[a-' }
+  exec: [blokky-testkit, exit, '0']
+inputs: [BRANCH=main]
+expect:
+  plan_errors:
+    - code: BK_PLAN_VALUE   # "a regex that doesn't compile" (errors.md §4)
+      line: 4
+    - code: BK_PLAN_VALUE
+      line: 5
