@@ -1,0 +1,14 @@
+title: Outside quotes, a backslash in an exec string (string form) makes the next character literal
+rules: [SH-5]
+features: [exec-string]
+plan: |
+  blokky: 1.0
+  exec: blokky-testkit argv a\ b \'c \"d \\e f\g
+expect:
+  status: succeeded
+  error: null
+  invocations:
+    - { argv: [argv, a b, '''c', '"d', '\e', fg] }
+notes: >-
+  An escaped space doesn't separate words, escaped quotes don't open a quoted
+  part, and the backslash itself is removed.

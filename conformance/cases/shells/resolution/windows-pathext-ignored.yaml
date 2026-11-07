@@ -1,0 +1,24 @@
+title: On Windows a name without an extension is tried with .com and .exe, whatever PATHEXT says
+rules: [SH-27]
+features: [exec]
+requires:
+  os: [windows]
+env:
+  PATHEXT: .CMD
+programs:
+  conf-tool: [argv]
+plan: |
+  blokky: 1.0
+  exec: [conf-tool, x]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      program: { $regex: '[/\\]conf-tool\.exe$' }
+  invocations:
+    - { name: conf-tool, argv: [argv, x] }
+notes: >-
+  The alias is conf-tool.exe (TK-6). A resolver that used PATHEXT would try
+  only .CMD and not find it.

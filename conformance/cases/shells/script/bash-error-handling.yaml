@@ -1,0 +1,27 @@
+title: A bash script has pipefail but neither -e nor -u
+rules: [SH-16]
+spec: [shells.md§2.2]
+features: [outputs, script, shell-bash, capture]
+requires:
+  shells: [bash]
+  os: [linux, macos]
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  shell: bash
+  script: |
+    false | true
+    echo "pipe=$?"
+    false
+    echo "unset=[${conf_unset_var}]"
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: "pipe=1\nunset=[]"
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 0
+notes: The script's exit status is the last echo's (SH-16).

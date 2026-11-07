@@ -1,0 +1,26 @@
+title: On Windows the PowerShell prologue also sets UTF-8 output and shares the same line
+rules: [SH-17, SH-34]
+features: [outputs, script, shell-pwsh, capture]
+requires:
+  os: [windows]
+  shells: [pwsh]
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  shell: pwsh
+  script: |
+    # conf comment
+
+    using namespace System.IO
+    $text = [File]::ReadAllText($PSCommandPath)
+    try { throw 'x' } catch { $line = $_.InvocationInfo.ScriptLineNumber }
+    [Console]::Out.Write($text + "line=$line")
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: "# conf comment\n\nusing namespace System.IO\n$ErrorActionPreference = 'Stop'; [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); $text = [File]::ReadAllText($PSCommandPath)\ntry { throw 'x' } catch { $line = $_.InvocationInfo.ScriptLineNumber }\n[Console]::Out.Write($text + \"line=$line\")\nline=5"
+notes: >-
+  The Windows variant of script/pwsh-prologue-placement: SH-34 fixes the full
+  Windows prologue text. The throw is still reported on line 5.

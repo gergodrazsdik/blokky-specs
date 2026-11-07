@@ -1,0 +1,26 @@
+title: A failing native program doesn't stop a PowerShell script
+rules: [SH-18]
+features: [outputs, script, shell-pwsh, capture]
+requires:
+  shells: [pwsh]
+clock: [real]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  shell: pwsh
+  script: |
+    blokky-testkit exit 3
+    Write-Output "after=$LASTEXITCODE"
+    exit 0
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: after=3
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 0
+  invocations:
+    - { argv: [exit, '3'] }
+notes: The script ends with an explicit exit, as SH-20 asks until the implicit exit code is settled.

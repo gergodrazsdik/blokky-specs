@@ -1,0 +1,19 @@
+title: Without shell or defaults.shell, detection on Windows picks pwsh when it resolves
+rules: [SH-22]
+features: [script, shell-pwsh]
+requires:
+  os: [windows]
+clock: [real]
+programs:
+  pwsh: [argv]
+  powershell: [argv]
+plan: |
+  blokky: 1.0
+  script: |
+    exit 0
+expect:
+  status: succeeded
+  error: null
+  invocations:
+    - { name: pwsh, argv: [argv, -NoProfile, -NonInteractive, -File, { $regex: '\.ps1$' }] }
+notes: Testkit aliases stand in for both PowerShells and record which one ran.

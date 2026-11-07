@@ -1,0 +1,28 @@
+title: BASH_ENV and ENV are removed from a script's environment, so bash reads no startup file
+rules: [SH-24]
+features: [outputs, script, shell-bash, capture]
+requires:
+  shells: [bash]
+  os: [linux, macos]
+clock: [real]
+env:
+  BASH_ENV: conf-bash-env.sh
+  ENV: conf-env.sh
+files:
+  conf-bash-env.sh: "echo sourced-bash-env\n"
+  conf-env.sh: "echo sourced-env\n"
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  shell: bash
+  script: |
+    printf '%s|%s\n' "${BASH_ENV-unset}" "${ENV-unset}"
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: unset|unset
+notes: >-
+  A non-interactive bash sources $BASH_ENV before the script; with it
+  removed, nothing is echoed before the printf. The files are relative to the
+  work directory, which is the leaf's cwd (CF-56).

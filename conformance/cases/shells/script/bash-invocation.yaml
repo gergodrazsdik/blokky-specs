@@ -1,0 +1,29 @@
+title: A bash script is run as the resolved bash with --noprofile --norc -o pipefail and the script file
+rules: [SH-11, SH-13, SH-16, SH-28, SH-29]
+spec: [shells.md§2.2, results.md§3.1]
+features: [script, shell-bash]
+requires:
+  os: [linux, macos]
+clock: [real]
+programs:
+  bash: [argv]
+plan: |
+  blokky: 1.0
+  shell: bash
+  script: |
+    exit 0
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      exit_code: 0
+      program: { $regex: '^/.*/bash$' }
+      invocation: [{ $regex: '^/.*/bash$' }, --noprofile, --norc, -o, pipefail, { $regex: '\.sh$' }]
+  invocations:
+    - { name: bash, argv: [argv, --noprofile, --norc, -o, pipefail, { $regex: '\.sh$' }] }
+notes: >-
+  The testkit alias named bash comes first on PATH (CF-57) and records its
+  arguments: no -e, no -u, no -c. On Windows bash only resolves through
+  configuration (SH-28), so the case is Unix-only.

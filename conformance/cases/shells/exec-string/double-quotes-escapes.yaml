@@ -1,0 +1,14 @@
+title: Inside double quotes of an exec string (string form) only \" and \\ are escapes
+rules: [SH-4]
+features: [exec-string]
+plan: |
+  blokky: 1.0
+  exec: blokky-testkit argv "a \"b\" c\\d \e 'f' |;" x
+expect:
+  status: succeeded
+  error: null
+  invocations:
+    - { argv: [argv, 'a "b" c\d \e ''f'' |;', x] }
+notes: >-
+  \" gives a quote and \\ one backslash; the backslash in \e stays, and single
+  quotes and operator characters inside double quotes are literal.

@@ -1,0 +1,23 @@
+title: An argv[0] with a path separator is a path, never looked up on PATH
+rules: [SH-26]
+spec: [errors.md§5.1]
+features: [exec]
+programs:
+  conf-tool: [exit, '0']
+plan: |
+  blokky: 1.0
+  exec: [./conf-tool]
+expect:
+  status: failed
+  error:
+    code: BK_SPAWN_NOT_FOUND
+    node: /
+    detail: { program: ./conf-tool }
+  nodes:
+    /:
+      status: failed
+      exit_code: { $absent: true }
+  invocations: []
+notes: >-
+  conf-tool resolves on PATH (an alias, CF-21), but ./conf-tool names a file
+  in the cwd, which doesn't exist.

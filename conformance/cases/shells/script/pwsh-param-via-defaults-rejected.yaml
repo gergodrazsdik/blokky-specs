@@ -1,0 +1,15 @@
+title: A param( block is a plan error when defaults.shell names pwsh
+rules: [SH-17]
+features: [defaults, script, shell-pwsh]
+plan: |
+  blokky: 1.0
+  defaults:
+    shell: pwsh
+  script: |
+    param($Name)
+    Write-Output $Name
+expect:
+  plan_errors:
+    - { code: BK_PLAN_INVALID, detail: { rule: SH-17 }, line: 5, column: 3 }   # the block's first content line (SY-1)
+  exhaustive: true
+notes: Nothing runs, so pwsh doesn't need to be installed.

@@ -1,0 +1,31 @@
+title: A script whose shell doesn't resolve on PATH fails with BK_SPAWN_NOT_FOUND naming the shell
+rules: [SH-23, SH-28]
+spec: [errors.md§5.1]
+features: [script, shell-pwsh]
+clock: [real]
+env:
+  PATH: /conf-nonexistent
+plan: |
+  blokky: 1.0
+  shell: pwsh
+  script: |
+    exit 0
+expect:
+  status: failed
+  error:
+    code: BK_SPAWN_NOT_FOUND
+    node: /
+    detail: { program: pwsh }
+  nodes:
+    /:
+      status: failed
+      exit_code: { $absent: true }
+platforms:
+  windows:
+    env:
+      PATH: 'C:\conf-nonexistent'
+notes: >-
+  The run starts with a PATH that holds no shell. pwsh is supported on every
+  OS (§5), so the failure is resolution, not support. Assumes no configured
+  shells.pwsh.path (SH-28), as conformance runs use no implementation
+  configuration.

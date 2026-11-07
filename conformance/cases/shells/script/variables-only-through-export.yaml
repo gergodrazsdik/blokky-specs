@@ -1,0 +1,26 @@
+title: Plan variables reach a script only through export, never by interpolation of its text
+rules: [SH-14]
+features: [vars, outputs, script, shell-sh, export, capture]
+requires:
+  shells: [sh]
+  os: [linux, macos]
+clock: [real]
+plan: |
+  blokky: 1.0
+  vars:
+    CONF_HIDDEN: hidden
+    CONF_SHOWN: shown
+  outputs: [SEEN]
+  shell: sh
+  export: [CONF_SHOWN]
+  script: |
+    printf '%s|%s\n' "${CONF_HIDDEN:-unset}" "${CONF_SHOWN:-unset}"
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: unset|shown
+notes: >-
+  If Blokky interpolated ${…} in script text, the first value would be
+  "hidden". SY-76 asks for a warning on the first reference, which isn't
+  observable.

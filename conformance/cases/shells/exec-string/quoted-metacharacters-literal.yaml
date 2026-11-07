@@ -1,0 +1,14 @@
+title: Metacharacters that are quoted, or ~ and # inside a word, are literal in an exec string (string form)
+rules: [SH-3, SH-4, SH-7]
+features: [exec-string]
+plan: |
+  blokky: 1.0
+  exec: blokky-testkit argv 'a|b' "c;d" 'x*' "(y)" '{z}' "[w]" '<>' "&" a~b a#b '~' "#" '$HOME' '`id`'
+expect:
+  status: succeeded
+  error: null
+  invocations:
+    - argv: [argv, 'a|b', 'c;d', 'x*', '(y)', '{z}', '[w]', '<>', '&', 'a~b', 'a#b', '~', '#', '$HOME', '`id`']
+notes: >-
+  SH-7 rejects these characters only unquoted, `~` and `#` only at the start of
+  a word, and `$` and backticks only outside single quotes.

@@ -1,0 +1,26 @@
+title: A relative argv[0] path is resolved against the node's cwd, not the run's
+rules: [SH-26]
+spec: [errors.md§5.1, reference.md§4.6]
+features: [exec, cwd]
+files:
+  tool.exe: not a program
+  sub: { dir: true }
+plan: |
+  blokky: 1.0
+  cwd: sub
+  exec: [./tool.exe]
+expect:
+  status: failed
+  error:
+    code: BK_SPAWN_NOT_FOUND
+    node: /
+    detail: { program: ./tool.exe }
+  nodes:
+    /:
+      status: failed
+      exit_code: { $absent: true }
+  invocations: []
+notes: >-
+  tool.exe exists only in the run's cwd. Resolved there, the OS would refuse
+  to start it (BK_SPAWN_FAILED, as in execution-model/leaves/spawn-failed-not-executable);
+  resolved against the node's cwd sub/, it doesn't exist.

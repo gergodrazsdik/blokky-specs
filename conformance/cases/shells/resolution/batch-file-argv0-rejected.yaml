@@ -1,0 +1,19 @@
+title: A literal argv[0] ending in .bat or .cmd, in any case, is a plan error on every OS
+rules: [SH-10]
+features: [do, exec, exec-string]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [conf-tool.cmd, x]
+    - exec: [./tools/build.BAT]
+    - exec: conf-tool.Cmd x
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, detail: { rule: SH-10 }, line: 3, column: 12 }   # the element, the value that is wrong
+    - { code: BK_PLAN_VALUE, detail: { rule: SH-10 }, line: 4, column: 12 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SH-10 }, line: 5, column: 11 }   # an error inside a string is at the value's start (SY-1)
+  exhaustive: true
+notes: >-
+  The check is on the literal name, so it doesn't depend on whether such a
+  file exists, nor on the OS. A bare name without an extension never
+  resolves to a .bat or .cmd file (SH-27).

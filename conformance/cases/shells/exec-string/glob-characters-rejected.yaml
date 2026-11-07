@@ -1,0 +1,22 @@
+title: Unquoted glob and brace characters in an exec string (string form) are plan errors
+rules: [SH-7]
+features: [do, exec-string]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: blokky-testkit argv x*
+    - exec: blokky-testkit argv x?
+    - exec: blokky-testkit argv x[
+    - exec: blokky-testkit argv x]
+    - exec: blokky-testkit argv x{a
+    - exec: blokky-testkit argv x}
+expect:
+  plan_errors:
+    - { code: BK_PLAN_VALUE, detail: { rule: SH-7 }, line: 3, column: 11 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SH-7 }, line: 4, column: 11 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SH-7 }, line: 5, column: 11 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SH-7 }, line: 6, column: 11 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SH-7 }, line: 7, column: 11 }
+    - { code: BK_PLAN_VALUE, detail: { rule: SH-7 }, line: 8, column: 11 }
+  exhaustive: true
+notes: Each string holds exactly one rejected character, so each is one error.

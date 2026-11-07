@@ -1,0 +1,18 @@
+title: On Windows the command line is quoted so the program parses back exactly the argv
+rules: [SH-9]
+features: [outputs, exec, capture]
+requires:
+  os: [windows]
+plan: |
+  blokky: 1.0
+  outputs: [SEEN]
+  exec: [blokky-testkit, argv, 'a b', '', 'q"q', 'tail\', 'sp ace\', '\\server\share', 'a\\"b']
+  capture: SEEN
+expect:
+  status: succeeded
+  outputs:
+    SEEN: '["a b","","q\"q","tail\\","sp ace\\","\\\\server\\share","a\\\\\"b"]'
+notes: >-
+  Spaces, an empty argument, embedded quotes and backslashes before a quote
+  or at the end of an argument are the cases CommandLineToArgvW quoting must
+  handle. The capture is the testkit's JSON (TK-12).
