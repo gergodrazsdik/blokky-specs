@@ -197,7 +197,7 @@ A run case: a stubborn leaf ignores the graceful stop, so it is killed only afte
 
 ```yaml
 title: The grace period follows a fired timeout, and the node is timed_out
-rules: [EM-26, EM-27, EM-43, EM-50, EM-66]
+rules: [EM-15, EM-26, EM-27, EM-43, EM-50, EM-66]
 features: [all, exec, timeout]
 plan: |
   blokky: 1.0
@@ -235,8 +235,7 @@ platforms:
   windows:
     expect:
       nodes:
-        # without a console the leaf has no graceful channel and is killed at once (EM-26)
-        /all/0: { signal: { $absent: true }, duration: { $min: 2s, $max: 14s } }
+        /all/0: { signal: { $absent: true } }
 ```
 
 A validation case: an `until` loop with neither `max` nor `timeout`.
@@ -254,13 +253,15 @@ expect:
   plan_errors:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-5 }
+      line: 2      # the until that needs max or timeout (SY-1)
+      column: 1
 ```
 
 An input case: a required input that isn't supplied, and an undeclared one.
 
 ```yaml
 title: A missing required input and an unknown input are reported together
-rules: [EM-1, EM-2, SY-44]
+rules: [EM-1, EM-2, SY-30, SY-44]
 spec: [variables.md§4.3]
 features: [inputs, log, interpolation]
 plan: |
@@ -273,7 +274,8 @@ inputs: [BRANCHH=main]
 expect:
   input_errors:
     - { code: BK_INPUT_MISSING }
-    - { code: BK_INPUT_UNKNOWN }
+    - code: BK_INPUT_UNKNOWN
+      detail: { suggestion: BRANCH }   # edit distance 1 (SY-30)
   exhaustive: true
 ```
 

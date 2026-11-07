@@ -1,5 +1,5 @@
 title: The grace period follows a fired timeout, and the node is timed_out
-rules: [EM-26, EM-27, EM-43, EM-50, EM-66]
+rules: [EM-15, EM-26, EM-27, EM-43, EM-50, EM-66]
 features: [all, exec, timeout]
 plan: |
   blokky: 1.0
@@ -37,6 +37,5 @@ platforms:
   windows:
     expect:
       nodes:
-        # without a console the leaf has no graceful channel and is killed at once (EM-26)
-        /all/0: { signal: { $absent: true }, duration: { $min: 2s, $max: 14s } }
+        /all/0: { signal: { $absent: true } }
 notes: The first example of conformance/README.md §3.8.

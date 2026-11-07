@@ -10,4 +10,6 @@ expect:
   plan_errors:
     - code: BK_PLAN_INVALID
       detail: { rule: RF-5 }
+      line: 2      # the until that needs max or timeout (SY-1)
+      column: 1
 notes: The second example of conformance/README.md §3.8.

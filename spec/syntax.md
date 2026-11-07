@@ -8,7 +8,7 @@ This document defines how a plan is written: encoding, the YAML subset, the root
 
 The key words MUST, MUST NOT, REQUIRED, SHALL, SHALL NOT, SHOULD, SHOULD NOT, RECOMMENDED, MAY and OPTIONAL are to be interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) and [RFC 8174](https://www.rfc-editor.org/rfc/rfc8174) when, and only when, they appear in all capitals.
 
-- **SY-1.** A **plan error** is detected before anything runs, and prevents the run. Every plan error carries a code from [errors.md](errors.md), a line and column (of the offending key, or of its value when the value is what is wrong), and, where this document says so, a corrected snippet.
+- **SY-1.** A **plan error** is detected before anything runs, and prevents the run. Every plan error carries a code from [errors.md](errors.md), a line and column (of the offending key, or of its value when the value is what is wrong; for a missing key, of the key that requires it, such as `until` for a missing `max` or `timeout` (RF-5) or `if` for a missing `then`, or, when no key requires it, of the mapping that lacks it), and, where this document says so, a corrected snippet.
 - **SY-2.** A **warning** points at something legal but likely wrong. Warnings never block a run by themselves; implementations decide how they are shown and whether users can tune them (for blokky-cli: lint rules).
 - **SY-3.** An implementation MUST report all plan errors it can find in one pass, not just the first.
 
@@ -87,7 +87,7 @@ Each of these is a plan error:
 
 ### 3.4 Unknown keys, did-you-mean and synonyms
 
-**SY-30.** An unknown key is a plan error. The message suggests the closest valid key at that position by edit distance, and also checks a synonym table for habits from other tools:
+**SY-30.** An unknown key is a plan error. The message suggests the closest valid key at that position by edit distance, and also checks a synonym table for habits from other tools. **Closest** means the smallest edit distance (Levenshtein, over code points) between the names after simple uppercase mapping (as in CO-12), at most 2; ties go to the name listed first (the schema's property order for keys, declaration order for inputs). When a close name or a synonym exists, `detail.suggestion` MUST give it (a synonym first); otherwise it is absent. The same rule applies to unknown inputs (`BK_INPUT_UNKNOWN`).
 
 | Written | Suggestion |
 |---|---|

@@ -54,7 +54,7 @@ This document defines the **run result**: the abstract outcome of a run that eve
 | exit code | The exit code (an unsigned 32-bit value on Windows), if the process exited. |
 | signal | The terminating signal (Unix), if any. |
 | killed by | If the run stopped the leaf: `timeout`, `attempt_timeout`, `cancel`, or the external stop's cause. |
-| graceful | `none` when the leaf had no graceful stop channel and was killed at once (EM-26). |
+| graceful | `none` when the leaf had left its console, so it had no graceful stop channel and was killed at once (EM-26). |
 | descendants held output | Whether a descendant kept the output open after the leaf completed (EM-20). |
 | survivors | Processes still alive after a join's reap timeout (EM-32). |
 | left running | For `keep_descendants: detach`: the processes left running after the run (program and process id, EM-22). |
