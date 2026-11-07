@@ -1,0 +1,16 @@
+title: An assert whose condition holds succeeds and starts no process
+spec: [reference.md§2.11]
+features: [vars, assert, cond-var]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    RUN_ID: '4711'
+  assert: { var: RUN_ID, equals: '4711' }
+  code: CI_RUN_NOT_FOUND
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { kind: assert, status: succeeded }
+  invocations: []

@@ -1,0 +1,24 @@
+title: A do whose children were all skipped succeeds, and its finally runs
+rules: [EM-44]
+features: [vars, do, exec, when, cond-var, finally]
+plan: |
+  blokky: 1.0
+  vars:
+    TARGET: staging
+  finally:
+    - exec: [blokky-testkit, print, --out, cleanup]
+  do:
+    - when: { var: TARGET, equals: prod }
+      exec: [blokky-testkit, exit, '3']
+    - when: { var: TARGET, equals: test }
+      exec: [blokky-testkit, exit, '3']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { status: succeeded, finally_status: succeeded }
+    /do/0: { status: skipped, skip_reason: condition }
+    /do/1: { status: skipped, skip_reason: condition }
+    /finally/0: { status: succeeded }
+  invocations:
+    - { argv: [print, --out, cleanup] }

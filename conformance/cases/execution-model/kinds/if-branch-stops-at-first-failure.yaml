@@ -1,0 +1,21 @@
+title: An if branch stops at its first failure, like a do with fail_fast true
+rules: [EM-48, EM-66]
+spec: [reference.md§2.7]
+features: [vars, if, exec, cond-var]
+plan: |
+  blokky: 1.0
+  vars:
+    TARGET: prod
+  if: { var: TARGET, equals: prod }
+  then:
+    - exec: [blokky-testkit, exit, '3']
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  status: failed
+  error: { code: BK_EXIT, node: /then/0, detail: { exit_code: 3 } }
+  nodes:
+    /: { status: failed, error: { code: BK_EXIT, node: /then/0 } }
+    /then/0: { status: failed, exit_code: 3 }
+    /then/1: { status: skipped, skip_reason: not_reached }
+  invocations:
+    - { argv: [exit, '3'] }

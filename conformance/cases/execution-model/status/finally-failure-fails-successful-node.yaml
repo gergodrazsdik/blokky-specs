@@ -1,0 +1,24 @@
+title: A failing finally fails an otherwise successful node with BK_FINALLY_FAILED
+rules: [EM-51]
+spec: [reference.md§4.10]
+features: [do, exec, finally]
+plan: |
+  blokky: 1.0
+  finally:
+    - exec: [blokky-testkit, exit, '4']
+  do:
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  status: failed
+  error:
+    code: BK_FINALLY_FAILED
+    node: /
+    causes:
+      - { code: BK_EXIT, node: /finally/0, detail: { exit_code: 4 } }
+  nodes:
+    /: { status: failed, finally_status: failed }
+    /do/0: { status: succeeded }
+    /finally/0: { status: failed, exit_code: 4 }
+  invocations:
+    - { argv: [exit, '0'] }
+    - { argv: [exit, '4'] }

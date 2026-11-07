@@ -1,0 +1,28 @@
+title: return in a loop body ends the current iteration only, and the loop goes on
+rules: [EM-67]
+spec: [reference.md§2.13]
+features: [for-each, do, return, when, cond-var, exec]
+plan: |
+  blokky: 1.0
+  for: { each: [a, b, c], as: ITEM }
+  do:
+    - when: { var: ITEM, equals: b }
+      return: Skipping b
+    - exec: [blokky-testkit, print, --out, { var: ITEM }]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      repetition:
+        count: 3
+        ended_by: items
+        entries:
+          - { index: 0, item: a, status: succeeded }
+          - { index: 1, item: b, status: succeeded }
+          - { index: 2, item: c, status: succeeded }
+  invocations:
+    - { argv: [print, --out, a] }
+    - { argv: [print, --out, c] }
+notes: Body nodes are asserted through the repetition entries and the invocation log (CF-27).

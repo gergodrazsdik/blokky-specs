@@ -1,0 +1,26 @@
+title: A race starts all children at once and cancels the others when one completes
+rules: [EM-12, EM-58]
+spec: [reference.md§2.6]
+features: [race, exec]
+plan: |
+  blokky: 1.0
+  race:
+    - exec: [blokky-testkit, sleep, 1m]
+    - exec: [blokky-testkit, write-file, done.txt, --text, done]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { status: succeeded }
+    /race/0:
+      status: cancelled
+      killed_by: cancel
+      error: { code: BK_CANCELLED, node: /race/0 }
+    /race/1: { status: succeeded }
+  files:
+    done.txt: { text: "done\n" }
+  duration: { $max: 20s }
+notes: >-
+  The second child runs while the first sleeps, so both were started without
+  waiting for each other. The sleep can't complete within the duration bound,
+  so the second child is the one that decides, and the sleep is cancelled.

@@ -1,0 +1,18 @@
+title: An ignored failure that decides a race counts as not failed, so the race succeeds
+rules: [EM-58]
+spec: [reference.md§2.6]
+features: [race, exec, ignore-errors]
+plan: |
+  blokky: 1.0
+  race:
+    - exec: [blokky-testkit, exit, '3']
+      ignore_errors: true
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { status: succeeded }
+    /race/0: { status: failed, ignored: true, error: { code: BK_EXIT } }
+  invocations:
+    - { argv: [exit, '3'] }
+notes: A single child decides the race, so the outcome is determined.

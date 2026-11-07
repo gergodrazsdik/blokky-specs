@@ -1,0 +1,20 @@
+title: fail without a code fails with BK_FAIL and records its rendered message
+spec: [reference.md§2.10]
+features: [vars, fail, interpolation]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    BRANCH: feature-x
+  fail: "No release tag on ${BRANCH}"
+expect:
+  status: failed
+  error: { code: BK_FAIL, node: / }
+  nodes:
+    /:
+      kind: fail
+      status: failed
+      error: { code: BK_FAIL, node: / }
+      messages:
+        - { text: No release tag on feature-x }
+  invocations: []

@@ -1,0 +1,28 @@
+title: BK_LOOP_MAX_REACHED nests the last iteration's error
+rules: [EM-53]
+spec: [reference.md§5.6]
+features: [until, exec, capture, cond-var]
+plan: |
+  blokky: 1.0
+  until: { var: STATE, equals: done }
+  max: 2
+  every: 0s
+  exec: [blokky-testkit, print, --out, pending, --exit, '3']
+  capture: STATE
+expect:
+  status: failed
+  error:
+    code: BK_LOOP_MAX_REACHED
+    node: /
+    causes:
+      - { code: BK_EXIT, detail: { exit_code: 3 } }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 2, ended_by: max }
+  invocations:
+    - { argv: [print, --out, pending, --exit, '3'] }
+    - { argv: [print, --out, pending, --exit, '3'] }
+notes: >-
+  Every iteration fails, so with until's default on_body_failure (continue) the
+  condition is never checked and the loop reaches max.

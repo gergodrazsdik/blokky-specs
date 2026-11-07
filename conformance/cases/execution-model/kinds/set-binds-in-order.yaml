@@ -1,0 +1,23 @@
+title: set binds its entries in order, so a later template can use an earlier entry
+spec: [reference.md§2.12]
+features: [outputs, do, set, exec, interpolation]
+plan: |
+  blokky: 1.0
+  outputs: [URL]
+  do:
+    - set:
+        HOST: example.com
+        URL: https://${HOST}/healthz
+    - exec: [blokky-testkit, print, --out, { var: URL }]
+expect:
+  status: succeeded
+  error: null
+  outputs:
+    URL: https://example.com/healthz
+  nodes:
+    /do/0:
+      kind: set
+      status: succeeded
+      bindings: { $unordered: [HOST, URL] }
+  invocations:
+    - { argv: [print, --out, https://example.com/healthz] }

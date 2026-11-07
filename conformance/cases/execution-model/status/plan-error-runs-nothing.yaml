@@ -1,0 +1,16 @@
+title: A plan error in a later node ends the run in validation; the valid nodes before it never run
+rules: [EM-1, RS-1]
+features: [do, exec]
+plan: |
+  blokky: 1.0
+  do:
+    - exec: [blokky-testkit, write-file, ran.txt, --text, ran]
+    - exec: [blokky-testkit, exit, '0']
+      retires: 3
+expect:
+  plan_errors:
+    - code: BK_PLAN_UNKNOWN_KEY
+      line: 5
+      column: 5
+  exhaustive: true
+notes: The runner checks that the invocation log is empty (CF-23), so the first leaf never started.

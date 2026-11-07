@@ -1,0 +1,21 @@
+title: A race whose children were all skipped succeeds
+rules: [EM-58]
+spec: [reference.md§2.6]
+features: [vars, race, exec, when, cond-var]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: slow
+  race:
+    - when: { var: MODE, equals: fast }
+      exec: [blokky-testkit, exit, '3']
+    - when: { var: MODE, equals: faster }
+      exec: [blokky-testkit, exit, '3']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { status: succeeded }
+    /race/0: { status: skipped, skip_reason: condition }
+    /race/1: { status: skipped, skip_reason: condition }
+  invocations: []

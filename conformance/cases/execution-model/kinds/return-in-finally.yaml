@@ -1,0 +1,23 @@
+title: return in a finally list ends that list; its remaining nodes are skipped as returned
+rules: [EM-67]
+spec: [reference.md§2.13]
+features: [do, return, exec, finally]
+plan: |
+  blokky: 1.0
+  finally:
+    - exec: [blokky-testkit, print, --out, first-cleanup]
+    - return: Cleanup done
+    - exec: [blokky-testkit, print, --out, second-cleanup]
+  do:
+    - exec: [blokky-testkit, print, --out, body]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { status: succeeded, finally_status: succeeded }
+    /finally/0: { status: succeeded }
+    /finally/1: { kind: return, status: succeeded }
+    /finally/2: { status: skipped, skip_reason: returned }
+  invocations:
+    - { argv: [print, --out, body] }
+    - { argv: [print, --out, first-cleanup] }

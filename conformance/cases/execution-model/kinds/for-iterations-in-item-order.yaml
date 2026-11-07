@@ -1,0 +1,26 @@
+title: Iterations of a for loop start in item order
+rules: [EM-10]
+spec: [reference.md§5.7]
+features: [for-each, exec]
+plan: |
+  blokky: 1.0
+  for: { each: [one, two, three], as: ITEM }
+  exec: [blokky-testkit, print, --out, { var: ITEM }]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /:
+      status: succeeded
+      repetition:
+        count: 3
+        ended_by: items
+        entries:
+          - { index: 0, item: one, status: succeeded }
+          - { index: 1, item: two, status: succeeded }
+          - { index: 2, item: three, status: succeeded }
+  invocations:
+    - { argv: [print, --out, one] }
+    - { argv: [print, --out, two] }
+    - { argv: [print, --out, three] }
+notes: concurrency defaults to 1, so each iteration ends before the next starts.

@@ -1,0 +1,24 @@
+title: BK_RETRIES_EXHAUSTED nests the last attempt's error
+rules: [EM-53]
+spec: [reference.md§5.4]
+features: [exec, retry]
+plan: |
+  blokky: 1.0
+  retry: true
+  max: 2
+  every: 0s
+  exec: [blokky-testkit, exit, '3']
+expect:
+  status: failed
+  error:
+    code: BK_RETRIES_EXHAUSTED
+    node: /
+    causes:
+      - { code: BK_EXIT, detail: { exit_code: 3 } }
+  nodes:
+    /:
+      status: failed
+      repetition: { count: 2, ended_by: max }
+  invocations:
+    - { argv: [exit, '3'] }
+    - { argv: [exit, '3'] }

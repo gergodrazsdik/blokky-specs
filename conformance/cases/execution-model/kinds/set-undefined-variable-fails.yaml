@@ -1,0 +1,28 @@
+title: A set template using a variable that wasn't bound at run time fails with BK_UNDEFINED_VARIABLE
+rules: [RF-23, VA-38]
+spec: [reference.md§2.12]
+features: [vars, do, set, when, cond-var, interpolation, exec]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    MODE: quick
+  do:
+    - when: { var: MODE, equals: full }
+      set: { SUFFIX: full }
+    - set: { LABEL: 'build-${SUFFIX}' }
+    - exec: [blokky-testkit, print, --out, { var: LABEL }]
+expect:
+  status: failed
+  error:
+    code: BK_UNDEFINED_VARIABLE
+    node: /do/1
+    detail: { name: SUFFIX }
+  nodes:
+    /do/0: { status: skipped, skip_reason: condition }
+    /do/1: { status: failed }
+    /do/2: { status: skipped, skip_reason: not_reached }
+  invocations: []
+notes: >-
+  SUFFIX has a possible binding before its use, so the plan passes the
+  syntactic scope check (RF-23); the skipped set leaves it unbound at run time.

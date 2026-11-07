@@ -1,0 +1,22 @@
+title: An if with a false condition runs else
+rules: [EM-48]
+spec: [reference.md§2.7]
+features: [vars, if, exec, cond-var]
+plan: |
+  blokky: 1.0
+  vars:
+    TARGET: staging
+  if: { var: TARGET, equals: prod }
+  then:
+    - exec: [blokky-testkit, print, --out, then]
+  else:
+    - exec: [blokky-testkit, print, --out, else]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { status: succeeded }
+    /then/0: { status: skipped, skip_reason: not_taken }
+    /else/0: { status: succeeded }
+  invocations:
+    - { argv: [print, --out, else] }

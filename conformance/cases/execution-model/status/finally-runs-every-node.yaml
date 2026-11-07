@@ -1,0 +1,27 @@
+title: A finally list runs every node after a failing one and fails with its first failure
+rules: [EM-51]
+spec: [reference.md§4.10]
+features: [do, exec, finally]
+plan: |
+  blokky: 1.0
+  finally:
+    - exec: [blokky-testkit, exit, '4']
+    - exec: [blokky-testkit, print, --out, second-cleanup]
+  do:
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  status: failed
+  error:
+    code: BK_FINALLY_FAILED
+    node: /
+    causes:
+      - { code: BK_EXIT, node: /finally/0, detail: { exit_code: 4 } }
+  nodes:
+    /: { status: failed, finally_status: failed }
+    /do/0: { status: succeeded }
+    /finally/0: { status: failed, exit_code: 4 }
+    /finally/1: { status: succeeded }
+  invocations:
+    - { argv: [exit, '0'] }
+    - { argv: [exit, '4'] }
+    - { argv: [print, --out, second-cleanup] }

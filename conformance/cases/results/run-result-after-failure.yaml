@@ -1,0 +1,13 @@
+title: A run that fails during execution still ends with a run result
+rules: [RS-1, RS-5, EM-3, EM-50]
+features: [exec]
+plan: |
+  blokky: 1.0
+  exec: [blokky-testkit, exit, '3']
+expect:
+  status: failed
+  error: { code: BK_EXIT, node: /, detail: { exit_code: 3 } }
+  nodes:
+    /: { kind: exec, status: failed, exit_code: 3, error: { code: BK_EXIT, node: / } }
+  invocations:
+    - { argv: [exit, '3'] }

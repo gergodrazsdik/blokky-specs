@@ -1,0 +1,35 @@
+title: Every node of the plan has a result under its plan path id, whatever the completion order
+rules: [EM-13, RS-3]
+features: [do, all, exec, log]
+plan: |
+  blokky: 1.0
+  do:
+    - all:
+        - exec: [blokky-testkit, print, --sleep, 1s, --out, slow]
+        - exec: [blokky-testkit, print, --out, fast]
+    - do:
+        - log: inner
+        - exec: [blokky-testkit, exit, '3']
+        - log: unreached
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  status: failed
+  error: { code: BK_EXIT, node: /do/1/do/1 }
+  nodes:
+    /: { kind: do, status: failed, children: [/do/0, /do/1, /do/2] }
+    /do/0: { kind: all, status: succeeded, children: [/do/0/all/0, /do/0/all/1] }
+    /do/0/all/0: { kind: exec, status: succeeded }
+    /do/0/all/1: { kind: exec, status: succeeded }
+    /do/1: { kind: do, status: failed, children: [/do/1/do/0, /do/1/do/1, /do/1/do/2] }
+    /do/1/do/0: { kind: log, status: succeeded }
+    /do/1/do/1: { kind: exec, status: failed }
+    /do/1/do/2: { status: skipped, skip_reason: not_reached }
+    /do/2: { status: skipped, skip_reason: not_reached }
+  invocations:
+    $unordered:
+      - { argv: [print, --sleep, 1s, --out, slow] }
+      - { argv: [print, --out, fast] }
+      - { argv: [exit, '3'] }
+notes: >-
+  The all's second child usually completes first; the results are still found
+  under the plan's path ids, and children lists them in plan order.

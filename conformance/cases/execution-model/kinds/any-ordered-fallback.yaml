@@ -1,0 +1,21 @@
+title: An ordered any tries the next child only after a failure, and stops at the first success
+rules: [EM-45]
+spec: [reference.md§2.5]
+features: [any, exec]
+plan: |
+  blokky: 1.0
+  any:
+    - exec: [blokky-testkit, exit, '3']
+    - exec: [blokky-testkit, print, --out, b]
+    - exec: [blokky-testkit, print, --out, c]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /: { kind: any, status: succeeded }
+    /any/0: { status: failed, exit_code: 3, error: { code: BK_EXIT } }
+    /any/1: { status: succeeded }
+    /any/2: { status: skipped, skip_reason: not_reached }
+  invocations:
+    - { argv: [exit, '3'] }
+    - { argv: [print, --out, b] }

@@ -1,0 +1,20 @@
+title: A return skipped by its when ends nothing
+rules: [EM-67]
+spec: [reference.md§2.13]
+features: [vars, do, return, when, cond-var, exec]
+plan: |
+  blokky: 1.0
+  vars:
+    CHANGED: src/app.cs
+  do:
+    - when: { var: CHANGED, empty: true }
+      return: Nothing changed
+    - exec: [blokky-testkit, print, --out, lint]
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { status: skipped, skip_reason: condition }
+    /do/1: { status: succeeded }
+  invocations:
+    - { argv: [print, --out, lint] }

@@ -1,0 +1,36 @@
+title: A node that never started has its id, kind, status and skip reason, but no duration, process, error, binding or message fields
+rules: [RS-6]
+features: [vars, do, exec, when, cond-var, log, capture]
+plan: |
+  blokky: 1.0
+  vars:
+    TARGET: staging
+  do:
+    - when: { var: TARGET, equals: prod }
+      exec: [blokky-testkit, print, --out, deployed]
+      capture: DEPLOYED
+    - exec: [blokky-testkit, exit, '3']
+    - log: never logged
+expect:
+  status: failed
+  nodes:
+    /do/0:
+      id: /do/0
+      kind: exec
+      status: skipped
+      skip_reason: condition
+      duration: { $absent: true }
+      error: { $absent: true }
+      ignored: { $absent: true }
+      exit_code: { $absent: true }
+      program: { $absent: true }
+      invocation: { $absent: true }
+      bindings: { $absent: true }
+      repetition: { $absent: true }
+    /do/2:
+      status: skipped
+      skip_reason: not_reached
+      kind: log
+      duration: { $absent: true }
+      error: { $absent: true }
+      messages: { $absent: true }

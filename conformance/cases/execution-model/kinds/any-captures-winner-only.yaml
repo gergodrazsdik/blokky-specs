@@ -1,0 +1,19 @@
+title: In an ordered any, only the winning child's capture is bound
+rules: [EM-59]
+spec: [reference.md§2.5]
+features: [outputs, any, exec, capture]
+plan: |
+  blokky: 1.0
+  outputs: [PICK]
+  any:
+    - exec: [blokky-testkit, print, --out, first, --exit, '3']
+      capture: PICK
+    - exec: [blokky-testkit, print, --out, second]
+      capture: PICK
+expect:
+  status: succeeded
+  outputs:
+    PICK: second
+  nodes:
+    /any/0: { status: failed }
+    /any/1: { status: succeeded }

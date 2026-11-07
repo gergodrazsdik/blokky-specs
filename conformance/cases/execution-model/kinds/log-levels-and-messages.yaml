@@ -1,0 +1,29 @@
+title: log records its rendered message with its level, info by default, and starts no process
+spec: [reference.md§2.9]
+features: [vars, do, log, interpolation]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    RUN_ID: '42'
+  do:
+    - log: "Polling run ${RUN_ID}"
+      level: debug
+    - log: "Watching run ${RUN_ID}"
+    - log: "Run ${RUN_ID} is slow"
+      level: warn
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0:
+      kind: log
+      status: succeeded
+      messages: [{ text: Polling run 42, level: debug }]
+    /do/1:
+      status: succeeded
+      messages: [{ text: Watching run 42, level: info }]
+    /do/2:
+      status: succeeded
+      messages: [{ text: Run 42 is slow, level: warn }]
+  invocations: []

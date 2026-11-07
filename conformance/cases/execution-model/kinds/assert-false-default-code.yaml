@@ -1,0 +1,14 @@
+title: An assert whose condition is false fails with BK_ASSERT when it has no code
+spec: [reference.md§2.11]
+features: [vars, assert, cond-var]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  vars:
+    RUN_ID: none
+  assert: { var: RUN_ID, equals: '4711' }
+expect:
+  status: failed
+  error: { code: BK_ASSERT, node: / }
+  nodes:
+    /: { status: failed, error: { code: BK_ASSERT, node: / } }

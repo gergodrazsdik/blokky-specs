@@ -1,0 +1,32 @@
+title: A failing child of all cancels its running sibling; the all fails with the child's error, not cancelled
+rules: [EM-43, EM-49, EM-66]
+spec: [reference.md§2.4]
+features: [all, exec]
+plan: |
+  blokky: 1.0
+  all:
+    - exec: [blokky-testkit, sleep, 1m]
+    - exec: [blokky-testkit, exit, '3']
+expect:
+  status: failed
+  error: { code: BK_EXIT, node: /all/1, detail: { exit_code: 3 } }
+  nodes:
+    /:
+      status: failed
+      error: { code: BK_EXIT, node: /all/1 }
+    /all/0:
+      status: cancelled
+      killed_by: cancel
+      error: { code: BK_CANCELLED, node: /all/0 }
+    /all/1:
+      status: failed
+      exit_code: 3
+  invocations:
+    $contains:
+      - { argv: [exit, '3'] }
+  duration: { $max: 20s }
+notes: >-
+  Both children start at once (no concurrency limit). The 1m sleep is still
+  running when its sibling fails, so fail_fast (default true) cancels it; the
+  duration bound shows the run didn't wait for the sleep. The sleep's own log
+  line isn't asserted: it may be cancelled before it writes it.

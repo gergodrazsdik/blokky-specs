@@ -1,0 +1,17 @@
+title: sleep 0s succeeds at once, starts no process, and the next sibling runs
+spec: [reference.md§2.8]
+features: [do, sleep, exec]
+clock: [real, scaled, virtual]
+plan: |
+  blokky: 1.0
+  do:
+    - sleep: 0s
+    - exec: [blokky-testkit, exit, '0']
+expect:
+  status: succeeded
+  error: null
+  nodes:
+    /do/0: { kind: sleep, status: succeeded }
+    /do/1: { status: succeeded }
+  invocations:
+    - { argv: [exit, '0'] }
